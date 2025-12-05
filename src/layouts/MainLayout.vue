@@ -1,0 +1,189 @@
+<template>
+  <div class="main-layout">
+    <!-- 左侧菜单栏 -->
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-icon">❤️</div>
+        <span class="logo-text">XinXi CRM</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <router-link
+          to="/account"
+          class="nav-item"
+          :class="{ active: activeMenu === '/account' }"
+        >
+          Account
+        </router-link>
+        <router-link
+          to="/client"
+          class="nav-item"
+          :class="{ active: activeMenu === '/client' }"
+        >
+          Client
+        </router-link>
+        <router-link
+          to="/introducer"
+          class="nav-item"
+          :class="{ active: activeMenu === '/introducer' }"
+        >
+          Introducer
+        </router-link>
+        <router-link
+          to="/bank-centre"
+          class="nav-item"
+          :class="{ active: activeMenu === '/bank-centre' }"
+        >
+          Bank & Centre
+        </router-link>
+        <div class="nav-item logout" @click="handleLogout">
+          Log out
+        </div>
+      </nav>
+    </aside>
+    
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </main>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
+
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
+
+const activeMenu = computed(() => {
+  const { path } = route
+  return path
+})
+
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await authStore.logout()
+    router.push('/login')
+  } catch {
+    // 用户取消
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.main-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 200px;
+  background-color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e4e7ed;
+  
+  .logo {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 20px;
+    border-bottom: 1px solid #e4e7ed;
+    
+    .logo-icon {
+      width: 24px;
+      height: 24px;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .logo-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: #409eff;
+    }
+  }
+  
+  .sidebar-nav {
+    flex: 1;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    
+    .nav-item {
+      display: block;
+      padding: 12px 20px;
+      color: #606266;
+      text-decoration: none;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      
+      &:hover {
+        background-color: #f0f0f0;
+      }
+      
+      &.active {
+        background-color: #e6f4ff;
+        color: #409eff;
+        
+        &::after {
+          content: '';
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          width: 3px;
+          background-color: #409eff;
+        }
+      }
+      
+      &.logout {
+        margin-top: auto;
+        color: #606266;
+        
+        &:hover {
+          background-color: #f0f0f0;
+        }
+      }
+    }
+  }
+}
+
+.main-content {
+  flex: 1;
+  background-color: #f5f5f5;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

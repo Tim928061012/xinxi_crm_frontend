@@ -1,0 +1,339 @@
+<template>
+  <div class="login-container">
+    <div class="login-content">
+      <!-- Logo区域 -->
+      <div class="logo-section">
+        <div class="logo">
+          <svg
+            width="80"
+            height="80"
+            viewBox="0 0 80 80"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <!-- 第一个C形/心形元素 - 青绿色，左侧 -->
+            <path
+              d="M 40 20 Q 20 20 20 40 Q 20 50 30 55 Q 40 60 40 60 Q 40 60 50 55 Q 60 50 60 40 Q 60 20 40 20 Z"
+              fill="#2EC4B6"
+              opacity="0.9"
+            />
+            <!-- 第二个C形/心形元素 - 蓝色，右侧重叠 -->
+            <path
+              d="M 40 25 Q 25 25 25 40 Q 25 48 32 52 Q 40 56 40 56 Q 40 56 48 52 Q 55 48 55 40 Q 55 25 40 25 Z"
+              fill="#4A90E2"
+              opacity="0.9"
+            />
+          </svg>
+        </div>
+        <h1 class="main-title">XinXi CRM</h1>
+        <p class="sub-title">XinXi Consulting(Hong kong) Limited</p>
+      </div>
+
+      <!-- 登录表单区域 -->
+      <div class="login-form-section">
+        <!-- 标签页 -->
+        <div class="tabs">
+          <div
+            class="tab-item"
+            :class="{ active: activeTab === 'employee' }"
+            @click="activeTab = 'employee'"
+          >
+            Employee
+          </div>
+          <div
+            class="tab-item"
+            :class="{ active: activeTab === 'administrator' }"
+            @click="activeTab = 'administrator'"
+          >
+            Administrator
+          </div>
+        </div>
+
+        <!-- 表单 -->
+        <el-form
+          ref="loginFormRef"
+          :model="loginForm"
+          :rules="loginRules"
+          class="login-form"
+          @submit.prevent="handleLogin"
+        >
+          <el-form-item prop="username">
+            <el-input
+              v-model="loginForm.username"
+              placeholder="Account / Username"
+              size="large"
+              :prefix-icon="User"
+              clearable
+            />
+          </el-form-item>
+
+          <el-form-item prop="password">
+            <el-input
+              v-model="loginForm.password"
+              type="password"
+              placeholder="Password"
+              size="large"
+              :prefix-icon="Lock"
+              show-password
+              @keyup.enter="handleLogin"
+            />
+          </el-form-item>
+
+          <el-form-item>
+            <el-button
+              type="primary"
+              size="large"
+              :loading="loading"
+              class="login-button"
+              @click="handleLogin"
+            >
+              Login
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+    </div>
+
+    <!-- 页脚 -->
+    <div class="footer">
+      <p>XinXi Consulting (Hong kong) Limited</p>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { User, Lock } from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/auth'
+
+const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
+
+const loginFormRef = ref<FormInstance>()
+const loading = ref(false)
+const activeTab = ref<'employee' | 'administrator'>('employee')
+
+const loginForm = reactive({
+  username: '',
+  password: ''
+})
+
+const loginRules: FormRules = {
+  username: [
+    { required: true, message: '请输入账号/用户名', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' }
+  ]
+}
+
+const handleLogin = async () => {
+  if (!loginFormRef.value) return
+
+  await loginFormRef.value.validate(async (valid) => {
+    if (valid) {
+      loading.value = true
+
+      try {
+        // 根据选中的标签页确定角色
+        const role = activeTab.value === 'administrator' ? 'admin' : 'user'
+        const result = await authStore.login(loginForm, role)
+
+        if (result.success) {
+          ElMessage.success('登录成功')
+
+          // 重定向到之前访问的页面或默认页面
+          const redirect = (route.query.redirect as string) || '/dashboard'
+          router.push(redirect)
+        } else {
+          ElMessage.error(result.message || '登录失败')
+        }
+      } catch (error: any) {
+        ElMessage.error(error.message || '登录失败，请稍后重试')
+      } finally {
+        loading.value = false
+      }
+    }
+  })
+}
+</script>
+
+<style lang="scss" scoped>
+.login-container {
+  width: 100%;
+  height: 100vh;
+  background: #F0F4F8;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  padding: 20px;
+  overflow: auto;
+}
+
+.login-content {
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+// Logo区域
+.logo-section {
+  text-align: center;
+  margin-bottom: 40px;
+  width: 100%;
+
+  .logo {
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    svg {
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    }
+  }
+
+  .main-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1E3A5F;
+    margin: 0 0 8px 0;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+  }
+
+  .sub-title {
+    font-size: 14px;
+    color: #6B7C93;
+    margin: 0;
+    letter-spacing: 0.3px;
+    line-height: 1.4;
+  }
+}
+
+// 登录表单区域
+.login-form-section {
+  width: 100%;
+  background: #fff;
+  border-radius: 8px;
+  padding: 30px 35px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+// 标签页
+.tabs {
+  display: flex;
+  margin-bottom: 30px;
+  border-bottom: 1px solid #E4E7ED;
+
+  .tab-item {
+    flex: 1;
+    text-align: center;
+    padding: 14px 0;
+    font-size: 16px;
+    color: #909399;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+    font-weight: 400;
+
+    &:hover {
+      color: #1E3A5F;
+    }
+
+    &.active {
+      color: #1E3A5F;
+      font-weight: 600;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #1E3A5F;
+        border-radius: 1px;
+      }
+    }
+  }
+}
+
+// 表单样式
+.login-form {
+  :deep(.el-form-item) {
+    margin-bottom: 20px;
+  }
+
+  :deep(.el-input__wrapper) {
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px #E4E7ED inset;
+    background-color: #fff;
+
+    &:hover {
+      box-shadow: 0 0 0 1px #C0C4CC inset;
+    }
+
+    &.is-focus {
+      box-shadow: 0 0 0 1px #1E3A5F inset;
+    }
+  }
+
+  :deep(.el-input__inner) {
+    font-size: 14px;
+  }
+
+  .login-button {
+    width: 100%;
+    height: 44px;
+    background: #1E3A5F;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin-top: 10px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: #2A4A6F;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(30, 58, 95, 0.2);
+    }
+
+    &:active:not(:disabled) {
+      background: #152A45;
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// 页脚
+.footer {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  width: 100%;
+
+  p {
+    font-size: 12px;
+    color: #909399;
+    margin: 0;
+    letter-spacing: 0.2px;
+  }
+}
+</style>
