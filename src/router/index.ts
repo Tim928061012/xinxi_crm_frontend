@@ -161,9 +161,14 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // 如果已登录用户访问登录页，重定向到首页
+  // 如果已登录用户访问登录页，重定向到账户列表页
   if (to.name === 'Login' && isAuthenticated) {
-    next({ name: 'Dashboard' })
+    const userRole = authStore.user?.role
+    if (userRole === 'admin') {
+      next({ name: 'Account' })
+    } else {
+      next({ name: 'Tasks' })
+    }
     NProgress.done()
     return
   }
@@ -174,8 +179,12 @@ router.beforeEach((to, from, next) => {
     const allowedRoles = to.meta.roles as string[]
     
     if (!userRole || !allowedRoles.includes(userRole)) {
-      // 没有权限，重定向到仪表盘
-      next({ name: 'Dashboard' })
+      // 没有权限，根据角色重定向
+      if (userRole === 'admin') {
+        next({ name: 'Account' })
+      } else {
+        next({ name: 'Tasks' })
+      }
       NProgress.done()
       return
     }

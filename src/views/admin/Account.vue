@@ -18,6 +18,7 @@
         :data="accountList"
         stripe
         class="account-table"
+        style="width: 100%"
       >
       <el-table-column prop="account" label="Account" width="180" />
       <el-table-column prop="name" label="Name" width="200" />
@@ -273,15 +274,19 @@ onMounted(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  position: relative;
 
   .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding-left: 0;
-    padding-right: 0;
+    padding: 0;
     width: 100%;
+    box-sizing: border-box;
 
     .user-info {
       display: flex;
@@ -289,15 +294,18 @@ onMounted(() => {
       gap: 8px;
       color: #606266;
       font-size: 14px;
-      padding-right: 0;
-      margin-right: 0;
+      padding: 0;
+      margin: 0;
     }
   }
 
   .table-wrapper {
     width: 100%;
     flex: 1;
-    padding-right: 0;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    position: relative;
   }
 
   .account-table {
@@ -306,11 +314,29 @@ onMounted(() => {
     overflow: hidden;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
     width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+
+    :deep(.el-table) {
+      width: 100% !important;
+      box-sizing: border-box;
+    }
+
+    :deep(.el-table__inner-wrapper) {
+      width: 100% !important;
+      box-sizing: border-box;
+    }
 
     :deep(.el-table__header-wrapper) {
+      width: 100% !important;
+      box-sizing: border-box;
+      
       .el-table__header {
+        width: 100% !important;
         background-color: #409eff;
         color: #fff;
+        box-sizing: border-box;
 
         th {
           background-color: #409eff !important;
@@ -318,14 +344,23 @@ onMounted(() => {
           border: none;
           font-weight: 500;
           padding: 12px 0;
+          box-sizing: border-box;
         }
       }
     }
 
     :deep(.el-table__body-wrapper) {
+      width: 100% !important;
+      box-sizing: border-box;
+      
       .el-table__body {
+        width: 100% !important;
+        box-sizing: border-box;
+        
         tr {
           background-color: #fff;
+          width: 100% !important;
+          box-sizing: border-box;
           
           &:hover {
             background-color: #f5f7fa;
@@ -334,6 +369,7 @@ onMounted(() => {
           td {
             padding: 12px 0;
             border-bottom: 1px solid #ebeef5;
+            box-sizing: border-box;
           }
         }
       }

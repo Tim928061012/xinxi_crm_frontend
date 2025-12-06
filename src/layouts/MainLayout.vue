@@ -175,6 +175,10 @@ const handleLogout = async () => {
   background-color: #f5f5f5;
   overflow-y: auto;
   overflow-x: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 .fade-enter-active,
