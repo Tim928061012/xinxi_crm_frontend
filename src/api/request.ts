@@ -24,14 +24,14 @@ const request: AxiosInstance = axios.create({
   }
 })
 
-// 请求拦截器
+// 请求拦截器：自动添加 token 到请求头
 request.interceptors.request.use(
   (config: AxiosRequestConfig) => {
-    const authStore = useAuthStore()
-    const token = authStore.token
+    // 从 localStorage 或 sessionStorage 获取 token
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
 
     if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`
+      config.headers['X-Auth-Token'] = token
     }
 
     return config
@@ -47,17 +47,32 @@ request.interceptors.response.use(
     const { data } = response
 
     // 如果后端返回的数据格式是 { code, data, message }
-    if (data.code !== undefined) {
+    if (data && typeof data === 'object' && data.code !== undefined) {
       if (data.code === 200 || data.code === 0) {
-        return data
+        // 保留原始响应对象，以便登录时能获取响应头
+        // 确保返回的对象可以添加属性
+        const result = { ...data }
+        result.__rawResponse = response
+        return result
       } else {
         ElMessage.error(data.message || '请求失败')
         return Promise.reject(new Error(data.message || '请求失败'))
       }
     }
 
-    // 如果后端直接返回数据
-    return data
+    // 如果后端直接返回数据，也保留原始响应对象
+    // 如果 data 是对象，则添加 __rawResponse 属性；否则包装成对象
+    if (data && typeof data === 'object') {
+      const result = { ...data }
+      result.__rawResponse = response
+      return result
+    } else {
+      // 如果 data 是基本类型，包装成对象
+      return {
+        data,
+        __rawResponse: response
+      }
+    }
   },
   (error) => {
     const { response } = error
@@ -65,9 +80,14 @@ request.interceptors.response.use(
     if (response) {
       switch (response.status) {
         case 401:
-          ElMessage.error('未授权，请重新登录')
+          // Token 过期或未授权，清除 token 并跳转登录
+          ElMessage.error('登录已过期，请重新登录')
           const authStore = useAuthStore()
+          // 清除 token
+          localStorage.removeItem('token')
+          sessionStorage.removeItem('token')
           authStore.logout()
+          // 跳转到登录页
           router.push({ name: 'Login' })
           break
         case 403:

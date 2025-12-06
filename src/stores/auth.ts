@@ -5,7 +5,8 @@ import { authApi } from '@/api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
-  const token = ref<string | null>(localStorage.getItem('token'))
+  // 从 localStorage 或 sessionStorage 获取 token
+  const token = ref<string | null>(localStorage.getItem('token') || sessionStorage.getItem('token'))
 
   const isAuthenticated = computed(() => !!token.value && !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
@@ -19,10 +20,25 @@ export const useAuthStore = defineStore('auth', () => {
         ? await authApi.adminLogin(loginForm)
         : await authApi.userLogin(loginForm)
       
-      // 从响应中获取token和用户信息
-      // 假设后端返回格式为 { code: 200, data: { token: string, user: User } }
+      // 从响应头（X-Auth-Token）或响应体（data.data.token）读取 token
+      // 响应拦截器会保留原始响应对象在 __rawResponse 中
+      const rawResponse = (response as any).__rawResponse
+      let authToken: string | null = null
+      
+      // 优先从响应头获取 token（不区分大小写）
+      if (rawResponse && rawResponse.headers) {
+        const headers = rawResponse.headers
+        authToken = headers['x-auth-token'] || headers['X-Auth-Token'] || headers['X-AUTH-TOKEN']
+      }
+      
+      // 如果响应头没有，则从响应体获取
+      if (!authToken) {
+        const responseData = response.data || response
+        authToken = responseData.token || responseData.data?.token
+      }
+      
+      // 获取用户信息
       const responseData = response.data || response
-      const authToken = responseData.token || responseData.data?.token
       const userData: User = responseData.user || responseData.data?.user || {
         id: responseData.id || '',
         username: loginForm.username,
@@ -39,6 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = authToken
       user.value = userData
       
+      // 将 token 保存到 localStorage（也可以使用 sessionStorage）
       localStorage.setItem('token', authToken)
       localStorage.setItem('user', JSON.stringify(userData))
       
@@ -66,8 +83,11 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       token.value = null
       user.value = null
+      // 清除 localStorage 和 sessionStorage 中的 token
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      sessionStorage.removeItem('token')
+      sessionStorage.removeItem('user')
     }
   }
 
@@ -92,10 +112,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 初始化：从localStorage恢复登录状态
+  // 初始化：从localStorage或sessionStorage恢复登录状态
   function initAuth() {
-    const storedToken = localStorage.getItem('token')
-    const storedUser = localStorage.getItem('user')
+    const storedToken = localStorage.getItem('token') || sessionStorage.getItem('token')
+    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user')
     
     if (storedToken && storedUser) {
       token.value = storedToken
