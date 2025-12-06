@@ -144,9 +144,19 @@ const handleLogin = async () => {
         if (result.success) {
           ElMessage.success('登录成功')
 
-          // 重定向到之前访问的页面或默认页面
-          const redirect = (route.query.redirect as string) || '/dashboard'
-          router.push(redirect)
+          // 重定向到之前访问的页面或根据角色重定向到默认页面
+          const redirect = route.query.redirect as string
+          if (redirect) {
+            router.push(redirect)
+          } else {
+            // 根据角色重定向到不同页面
+            const role = activeTab.value === 'administrator' ? 'admin' : 'user'
+            if (role === 'admin') {
+              router.push('/account')
+            } else {
+              router.push('/tasks')
+            }
+          }
         } else {
           ElMessage.error(result.message || '登录失败')
         }

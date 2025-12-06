@@ -60,16 +60,6 @@ const routes: RouteRecordRaw[] = [
           roles: ['admin']
         }
       },
-      {
-        path: 'dashboard',
-        name: 'Dashboard',
-        component: () => import('@/views/Dashboard.vue'),
-        meta: { 
-          requiresAuth: true,
-          title: '仪表盘',
-          roles: ['user', 'admin']
-        }
-      },
       // 普通用户路由
       {
         path: 'tasks',

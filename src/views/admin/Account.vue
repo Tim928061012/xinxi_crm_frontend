@@ -23,14 +23,19 @@
       <el-table-column prop="account" label="Account" width="180" />
       <el-table-column prop="name" label="Name" width="200" />
       <el-table-column prop="createdTime" label="Created Time" width="200" />
-      <el-table-column label="Status" width="120">
+      <el-table-column label="Status" width="150">
         <template #default="{ row }">
-          <el-switch
-            v-model="row.status"
-            :active-value="'enabled'"
-            :inactive-value="'disabled'"
-            @change="handleStatusChange(row)"
-          />
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <el-switch
+              v-model="row.isActive"
+              :active-value="true"
+              :inactive-value="false"
+              @change="handleStatusChange(row)"
+            />
+            <span :style="{ color: row.isActive ? '#67c23a' : '#909399' }">
+              {{ row.isActive ? 'enabled' : 'disabled' }}
+            </span>
+          </div>
         </template>
       </el-table-column>
       <el-table-column label="Actions" width="220">
@@ -150,15 +155,22 @@ const loadAccounts = async () => {
     const data = response.data || response || []
     // 转换数据格式，将后端返回的数据转换为前端需要的格式
     // 后端返回 username，前端使用 account 显示
-    accountList.value = data.map((item: any) => ({
-      id: item.id,
-      account: item.username || item.account || '', // 后端返回 username，映射到前端的 account
-      firstName: item.firstName || item.first_name || '',
-      lastName: item.lastName || item.last_name || '',
-      name: item.name || `${item.lastName || item.last_name || ''}, ${item.firstName || item.first_name || ''}`,
-      status: item.active === true || item.active === 'true' || item.status === 'enabled' || item.status === 'active' ? 'enabled' : 'disabled',
-      createdTime: item.createdTime || item.created_time || item.createTime || ''
-    }))
+    accountList.value = data.map((item: any) => {
+      const firstName = item.firstName || item.first_name || ''
+      const lastName = item.lastName || item.last_name || ''
+      const isActive = item.isActive === true || item.isActive === 'true' || item.active === true || item.active === 'true'
+      
+      return {
+        id: item.id,
+        account: item.username || item.account || '', // 后端返回 username，映射到前端的 account
+        firstName: firstName,
+        lastName: lastName,
+        name: `${firstName}, ${lastName}`, // 格式：firstName, lastName
+        isActive: isActive, // 后端返回的 isActive 字段
+        status: isActive ? 'enabled' : 'disabled', // 前端显示用的状态
+        createdTime: item.createdAt || item.created_at || item.createdTime || item.created_time || item.createTime || ''
+      }
+    })
   } catch (error) {
     console.error('加载账户列表失败:', error)
     ElMessage.error('加载账户列表失败')
@@ -226,16 +238,18 @@ const handleSubmitEditAccount = async () => {
 
 // 状态切换
 const handleStatusChange = async (row: Account) => {
-  const originalStatus = row.status
+  const originalIsActive = row.isActive
   try {
-    const active = row.status === 'enabled'
-    await accountApi.updateAccountStatus(row.id, active)
-    ElMessage.success(`账户已${row.status === 'enabled' ? '启用' : '禁用'}`)
+    await accountApi.updateAccountStatus(row.id, row.isActive)
+    // 更新状态显示
+    row.status = row.isActive ? 'enabled' : 'disabled'
+    ElMessage.success(`账户已${row.isActive ? '启用' : '禁用'}`)
   } catch (error: any) {
     console.error('更新账户状态失败:', error)
     ElMessage.error(error.response?.data?.message || '更新账户状态失败')
     // 恢复原状态
-    row.status = originalStatus
+    row.isActive = originalIsActive
+    row.status = originalIsActive ? 'enabled' : 'disabled'
   }
 }
 

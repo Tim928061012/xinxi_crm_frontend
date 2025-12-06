@@ -5,8 +5,9 @@ export interface Account {
   account: string
   firstName: string
   lastName: string
-  name: string // 显示用的全名，格式：lastName, firstName
-  status: 'enabled' | 'disabled'
+  name: string // 显示用的全名，格式：firstName, lastName
+  isActive: boolean // 后端返回的 isActive 字段
+  status: 'enabled' | 'disabled' // 前端显示用的状态
   createdTime: string
 }
 

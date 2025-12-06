@@ -10,11 +10,19 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const goHome = () => {
-  router.push('/dashboard')
+  // 根据用户角色重定向到不同页面
+  const userRole = authStore.user?.role
+  if (userRole === 'admin') {
+    router.push('/account')
+  } else {
+    router.push('/tasks')
+  }
 }
 </script>
 
