@@ -13,12 +13,12 @@
     </div>
 
     <!-- 账户表格 -->
-    <el-table
-      :data="accountList"
-      stripe
-      style="width: 100%"
-      class="account-table"
-    >
+    <div class="table-wrapper">
+      <el-table
+        :data="accountList"
+        stripe
+        class="account-table"
+      >
       <el-table-column prop="account" label="Account" width="180" />
       <el-table-column prop="name" label="Name" width="200" />
       <el-table-column prop="createdTime" label="Created Time" width="200" />
@@ -43,7 +43,8 @@
           </el-link>
         </template>
       </el-table-column>
-    </el-table>
+      </el-table>
+    </div>
 
     <!-- 新建账户模态框 -->
     <el-dialog
@@ -144,34 +145,23 @@ const accountFormRules: FormRules = {
 // 加载账户列表
 const loadAccounts = async () => {
   try {
-    // TODO: 调用实际接口
-    // const response = await accountApi.getAccounts()
-    // accountList.value = response.data || response
-    
-    // 临时模拟数据
-    accountList.value = [
-      {
-        id: 1,
-        account: '17328392241',
-        firstName: 'Tai man',
-        lastName: 'Chan',
-        name: 'Tai man, Chan',
-        status: 'enabled',
-        createdTime: '2025-10-12 19:00'
-      },
-      {
-        id: 2,
-        account: '18673367255',
-        firstName: 'Jackie',
-        lastName: 'Chan',
-        name: 'Jackie, Chan',
-        status: 'disabled',
-        createdTime: '2025-08-12 02:30'
-      }
-    ]
+    const response = await accountApi.getAccounts()
+    const data = response.data || response || []
+    // 转换数据格式，将后端返回的数据转换为前端需要的格式
+    // 后端返回 username，前端使用 account 显示
+    accountList.value = data.map((item: any) => ({
+      id: item.id,
+      account: item.username || item.account || '', // 后端返回 username，映射到前端的 account
+      firstName: item.firstName || item.first_name || '',
+      lastName: item.lastName || item.last_name || '',
+      name: item.name || `${item.lastName || item.last_name || ''}, ${item.firstName || item.first_name || ''}`,
+      status: item.active === true || item.active === 'true' || item.status === 'enabled' || item.status === 'active' ? 'enabled' : 'disabled',
+      createdTime: item.createdTime || item.created_time || item.createTime || ''
+    }))
   } catch (error) {
     console.error('加载账户列表失败:', error)
     ElMessage.error('加载账户列表失败')
+    accountList.value = []
   }
 }
 
@@ -190,14 +180,13 @@ const handleSubmitNewAccount = async () => {
   await newAccountFormRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        // TODO: 调用实际接口
-        // await accountApi.createAccount(newAccountForm)
+        await accountApi.createAccount(newAccountForm)
         ElMessage.success('创建账户成功')
         newAccountDialogVisible.value = false
         loadAccounts()
-      } catch (error) {
+      } catch (error: any) {
         console.error('创建账户失败:', error)
-        ElMessage.error('创建账户失败')
+        ElMessage.error(error.response?.data?.message || '创建账户失败')
       }
     }
   })
@@ -219,17 +208,16 @@ const handleSubmitEditAccount = async () => {
   await editAccountFormRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        // TODO: 调用实际接口
-        // await accountApi.updateAccount(editAccountForm.id, {
-        //   firstName: editAccountForm.firstName,
-        //   lastName: editAccountForm.lastName
-        // })
+        await accountApi.updateAccount(editAccountForm.id, {
+          firstName: editAccountForm.firstName,
+          lastName: editAccountForm.lastName
+        })
         ElMessage.success('更新账户成功')
         editAccountDialogVisible.value = false
         loadAccounts()
-      } catch (error) {
+      } catch (error: any) {
         console.error('更新账户失败:', error)
-        ElMessage.error('更新账户失败')
+        ElMessage.error(error.response?.data?.message || '更新账户失败')
       }
     }
   })
@@ -237,15 +225,16 @@ const handleSubmitEditAccount = async () => {
 
 // 状态切换
 const handleStatusChange = async (row: Account) => {
+  const originalStatus = row.status
   try {
-    // TODO: 调用实际接口
-    // await accountApi.updateAccountStatus(row.id, row.status)
+    const active = row.status === 'enabled'
+    await accountApi.updateAccountStatus(row.id, active)
     ElMessage.success(`账户已${row.status === 'enabled' ? '启用' : '禁用'}`)
-  } catch (error) {
+  } catch (error: any) {
     console.error('更新账户状态失败:', error)
-    ElMessage.error('更新账户状态失败')
+    ElMessage.error(error.response?.data?.message || '更新账户状态失败')
     // 恢复原状态
-    row.status = row.status === 'enabled' ? 'disabled' : 'enabled'
+    row.status = originalStatus
   }
 }
 
@@ -262,13 +251,12 @@ const handleResetPassword = async (row: Account) => {
       }
     )
     
-    // TODO: 调用实际接口
-    // await accountApi.resetPassword(row.id)
+    await accountApi.resetPassword(row.id)
     ElMessage.success('密码重置成功')
   } catch (error: any) {
     if (error !== 'cancel') {
       console.error('重置密码失败:', error)
-      ElMessage.error('重置密码失败')
+      ElMessage.error(error.response?.data?.message || '重置密码失败')
     }
   }
 }
@@ -283,12 +271,17 @@ onMounted(() => {
   padding: 20px;
   background-color: #f5f5f5;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 
   .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    padding-left: 0;
+    padding-right: 0;
+    width: 100%;
 
     .user-info {
       display: flex;
@@ -296,7 +289,15 @@ onMounted(() => {
       gap: 8px;
       color: #606266;
       font-size: 14px;
+      padding-right: 0;
+      margin-right: 0;
     }
+  }
+
+  .table-wrapper {
+    width: 100%;
+    flex: 1;
+    padding-right: 0;
   }
 
   .account-table {
@@ -304,6 +305,7 @@ onMounted(() => {
     border-radius: 4px;
     overflow: hidden;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    width: 100%;
 
     :deep(.el-table__header-wrapper) {
       .el-table__header {
