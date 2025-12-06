@@ -46,64 +46,86 @@ request.interceptors.response.use(
   (response: AxiosResponse) => {
     const { data } = response
 
-    // 如果后端返回的数据格式是 { code, data, message }
-    if (data && typeof data === 'object' && data.code !== undefined) {
-      if (data.code === 200 || data.code === 0) {
-        // 保留原始响应对象，以便登录时能获取响应头
-        // 确保返回的对象可以添加属性
-        const result = { ...data }
-        result.__rawResponse = response
-        return result
-      } else {
-        ElMessage.error(data.message || '请求失败')
-        return Promise.reject(new Error(data.message || '请求失败'))
-      }
-    }
-
-    // 如果后端直接返回数据，也保留原始响应对象
-    // 如果 data 是对象，则添加 __rawResponse 属性；否则包装成对象
+    // 如果后端返回的数据格式是 { code, data, message } 或 { success, data, message }
     if (data && typeof data === 'object') {
+      // 检查 success 字段（优先级高于 code）
+      if (data.success !== undefined) {
+        if (data.success === true) {
+          // 成功，保留原始响应对象
+          const result = { ...data }
+          result.__rawResponse = response
+          return result
+        } else {
+          // success 为 false，不显示错误消息，让调用方处理，避免重复提示
+          return Promise.reject(new Error(data.message || 'Request failed'))
+        }
+      }
+      
+      // 检查 code 字段（兼容旧格式）
+      if (data.code !== undefined) {
+        if (data.code === 200 || data.code === 0) {
+          // 保留原始响应对象，以便登录时能获取响应头
+          const result = { ...data }
+          result.__rawResponse = response
+          return result
+        } else {
+          // 不在这里显示错误消息，让调用方处理，避免重复提示
+          return Promise.reject(new Error(data.message || 'Request failed'))
+        }
+      }
+      
+      // 如果既没有 success 也没有 code，直接返回数据
       const result = { ...data }
       result.__rawResponse = response
       return result
-    } else {
-      // 如果 data 是基本类型，包装成对象
-      return {
-        data,
-        __rawResponse: response
-      }
+    }
+
+    // 如果后端直接返回数据，也保留原始响应对象
+    // 如果 data 是基本类型，包装成对象
+    return {
+      data,
+      __rawResponse: response
     }
   },
   (error) => {
-    const { response } = error
+    const { response, config } = error
+    // 检查是否是登录接口，如果是登录接口，不在这里显示错误，让调用方处理
+    const isLoginRequest = config?.url?.includes('/auth/') && (config?.url?.includes('/login') || config?.method === 'post')
 
     if (response) {
-      switch (response.status) {
-        case 401:
-          // Token 过期或未授权，清除 token 并跳转登录
-          ElMessage.error('登录已过期，请重新登录')
-          const authStore = useAuthStore()
-          // 清除 token
-          localStorage.removeItem('token')
-          sessionStorage.removeItem('token')
-          authStore.logout()
-          // 跳转到登录页
-          router.push({ name: 'Login' })
-          break
-        case 403:
-          ElMessage.error('拒绝访问')
-          break
-        case 404:
-          ElMessage.error('请求错误，未找到该资源')
-          break
-        case 500:
-          ElMessage.error('服务器错误')
-          break
-        default:
-          ElMessage.error(response.data?.message || `连接错误${response.status}`)
+      const status = response.status
+      
+      // 401 特殊处理：未授权，需要跳转到登录页
+      if (status === 401) {
+        if (isLoginRequest) {
+          // 登录请求的 401，不显示错误，让调用方处理
+          return Promise.reject(error)
+        }
+        // 其他请求的 401，说明 token 过期或未授权，需要清除 token 并跳转登录
+        const authStore = useAuthStore()
+        // 清除 token
+        localStorage.removeItem('token')
+        sessionStorage.removeItem('token')
+        // 清除用户信息
+        authStore.logout()
+        // 跳转到登录页
+        router.push({ name: 'Login' })
+        return Promise.reject(error)
+      }
+      
+      // 业务错误（400-499，除了 401）：不显示错误，让调用方处理，避免重复提示
+      if (status >= 400 && status < 500) {
+        return Promise.reject(error)
+      }
+      
+      // 服务器错误（500+）：显示错误
+      if (status >= 500) {
+        ElMessage.error(response.data?.message || 'Server error')
+        return Promise.reject(error)
       }
     } else {
-      ElMessage.error('网络连接失败')
+      // 网络错误：显示错误
+      ElMessage.error('Network connection failed')
     }
 
     return Promise.reject(error)

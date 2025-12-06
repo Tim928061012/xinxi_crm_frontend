@@ -142,7 +142,7 @@ const handleLogin = async () => {
         const result = await authStore.login(loginForm, role)
 
         if (result.success) {
-          ElMessage.success('登录成功')
+          ElMessage.success('Login successful')
 
           // 重定向到之前访问的页面或根据角色重定向到默认页面
           const redirect = route.query.redirect as string
@@ -158,10 +158,15 @@ const handleLogin = async () => {
             }
           }
         } else {
-          ElMessage.error(result.message || '登录失败')
+          // 只在这里显示错误消息，避免重复提示
+          ElMessage.error(result.message || 'Login failed')
         }
       } catch (error: any) {
-        ElMessage.error(error.message || '登录失败，请稍后重试')
+        // 只有在 authStore.login 抛出异常时才显示错误（这种情况不应该发生，因为 login 已经处理了错误）
+        // 但为了安全起见，保留这个 catch
+        if (!error.handled) {
+          ElMessage.error(error.message || 'Login failed, please try again')
+        }
       } finally {
         loading.value = false
       }

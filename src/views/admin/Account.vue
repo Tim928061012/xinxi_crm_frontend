@@ -66,13 +66,13 @@
         label-width="120px"
       >
         <el-form-item label="Account" prop="account" required>
-          <el-input v-model="newAccountForm.account" placeholder="请输入账户" />
+          <el-input v-model="newAccountForm.account" placeholder="Please enter account" />
         </el-form-item>
         <el-form-item label="First Name" prop="firstName" required>
-          <el-input v-model="newAccountForm.firstName" placeholder="请输入名字" />
+          <el-input v-model="newAccountForm.firstName" placeholder="Please enter first name" />
         </el-form-item>
         <el-form-item label="Last Name" prop="lastName" required>
-          <el-input v-model="newAccountForm.lastName" placeholder="请输入姓氏" />
+          <el-input v-model="newAccountForm.lastName" placeholder="Please enter last name" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -98,10 +98,10 @@
           <el-input v-model="editAccountForm.account" disabled />
         </el-form-item>
         <el-form-item label="First Name" prop="firstName" required>
-          <el-input v-model="editAccountForm.firstName" placeholder="请输入名字" />
+          <el-input v-model="editAccountForm.firstName" placeholder="Please enter first name" />
         </el-form-item>
         <el-form-item label="Last Name" prop="lastName" required>
-          <el-input v-model="editAccountForm.lastName" placeholder="请输入姓氏" />
+          <el-input v-model="editAccountForm.lastName" placeholder="Please enter last name" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -113,10 +113,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch, onActivated } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, User } from '@element-plus/icons-vue'
 import { accountApi, type Account, type CreateAccountParams, type UpdateAccountParams } from '@/api/account'
+
+const route = useRoute()
 
 const accountList = ref<Account[]>([])
 const newAccountDialogVisible = ref(false)
@@ -138,13 +141,13 @@ const editAccountForm = reactive<UpdateAccountParams & { account: string; id?: n
 
 const accountFormRules: FormRules = {
   account: [
-    { required: true, message: '请输入账户', trigger: 'blur' }
+    { required: true, message: 'Please enter account', trigger: 'blur' }
   ],
   firstName: [
-    { required: true, message: '请输入名字', trigger: 'blur' }
+    { required: true, message: 'Please enter first name', trigger: 'blur' }
   ],
   lastName: [
-    { required: true, message: '请输入姓氏', trigger: 'blur' }
+    { required: true, message: 'Please enter last name', trigger: 'blur' }
   ]
 }
 
@@ -159,9 +162,12 @@ const loadAccounts = async () => {
       const firstName = item.firstName || item.first_name || ''
       const lastName = item.lastName || item.last_name || ''
       const isActive = item.isActive === true || item.isActive === 'true' || item.active === true || item.active === 'true'
+      // 使用 userId 字段，如果没有则使用 id
+      const userId = item.userId || item.user_id || item.id
       
       return {
-        id: item.id,
+        id: userId, // 使用 userId 作为 id
+        userId: userId, // 同时保存 userId 字段
         account: item.username || item.account || '', // 后端返回 username，映射到前端的 account
         firstName: firstName,
         lastName: lastName,
@@ -172,8 +178,8 @@ const loadAccounts = async () => {
       }
     })
   } catch (error) {
-    console.error('加载账户列表失败:', error)
-    ElMessage.error('加载账户列表失败')
+    console.error('Failed to load account list:', error)
+    ElMessage.error('Failed to load account list')
     accountList.value = []
   }
 }
@@ -194,12 +200,14 @@ const handleSubmitNewAccount = async () => {
     if (valid) {
       try {
         await accountApi.createAccount(newAccountForm)
-        ElMessage.success('创建账户成功')
+        ElMessage.success('Account created successfully')
         newAccountDialogVisible.value = false
         loadAccounts()
       } catch (error: any) {
-        console.error('创建账户失败:', error)
-        ElMessage.error(error.response?.data?.message || '创建账户失败')
+        console.error('Failed to create account:', error)
+        // 优先使用 error.message（来自响应拦截器），然后是 error.response?.data?.message，最后是默认消息
+        const errorMessage = error.message || error.response?.data?.message || 'Failed to create account'
+        ElMessage.error(errorMessage)
       }
     }
   })
@@ -207,7 +215,9 @@ const handleSubmitNewAccount = async () => {
 
 // 编辑账户
 const handleEdit = (row: Account) => {
-  editAccountForm.id = row.id
+  // 使用 userId 字段，如果没有则使用 id
+  const userId = (row as any).userId || row.id
+  editAccountForm.id = userId
   editAccountForm.account = row.account
   editAccountForm.firstName = row.firstName
   editAccountForm.lastName = row.lastName
@@ -225,12 +235,14 @@ const handleSubmitEditAccount = async () => {
           firstName: editAccountForm.firstName,
           lastName: editAccountForm.lastName
         })
-        ElMessage.success('更新账户成功')
+        ElMessage.success('Account updated successfully')
         editAccountDialogVisible.value = false
         loadAccounts()
       } catch (error: any) {
-        console.error('更新账户失败:', error)
-        ElMessage.error(error.response?.data?.message || '更新账户失败')
+        console.error('Failed to update account:', error)
+        // 优先使用 error.message（来自响应拦截器），然后是 error.response?.data?.message，最后是默认消息
+        const errorMessage = error.message || error.response?.data?.message || 'Failed to update account'
+        ElMessage.error(errorMessage)
       }
     }
   })
@@ -239,14 +251,24 @@ const handleSubmitEditAccount = async () => {
 // 状态切换
 const handleStatusChange = async (row: Account) => {
   const originalIsActive = row.isActive
+  // 使用 userId 字段，如果没有则使用 id
+  const userId = (row as any).userId || row.id
+  if (!userId) {
+    ElMessage.error('User ID does not exist, cannot update status')
+    row.isActive = originalIsActive
+    return
+  }
+  
   try {
-    await accountApi.updateAccountStatus(row.id, row.isActive)
+    await accountApi.updateAccountStatus(userId, row.isActive)
     // 更新状态显示
     row.status = row.isActive ? 'enabled' : 'disabled'
-    ElMessage.success(`账户已${row.isActive ? '启用' : '禁用'}`)
+    ElMessage.success(`Account ${row.isActive ? 'enabled' : 'disabled'}`)
   } catch (error: any) {
-    console.error('更新账户状态失败:', error)
-    ElMessage.error(error.response?.data?.message || '更新账户状态失败')
+    console.error('Failed to update account status:', error)
+    // 优先使用 error.message（来自响应拦截器），然后是 error.response?.data?.message，最后是默认消息
+    const errorMessage = error.message || error.response?.data?.message || 'Failed to update account status'
+    ElMessage.error(errorMessage)
     // 恢复原状态
     row.isActive = originalIsActive
     row.status = originalIsActive ? 'enabled' : 'disabled'
@@ -255,26 +277,51 @@ const handleStatusChange = async (row: Account) => {
 
 // 重置密码
 const handleResetPassword = async (row: Account) => {
+  // 使用 userId 字段，如果没有则使用 id
+  const userId = (row as any).userId || row.id
+  if (!userId) {
+    ElMessage.error('User ID does not exist, cannot reset password')
+    return
+  }
+  
   try {
     await ElMessageBox.confirm(
-      `确定要重置账户 ${row.account} 的密码吗？`,
-      '提示',
+      `Are you sure you want to reset the password for account ${row.account}?`,
+      'Confirm',
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Confirm',
+        cancelButtonText: 'Cancel',
         type: 'warning'
       }
     )
     
-    await accountApi.resetPassword(row.id)
-    ElMessage.success('密码重置成功')
+    await accountApi.resetPassword(userId)
+    ElMessage.success('Password reset successfully')
   } catch (error: any) {
     if (error !== 'cancel') {
-      console.error('重置密码失败:', error)
-      ElMessage.error(error.response?.data?.message || '重置密码失败')
+      console.error('Failed to reset password:', error)
+      // 优先使用 error.message（来自响应拦截器），然后是 error.response?.data?.message，最后是默认消息
+      const errorMessage = error.message || error.response?.data?.message || 'Failed to reset password'
+      ElMessage.error(errorMessage)
     }
   }
 }
+
+// 监听路由变化，当路由切换到当前页面时刷新数据
+watch(
+  () => route.path,
+  (newPath) => {
+    if (newPath === '/account') {
+      loadAccounts()
+    }
+  },
+  { immediate: false }
+)
+
+// 当组件被激活时（从其他路由切换回来时）刷新数据
+onActivated(() => {
+  loadAccounts()
+})
 
 onMounted(() => {
   loadAccounts()

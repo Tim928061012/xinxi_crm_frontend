@@ -70,16 +70,16 @@ const activeMenu = computed(() => {
 
 const handleLogout = async () => {
   try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm('Are you sure you want to log out?', 'Confirm', {
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Cancel',
       type: 'warning'
     })
     
     await authStore.logout()
     router.push('/login')
   } catch {
-    // 用户取消
+    // User cancelled
   }
 }
 </script>

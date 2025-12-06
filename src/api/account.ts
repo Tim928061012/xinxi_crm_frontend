@@ -2,6 +2,7 @@ import request from './request'
 
 export interface Account {
   id: number
+  userId?: number // 后端返回的 userId 字段
   account: string
   firstName: string
   lastName: string

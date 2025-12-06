@@ -62,9 +62,12 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: true }
     } catch (error: any) {
       console.error('Login error:', error)
+      // 从错误对象中提取错误消息
+      // 优先使用 response.data.message，然后是 error.message，最后是默认消息
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed, please check your username and password'
       return { 
         success: false, 
-        message: error.response?.data?.message || error.message || '登录失败，请检查用户名和密码' 
+        message: errorMessage
       }
     }
   }
