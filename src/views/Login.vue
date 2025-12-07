@@ -154,7 +154,7 @@ const handleLogin = async () => {
             if (role === 'admin') {
               router.push('/account')
             } else {
-              router.push('/tasks')
+              router.push('/user/client')
             }
           }
         } else {

@@ -14,6 +14,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Login.vue'),
     meta: { requiresAuth: false }
   },
+  // 管理员布局
   {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
@@ -60,7 +61,7 @@ const routes: RouteRecordRaw[] = [
           roles: ['admin']
         }
       },
-      // 普通用户路由
+      // 普通用户路由（在管理员布局中，但通常不会被访问）
       {
         path: 'tasks',
         name: 'Tasks',
@@ -124,6 +125,65 @@ const routes: RouteRecordRaw[] = [
       }
     ]
   },
+  // 普通用户布局
+  {
+    path: '/user',
+    component: () => import('@/layouts/UserLayout.vue'),
+    redirect: '/user/client',
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: 'client',
+        name: 'UserClient',
+        component: () => import('@/views/user/ClientList.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '客户管理',
+          roles: ['user', 'admin']
+        }
+      },
+      {
+        path: 'client/new',
+        name: 'UserClientNew',
+        component: () => import('@/views/user/ClientDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '新建客户',
+          roles: ['user', 'admin']
+        }
+      },
+      {
+        path: 'client/:id',
+        name: 'UserClientView',
+        component: () => import('@/views/user/ClientDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '客户详情',
+          roles: ['user', 'admin']
+        }
+      },
+      {
+        path: 'client/:id/edit',
+        name: 'UserClientEdit',
+        component: () => import('@/views/user/ClientDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '编辑客户',
+          roles: ['user', 'admin']
+        }
+      },
+      {
+        path: 'profile',
+        name: 'UserProfile',
+        component: () => import('@/views/user/Profile.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '个人中心',
+          roles: ['user', 'admin']
+        }
+      }
+    ]
+  },
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
@@ -143,6 +203,7 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   const requiresAuth = to.meta.requiresAuth !== false
   const isAuthenticated = authStore.isAuthenticated
+  const userRole = authStore.user?.role
 
   // 如果路由需要认证但用户未登录
   if (requiresAuth && !isAuthenticated) {
@@ -151,21 +212,44 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // 如果已登录用户访问登录页，重定向到账户列表页
+  // 如果已登录用户访问登录页，重定向到对应页面
   if (to.name === 'Login' && isAuthenticated) {
-    const userRole = authStore.user?.role
     if (userRole === 'admin') {
       next({ name: 'Account' })
     } else {
-      next({ name: 'Tasks' })
+      next({ name: 'UserClient' })
     }
+    NProgress.done()
+    return
+  }
+
+  // 如果普通用户已登录，检查是否访问管理员路由，如果是则立即重定向
+  // 这必须在所有其他检查之前，避免加载 MainLayout
+  if (isAuthenticated && userRole === 'user') {
+    // 管理员专用路由路径（只检查根路径，不包括 /user 下的路径）
+    const adminPaths = ['/account', '/introducer', '/bank-centre', '/admin']
+    // 检查是否是管理员路径（排除 /user 开头的路径）
+    const isAdminPath = !to.path.startsWith('/user') && adminPaths.some(path => to.path === path || to.path.startsWith(path + '/'))
+    // 检查是否是管理员布局下的 /client 路径（不是 /user/client）
+    const isAdminClientPath = to.path === '/client' || (to.path.startsWith('/client/') && !to.path.startsWith('/user/client'))
+    
+    // 如果访问根路径或管理员路由，重定向到用户页面
+    if (to.path === '/' || isAdminPath || isAdminClientPath) {
+      next({ name: 'UserClient' })
+      NProgress.done()
+      return
+    }
+  }
+
+  // 如果访问根路径，根据角色重定向（普通用户已经在上面处理了）
+  if (to.path === '/' && isAuthenticated && userRole === 'admin') {
+    next({ name: 'Account' })
     NProgress.done()
     return
   }
 
   // 检查角色权限
   if (requiresAuth && to.meta.roles) {
-    const userRole = authStore.user?.role
     const allowedRoles = to.meta.roles as string[]
     
     if (!userRole || !allowedRoles.includes(userRole)) {
@@ -173,7 +257,7 @@ router.beforeEach((to, from, next) => {
       if (userRole === 'admin') {
         next({ name: 'Account' })
       } else {
-        next({ name: 'Tasks' })
+        next({ name: 'UserClient' })
       }
       NProgress.done()
       return

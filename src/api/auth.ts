@@ -12,6 +12,15 @@ export interface UserInfo {
   role: 'user' | 'admin'
   email: string
   avatar?: string
+  firstName?: string
+  lastName?: string
+  account?: string
+}
+
+export interface ChangePasswordParams {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
 }
 
 export const authApi = {
@@ -38,5 +47,15 @@ export const authApi = {
   // 获取用户信息
   getUserInfo() {
     return request.get('/auth/userinfo')
+  },
+
+  // 获取当前用户信息
+  getMe() {
+    return request.get('/auth/me')
+  },
+
+  // 修改密码
+  changePassword(params: ChangePasswordParams) {
+    return request.put('/auth/change-password', params)
   }
 }

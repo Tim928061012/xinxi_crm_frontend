@@ -1,5 +1,5 @@
 <template>
-  <div class="main-layout">
+  <div class="user-layout">
     <!-- 左侧菜单栏 -->
     <aside class="sidebar">
       <div class="logo">
@@ -9,32 +9,18 @@
       
       <nav class="sidebar-nav">
         <router-link
-          to="/account"
+          to="/user/client"
           class="nav-item"
-          :class="{ active: activeMenu === '/account' }"
-        >
-          Account
-        </router-link>
-        <router-link
-          to="/client"
-          class="nav-item"
-          :class="{ active: activeMenu === '/client' }"
+          :class="{ active: activeMenu === '/user/client' || activeMenu.startsWith('/user/client/') }"
         >
           Client
         </router-link>
         <router-link
-          to="/introducer"
+          to="/user/profile"
           class="nav-item"
-          :class="{ active: activeMenu === '/introducer' }"
+          :class="{ active: activeMenu === '/user/profile' }"
         >
-          Introducer
-        </router-link>
-        <router-link
-          to="/bank-centre"
-          class="nav-item"
-          :class="{ active: activeMenu === '/bank-centre' }"
-        >
-          Bank & Centre
+          Profile
         </router-link>
         <div class="nav-item logout" @click="handleLogout">
           Log out
@@ -54,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -66,13 +52,6 @@ const authStore = useAuthStore()
 const activeMenu = computed(() => {
   const { path } = route
   return path
-})
-
-// 检查用户角色，如果是普通用户，重定向到用户页面
-onMounted(() => {
-  if (authStore.user?.role === 'user') {
-    router.replace('/user/client')
-  }
 })
 
 const handleLogout = async () => {
@@ -92,7 +71,7 @@ const handleLogout = async () => {
 </script>
 
 <style lang="scss" scoped>
-.main-layout {
+.user-layout {
   display: flex;
   height: 100vh;
   overflow: hidden;
@@ -106,72 +85,52 @@ const handleLogout = async () => {
   border-right: 1px solid #e4e7ed;
   
   .logo {
-    height: 60px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 20px;
+    padding: 20px;
     border-bottom: 1px solid #e4e7ed;
     
     .logo-icon {
-      width: 24px;
-      height: 24px;
-      font-size: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      font-size: 24px;
+      margin-right: 8px;
     }
     
     .logo-text {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 600;
-      color: #409eff;
+      color: #303133;
     }
   }
   
   .sidebar-nav {
     flex: 1;
     padding: 20px 0;
-    display: flex;
-    flex-direction: column;
     
     .nav-item {
       display: block;
       padding: 12px 20px;
       color: #606266;
       text-decoration: none;
-      font-size: 14px;
       cursor: pointer;
       transition: all 0.3s;
-      position: relative;
+      border-left: 3px solid transparent;
       
       &:hover {
-        background-color: #f0f0f0;
+        background-color: #ecf5ff;
+        color: #409eff;
       }
       
       &.active {
-        background-color: #e6f4ff;
+        background-color: #ecf5ff;
         color: #409eff;
-        
-        &::after {
-          content: '';
-          position: absolute;
-          right: 0;
-          top: 0;
-          bottom: 0;
-          width: 3px;
-          background-color: #409eff;
-        }
+        border-left-color: #409eff;
+        font-weight: 500;
       }
       
       &.logout {
         margin-top: auto;
-        color: #606266;
-        
-        &:hover {
-          background-color: #f0f0f0;
-        }
+        border-top: 1px solid #e4e7ed;
+        padding-top: 20px;
       }
     }
   }
@@ -179,13 +138,8 @@ const handleLogout = async () => {
 
 .main-content {
   flex: 1;
-  background-color: #f5f5f5;
   overflow-y: auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0;
-  padding: 0;
+  background-color: #fff;
 }
 
 .fade-enter-active,
@@ -198,3 +152,4 @@ const handleLogout = async () => {
   opacity: 0;
 }
 </style>
+

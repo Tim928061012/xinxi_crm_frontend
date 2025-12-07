@@ -5,6 +5,9 @@ export interface User {
   role: 'user' | 'admin'
   email: string
   avatar?: string
+  firstName?: string
+  lastName?: string
+  account?: string
 }
 
 export interface LoginForm {
