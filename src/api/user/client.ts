@@ -89,27 +89,27 @@ export interface UpdateClientParams extends CreateClientParams {}
 export const userClientApi = {
   // 获取客户列表
   getClients(params?: any) {
-    return request.get('/clients', { params })
+    return request.get('/user/clients', { params })
   },
 
   // 获取客户详情
   getClientById(id: number) {
-    return request.get(`/clients/${id}`)
+    return request.get(`/user/clients/${id}`)
   },
 
   // 创建客户
   createClient(data: CreateClientParams) {
-    return request.post('/clients', data)
+    return request.post('/user/clients', data)
   },
 
   // 更新客户
   updateClient(id: number, data: UpdateClientParams) {
-    return request.put(`/clients/${id}`, data)
+    return request.put(`/user/clients/${id}`, data)
   },
 
   // 删除客户
   deleteClient(id: number) {
-    return request.delete(`/clients/${id}`)
+    return request.delete(`/user/clients/${id}`)
   }
 }
 

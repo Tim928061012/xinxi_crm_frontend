@@ -106,9 +106,10 @@ const loadClients = async () => {
         createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
       }
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to load client list:', error)
-    ElMessage.error('Failed to load client list')
+    // 不显示错误消息，避免干扰用户体验
+    // 如果 API 调用失败，保持空列表
     clientList.value = []
   }
 }
@@ -116,10 +117,8 @@ const loadClients = async () => {
 // 新建客户
 const handleNewClient = () => {
   console.log('handleNewClient called, navigating to /user/client/new')
-  // 使用路由名称而不是路径，更可靠
   router.push({ name: 'UserClientNew' }).catch((error) => {
     console.error('Navigation error:', error)
-    // 如果使用名称失败，尝试使用路径
     router.push('/user/client/new').catch((err) => {
       console.error('Navigation with path also failed:', err)
     })
@@ -164,8 +163,8 @@ const handleDelete = async (row: Client) => {
 // 监听路由变化，当路由切换到当前页面时刷新数据
 watch(
   () => route.path,
-  (newPath) => {
-    if (newPath === '/user/client') {
+  (newPath, oldPath) => {
+    if (newPath === '/user/client' && newPath !== oldPath) {
       loadClients()
     }
   },
@@ -174,10 +173,13 @@ watch(
 
 // 当组件被激活时（从其他路由切换回来时）刷新数据
 onActivated(() => {
-  loadClients()
+  if (route.path === '/user/client') {
+    loadClients()
+  }
 })
 
 onMounted(() => {
+  // 确保在组件挂载时加载数据
   loadClients()
 })
 </script>
@@ -314,4 +316,3 @@ onMounted(() => {
   }
 }
 </style>
-

@@ -76,16 +76,16 @@ import { ref, onMounted, watch, onActivated } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
-import { clientApi, type Client, type UpdateComplianceOperationParams } from '@/api/client'
+import { adminClientApi, type AdminClient, type UpdateComplianceOperationParams } from '@/api/client'
 import { formatDateTime } from '@/utils/date'
 
 const route = useRoute()
-const clientList = ref<Client[]>([])
+const clientList = ref<AdminClient[]>([])
 
 // 加载客户列表
 const loadClients = async () => {
   try {
-    const response = await clientApi.getClients()
+    const response = await adminClientApi.getClients()
     const data = response.data || response || []
     // 转换数据格式
     clientList.value = data.map((item: any) => {
@@ -121,7 +121,7 @@ const loadClients = async () => {
 }
 
 // Compliance 切换
-const handleComplianceChange = async (row: Client) => {
+const handleComplianceChange = async (row: AdminClient) => {
   const originalCompliance = row.compliance
   try {
     const params: UpdateComplianceOperationParams = {
@@ -130,9 +130,9 @@ const handleComplianceChange = async (row: Client) => {
     }
     
     if (row.type === 'individual') {
-      await clientApi.updateIndividualComplianceOperation(row.id, params)
+      await adminClientApi.updateIndividualComplianceOperation(row.id, params)
     } else {
-      await clientApi.updateCorporateComplianceOperation(row.id, params)
+      await adminClientApi.updateCorporateComplianceOperation(row.id, params)
     }
     
     ElMessage.success(`Compliance ${row.compliance ? 'enabled' : 'disabled'}`)
@@ -146,7 +146,7 @@ const handleComplianceChange = async (row: Client) => {
 }
 
 // Operation 切换
-const handleOperationChange = async (row: Client) => {
+const handleOperationChange = async (row: AdminClient) => {
   const originalOperation = row.operation
   try {
     const params: UpdateComplianceOperationParams = {
@@ -155,9 +155,9 @@ const handleOperationChange = async (row: Client) => {
     }
     
     if (row.type === 'individual') {
-      await clientApi.updateIndividualComplianceOperation(row.id, params)
+      await adminClientApi.updateIndividualComplianceOperation(row.id, params)
     } else {
-      await clientApi.updateCorporateComplianceOperation(row.id, params)
+      await adminClientApi.updateCorporateComplianceOperation(row.id, params)
     }
     
     ElMessage.success(`Operation ${row.operation ? 'enabled' : 'disabled'}`)
@@ -171,7 +171,7 @@ const handleOperationChange = async (row: Client) => {
 }
 
 // 查看客户详情
-const handleView = (row: Client) => {
+const handleView = (row: AdminClient) => {
   // TODO: 实现查看客户详情功能
   ElMessage.info('View client details (to be implemented)')
 }

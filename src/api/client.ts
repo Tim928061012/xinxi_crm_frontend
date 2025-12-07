@@ -1,6 +1,7 @@
 import request from './request'
 
-export interface Client {
+// Admin 客户数据结构（与普通用户的 Client 完全独立）
+export interface AdminClient {
   id: number
   clientId?: number // 用于区分个人客户和企业客户
   client: string // 客户名称
@@ -16,10 +17,11 @@ export interface UpdateComplianceOperationParams {
   operation: boolean
 }
 
-export const clientApi = {
-  // 获取客户列表
+// Admin 客户 API（与普通用户的 userClientApi 完全独立）
+export const adminClientApi = {
+  // 获取所有客户列表（管理员视图）
   getClients(params?: any) {
-    return request.get('/clients', { params })
+    return request.get('/admin/clients', { params })
   },
 
   // 修改个人客户的 compliance 和 operation

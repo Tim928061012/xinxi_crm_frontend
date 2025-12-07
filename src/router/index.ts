@@ -223,6 +223,28 @@ router.beforeEach((to, from, next) => {
     return
   }
 
+  // 优先处理 /user 下的路由，确保能正常通过
+  if (to.path.startsWith('/user')) {
+    // 检查角色权限
+    if (requiresAuth && to.meta.roles) {
+      const allowedRoles = to.meta.roles as string[]
+      
+      if (!userRole || !allowedRoles.includes(userRole)) {
+        // 没有权限，根据角色重定向
+        if (userRole === 'admin') {
+          next({ name: 'Account' })
+        } else {
+          next({ name: 'UserClient' })
+        }
+        NProgress.done()
+        return
+      }
+    }
+    // 有权限，允许通过
+    next()
+    return
+  }
+
   // 如果普通用户已登录，检查是否访问管理员路由，如果是则立即重定向
   // 这必须在所有其他检查之前，避免加载 MainLayout
   if (isAuthenticated && userRole === 'user') {
@@ -248,7 +270,7 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // 检查角色权限
+  // 检查角色权限（非 /user 路由）
   if (requiresAuth && to.meta.roles) {
     const allowedRoles = to.meta.roles as string[]
     

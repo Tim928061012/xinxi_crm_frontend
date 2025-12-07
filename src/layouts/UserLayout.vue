@@ -9,16 +9,18 @@
       
       <nav class="sidebar-nav">
         <router-link
-          to="/user/client"
+          :to="{ name: 'UserClient' }"
           class="nav-item"
           :class="{ active: activeMenu === '/user/client' || activeMenu.startsWith('/user/client/') }"
+          @click="handleNavClick"
         >
           Client
         </router-link>
         <router-link
-          to="/user/profile"
+          :to="{ name: 'UserProfile' }"
           class="nav-item"
           :class="{ active: activeMenu === '/user/profile' }"
+          @click="handleNavClick"
         >
           Profile
         </router-link>
@@ -53,6 +55,11 @@ const activeMenu = computed(() => {
   const { path } = route
   return path
 })
+
+const handleNavClick = () => {
+  // 确保导航正常工作，不需要额外处理
+  // router-link 会自动处理导航
+}
 
 const handleLogout = async () => {
   try {
