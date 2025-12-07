@@ -422,25 +422,384 @@
 
       <el-tab-pane label="KYC" name="kyc">
         <div class="tab-content">
-          <p>KYC content will be added later.</p>
+          <div class="kyc-section">
+            <div class="section-header">
+              <h3 class="section-title">Upload Supporting Documents</h3>
+              <el-button type="primary" :icon="Plus" @click="handleUploadKYCDocument">
+                Upload
+              </el-button>
+            </div>
+            <el-table
+              v-if="kycData.documents && kycData.documents.length > 0"
+              :data="kycData.documents"
+              stripe
+              style="width: 100%"
+            >
+              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="size" label="Size" width="150" />
+              <el-table-column label="Upload Time" width="200">
+                <template #default="{ row }">
+                  {{ formatDateTime(row.uploadTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="Actions" width="200">
+                <template #default="{ row }">
+                  <el-link type="primary" @click="handleOpenKYCDocument(row)" :underline="false">
+                    Open
+                  </el-link>
+                  <el-divider direction="vertical" />
+                  <el-link type="primary" @click="handleDeleteKYCDocument(row)" :underline="false">
+                    Delete
+                  </el-link>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div v-else class="empty-state">
+              <p>No documents uploaded yet. Click "Upload" to add documents.</p>
+            </div>
+          </div>
         </div>
       </el-tab-pane>
 
       <el-tab-pane label="Investment Risk Profile" name="risk">
         <div class="tab-content">
-          <p>Investment Risk Profile content will be added later.</p>
+          <el-form :model="riskProfileData" label-width="250px" class="risk-profile-form">
+            <!-- Investment Risk Rating Section -->
+            <div class="form-section">
+              <div class="form-row">
+                <el-form-item label="Investment Risk Rating">
+                  <el-select v-model="riskProfileData.investmentRiskRating" placeholder="Please select" style="width: 100%">
+                    <el-option label="Conservative" value="Conservative" />
+                    <el-option label="Moderate" value="Moderate" />
+                    <el-option label="Balanced" value="Balanced" />
+                    <el-option label="Growth" value="Growth" />
+                    <el-option label="Aggressive" value="Aggressive" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="HongKong PI">
+                  <el-switch
+                    v-model="riskProfileData.hongKongPI"
+                    :active-value="true"
+                    :inactive-value="false"
+                  />
+                  <span style="margin-left: 8px;">{{ riskProfileData.hongKongPI ? 'Yes' : 'No' }}</span>
+                </el-form-item>
+              </div>
+              <div class="form-row">
+                <el-form-item label="Remarks" style="width: 100%;">
+                  <el-input
+                    v-model="riskProfileData.remarks"
+                    type="textarea"
+                    :rows="4"
+                    placeholder="Please enter remarks"
+                  />
+                </el-form-item>
+              </div>
+            </div>
+
+            <!-- Vulnerable Client Assessment Section -->
+            <div class="form-section">
+              <h3 class="section-title">Vulnerable Client Assessment</h3>
+              <div class="form-row">
+                <div class="vulnerable-questions">
+                  <el-form-item>
+                    <el-checkbox v-model="riskProfileData.vulnerableClientAssessment.age65AndAbove">
+                      Age 65 years old and above
+                    </el-checkbox>
+                  </el-form-item>
+                  <el-form-item>
+                    <el-checkbox v-model="riskProfileData.vulnerableClientAssessment.physicalOrIntellectualDisabilities">
+                      Physical or intellectual disabilities
+                    </el-checkbox>
+                  </el-form-item>
+                  <el-form-item>
+                    <el-checkbox v-model="riskProfileData.vulnerableClientAssessment.notProficientInEnglish">
+                      Not proficient in written or spoken English
+                    </el-checkbox>
+                  </el-form-item>
+                  <el-form-item>
+                    <el-checkbox v-model="riskProfileData.vulnerableClientAssessment.educationPrimaryOrBelow">
+                      Education primary or below and has no investment
+                    </el-checkbox>
+                  </el-form-item>
+                </div>
+                <div class="vulnerable-client-info">
+                  <el-form-item label="Vulnerable Client">
+                    <el-switch
+                      v-model="riskProfileData.vulnerableClientAssessment.vulnerableClient"
+                      :active-value="true"
+                      :inactive-value="false"
+                    />
+                    <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.vulnerableClient ? 'Yes' : 'No' }}</span>
+                  </el-form-item>
+                  <el-form-item label="Review Date (dd/mm/yyyy)">
+                    <el-date-picker
+                      v-model="riskProfileData.vulnerableClientAssessment.reviewDate"
+                      type="date"
+                      placeholder="Select date"
+                      format="DD/MM/YYYY"
+                      value-format="DD/MM/YYYY"
+                      style="width: 100%"
+                    />
+                  </el-form-item>
+                </div>
+              </div>
+            </div>
+
+            <!-- Investment Knowledge & Experience Section -->
+            <div class="form-section">
+              <h3 class="section-title">Investment Knowledge & Experience</h3>
+              <el-table :data="riskProfileData.investmentKnowledgeExperience.types" stripe style="width: 100%">
+                <el-table-column prop="type" label="Type" width="400" />
+                <el-table-column label="Knowledge" width="150" align="center">
+                  <template #default="{ row }">
+                    <el-checkbox v-model="row.knowledge" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="Experience" width="150" align="center">
+                  <template #default="{ row }">
+                    <el-checkbox v-model="row.experience" />
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-form>
         </div>
       </el-tab-pane>
 
       <el-tab-pane label="Documents" name="documents">
         <div class="tab-content">
-          <p>Documents content will be added later.</p>
+          <!-- Upload Identity Proof -->
+          <div class="document-section">
+            <div class="section-header">
+              <h3 class="section-title">Upload Identity Proof</h3>
+              <el-button type="primary" :icon="Plus" @click="handleUploadDocument('identity')">
+                Upload
+              </el-button>
+            </div>
+            <el-table
+              v-if="documentsData.identity && documentsData.identity.length > 0"
+              :data="documentsData.identity"
+              stripe
+              style="width: 100%"
+            >
+              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="size" label="Size" width="150" />
+              <el-table-column label="Upload Time" width="200">
+                <template #default="{ row }">
+                  {{ formatDateTime(row.uploadTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="Actions" width="200">
+                <template #default="{ row }">
+                  <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
+                    Open
+                  </el-link>
+                  <el-divider direction="vertical" />
+                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                    Delete
+                  </el-link>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <!-- Upload Address Proof -->
+          <div class="document-section">
+            <div class="section-header">
+              <h3 class="section-title">Upload Address Proof</h3>
+              <el-button type="primary" :icon="Plus" @click="handleUploadDocument('address')">
+                Upload
+              </el-button>
+            </div>
+            <el-table
+              v-if="documentsData.address && documentsData.address.length > 0"
+              :data="documentsData.address"
+              stripe
+              style="width: 100%"
+            >
+              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="size" label="Size" width="150" />
+              <el-table-column label="Upload Time" width="200">
+                <template #default="{ row }">
+                  {{ formatDateTime(row.uploadTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="Actions" width="200">
+                <template #default="{ row }">
+                  <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
+                    Open
+                  </el-link>
+                  <el-divider direction="vertical" />
+                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                    Delete
+                  </el-link>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <!-- Upload Forms -->
+          <div class="document-section">
+            <div class="section-header">
+              <h3 class="section-title">Upload Forms</h3>
+              <el-button type="primary" :icon="Plus" @click="handleUploadDocument('forms')">
+                Upload
+              </el-button>
+            </div>
+            <el-table
+              v-if="documentsData.forms && documentsData.forms.length > 0"
+              :data="documentsData.forms"
+              stripe
+              style="width: 100%"
+            >
+              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="size" label="Size" width="150" />
+              <el-table-column label="Upload Time" width="200">
+                <template #default="{ row }">
+                  {{ formatDateTime(row.uploadTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="Actions" width="200">
+                <template #default="{ row }">
+                  <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
+                    Open
+                  </el-link>
+                  <el-divider direction="vertical" />
+                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                    Delete
+                  </el-link>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <!-- Upload XinXi Statements -->
+          <div class="document-section">
+            <div class="section-header">
+              <h3 class="section-title">Upload XinXi Statements</h3>
+              <el-button type="primary" :icon="Plus" @click="handleUploadDocument('statements')">
+                Upload
+              </el-button>
+            </div>
+            <el-table
+              v-if="documentsData.statements && documentsData.statements.length > 0"
+              :data="documentsData.statements"
+              stripe
+              style="width: 100%"
+            >
+              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="size" label="Size" width="150" />
+              <el-table-column label="Upload Time" width="200">
+                <template #default="{ row }">
+                  {{ formatDateTime(row.uploadTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="Actions" width="200">
+                <template #default="{ row }">
+                  <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
+                    Open
+                  </el-link>
+                  <el-divider direction="vertical" />
+                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                    Delete
+                  </el-link>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
       </el-tab-pane>
 
       <el-tab-pane label="Fee Schedule" name="fee">
         <div class="tab-content">
-          <p>Fee Schedule content will be added later.</p>
+          <el-form :model="feeScheduleData" label-width="250px" class="fee-schedule-form">
+            <div class="form-row">
+              <!-- Left Column -->
+              <div class="fee-column">
+                <!-- Management Fee -->
+                <div class="fee-item">
+                  <div class="fee-header">
+                    <span class="fee-label">Management Fee</span>
+                    <el-switch
+                      v-model="feeScheduleData.managementFee.enabled"
+                      :active-value="true"
+                      :inactive-value="false"
+                    />
+                    <span style="margin-left: 8px;">{{ feeScheduleData.managementFee.enabled ? 'Yes' : 'No' }}</span>
+                  </div>
+                  <template v-if="feeScheduleData.managementFee.enabled">
+                    <el-form-item label="Yearly Management Fee (%)">
+                      <el-input v-model.number="feeScheduleData.managementFee.yearlyManagementFee" type="number" placeholder="Please enter" />
+                    </el-form-item>
+                    <el-form-item label="Minimum Management Fee (p.a.)">
+                      <el-input v-model.number="feeScheduleData.managementFee.minimumManagementFee" type="number" placeholder="Please enter" />
+                    </el-form-item>
+                  </template>
+                </div>
+
+                <!-- Retrocession -->
+                <div class="fee-item">
+                  <div class="fee-header">
+                    <span class="fee-label">Retrocession</span>
+                    <el-switch
+                      v-model="feeScheduleData.retrocession.enabled"
+                      :active-value="true"
+                      :inactive-value="false"
+                    />
+                    <span style="margin-left: 8px;">{{ feeScheduleData.retrocession.enabled ? 'Yes' : 'No' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column -->
+              <div class="fee-column">
+                <!-- Performance Fee -->
+                <div class="fee-item">
+                  <div class="fee-header">
+                    <span class="fee-label">Performance Fee</span>
+                    <el-switch
+                      v-model="feeScheduleData.performanceFee.enabled"
+                      :active-value="true"
+                      :inactive-value="false"
+                    />
+                    <span style="margin-left: 8px;">{{ feeScheduleData.performanceFee.enabled ? 'Yes' : 'No' }}</span>
+                  </div>
+                  <template v-if="feeScheduleData.performanceFee.enabled">
+                    <el-form-item label="Hurdle Rate (%)">
+                      <el-input v-model.number="feeScheduleData.performanceFee.hurdleRate" type="number" placeholder="Please enter" />
+                    </el-form-item>
+                    <el-form-item label="Profit shared to XinXi (%)">
+                      <el-input v-model.number="feeScheduleData.performanceFee.profitSharedToXinXi" type="number" placeholder="Please enter" />
+                    </el-form-item>
+                  </template>
+                </div>
+
+                <!-- Others -->
+                <div class="fee-item">
+                  <div class="fee-header">
+                    <span class="fee-label">Others</span>
+                    <el-switch
+                      v-model="feeScheduleData.others.enabled"
+                      :active-value="true"
+                      :inactive-value="false"
+                    />
+                    <span style="margin-left: 8px;">{{ feeScheduleData.others.enabled ? 'Yes' : 'No' }}</span>
+                  </div>
+                  <template v-if="feeScheduleData.others.enabled">
+                    <el-form-item label="Details">
+                      <el-input
+                        v-model="feeScheduleData.others.details"
+                        type="textarea"
+                        :rows="4"
+                        placeholder="Please enter details"
+                      />
+                    </el-form-item>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </el-form>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -519,20 +878,59 @@
         <el-button type="primary" @click="handleSubmitPortfolio">Submit</el-button>
       </template>
     </el-dialog>
+
+    <!-- 文档上传对话框 -->
+    <el-dialog
+      v-model="documentUploadDialogVisible"
+      :title="documentUploadTitle"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <el-upload
+        ref="uploadRef"
+        class="upload-demo"
+        drag
+        :auto-upload="false"
+        :on-change="handleFileChange"
+        :file-list="fileList"
+        :limit="1"
+        accept=".pdf"
+      >
+        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+        <div class="el-upload__text">
+          Drag & drop files here, or <em>click to upload</em>
+        </div>
+        <template #tip>
+          <div class="el-upload__tip">
+            Only pdf can be uploaded, and the size does not exceed 100MB
+          </div>
+        </template>
+      </el-upload>
+      <template #footer>
+        <el-button @click="documentUploadDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="handleSubmitDocumentUpload" :loading="uploading">
+          {{ uploading ? 'Uploading...' : 'Upload' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { ArrowLeft, Plus, User, Phone, Message, Location } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
+import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { userClientApi, type Client, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
 import { portfolioApi, type Portfolio, type CreatePortfolioParams } from '@/api/user/portfolio'
 import { accountApi, type Account } from '@/api/account'
 import { introducerApi, type Introducer } from '@/api/introducer'
 import { bankApi, type BankCentre } from '@/api/bank'
+import { kycApi, type KYCData, type KYCDocument } from '@/api/user/kyc'
+import { documentsApi, type DocumentsData, type Document, type DocumentType } from '@/api/user/documents'
+import { riskProfileApi, type InvestmentRiskProfile, type InvestmentType } from '@/api/user/risk-profile'
+import { feeScheduleApi, type FeeSchedule } from '@/api/user/fee-schedule'
 import { formatDateTime } from '@/utils/date'
 
 const route = useRoute()
@@ -596,6 +994,92 @@ const portfolioForm = reactive<CreatePortfolioParams>({
   bookingCentre: '',
   portfolioNo: ''
 })
+
+// KYC 数据
+const kycData = reactive<KYCData>({
+  documents: []
+})
+
+// Documents 数据
+const documentsData = reactive<DocumentsData>({
+  identity: [],
+  address: [],
+  forms: [],
+  statements: []
+})
+
+// Investment Risk Profile 数据
+const riskProfileData = reactive<InvestmentRiskProfile>({
+  investmentRiskRating: undefined,
+  remarks: '',
+  hongKongPI: false,
+  vulnerableClientAssessment: {
+    age65AndAbove: false,
+    physicalOrIntellectualDisabilities: false,
+    notProficientInEnglish: false,
+    educationPrimaryOrBelow: false,
+    vulnerableClient: false,
+    reviewDate: undefined
+  },
+  investmentKnowledgeExperience: {
+    types: [
+      { type: 'Alternative Investments', knowledge: false, experience: false },
+      { type: 'Bonds', knowledge: false, experience: false },
+      { type: 'Bonds With Special Features', knowledge: false, experience: false },
+      { type: 'Commodities', knowledge: false, experience: false },
+      { type: 'Deposits (including foreign currency deposits)', knowledge: false, experience: false },
+      { type: 'Equities', knowledge: false, experience: false },
+      { type: 'Equity Funds / Money Market Funds', knowledge: false, experience: false },
+      { type: 'Synthetic ETF / Futures-based ETF / Leveraged and Inverse Products', knowledge: false, experience: false },
+      { type: 'Other Mutual Funds', knowledge: false, experience: false },
+      { type: 'Derivatives', knowledge: false, experience: false },
+      { type: 'Foreign Exchange (e.g. Spot)', knowledge: false, experience: false },
+      { type: 'Security Tokens', knowledge: false, experience: false },
+      { type: 'Margin/Leveraged Trading', knowledge: false, experience: false }
+    ]
+  }
+})
+
+// Fee Schedule 数据
+const feeScheduleData = reactive<FeeSchedule>({
+  managementFee: {
+    enabled: false,
+    yearlyManagementFee: undefined,
+    minimumManagementFee: undefined
+  },
+  retrocession: {
+    enabled: false
+  },
+  performanceFee: {
+    enabled: false,
+    hurdleRate: undefined,
+    profitSharedToXinXi: undefined
+  },
+  others: {
+    enabled: false,
+    details: undefined
+  }
+})
+
+// 文档上传
+const documentUploadDialogVisible = ref(false)
+const documentUploadType = ref<DocumentType | 'kyc'>('identity')
+const documentUploadTitle = computed(() => {
+  if (documentUploadType.value === 'kyc') {
+    return 'Upload Supporting Documents'
+  }
+  const titles: Record<DocumentType, string> = {
+    identity: 'Upload Identity Proof',
+    address: 'Upload Address Proof',
+    forms: 'Upload Forms',
+    statements: 'Upload XinXi Statements'
+  }
+  return titles[documentUploadType.value]
+})
+const uploadRef = ref()
+const fileList = ref<UploadFile[]>([])
+const uploading = ref(false)
+const currentUploadFile = ref<File | null>(null)
 
 // 可用的 Booking Centres（根据选择的 Bank 动态获取）
 const availableBookingCentres = computed(() => {
@@ -669,6 +1153,57 @@ const loadClient = async () => {
     } catch (error) {
       console.warn('Failed to load portfolios:', error)
       clientForm.portfolios = []
+    }
+
+    // 加载 KYC 数据
+    try {
+      const kycResponse = await kycApi.getKYC(clientId.value)
+      const kyc = kycResponse.data || kycResponse || {}
+      kycData.documents = kyc.documents || []
+    } catch (error) {
+      console.warn('Failed to load KYC data:', error)
+      kycData.documents = []
+    }
+
+    // 加载 Documents 数据
+    try {
+      const documentsResponse = await documentsApi.getDocuments(clientId.value)
+      const documents = documentsResponse.data || documentsResponse || {}
+      documentsData.identity = documents.identity || []
+      documentsData.address = documents.address || []
+      documentsData.forms = documents.forms || []
+      documentsData.statements = documents.statements || []
+    } catch (error) {
+      console.warn('Failed to load documents:', error)
+    }
+
+    // 加载 Investment Risk Profile 数据
+    try {
+      const riskResponse = await riskProfileApi.getRiskProfile(clientId.value)
+      const risk = riskResponse.data || riskResponse || {}
+      if (risk.investmentRiskRating) riskProfileData.investmentRiskRating = risk.investmentRiskRating
+      if (risk.remarks) riskProfileData.remarks = risk.remarks
+      if (risk.hongKongPI !== undefined) riskProfileData.hongKongPI = risk.hongKongPI
+      if (risk.vulnerableClientAssessment) {
+        Object.assign(riskProfileData.vulnerableClientAssessment, risk.vulnerableClientAssessment)
+      }
+      if (risk.investmentKnowledgeExperience?.types) {
+        riskProfileData.investmentKnowledgeExperience.types = risk.investmentKnowledgeExperience.types
+      }
+    } catch (error) {
+      console.warn('Failed to load risk profile:', error)
+    }
+
+    // 加载 Fee Schedule 数据
+    try {
+      const feeResponse = await feeScheduleApi.getFeeSchedule(clientId.value)
+      const fee = feeResponse.data || feeResponse || {}
+      if (fee.managementFee) Object.assign(feeScheduleData.managementFee, fee.managementFee)
+      if (fee.retrocession) Object.assign(feeScheduleData.retrocession, fee.retrocession)
+      if (fee.performanceFee) Object.assign(feeScheduleData.performanceFee, fee.performanceFee)
+      if (fee.others) Object.assign(feeScheduleData.others, fee.others)
+    } catch (error) {
+      console.warn('Failed to load fee schedule:', error)
     }
   } catch (error: any) {
     console.error('Failed to load client:', error)
@@ -818,6 +1353,32 @@ const handleSave = async () => {
         if (isEditMode.value && currentClientId) {
           // 更新现有 Client
           await userClientApi.updateClient(currentClientId, clientForm)
+          
+          // 保存其他 tab 的数据
+          try {
+            await kycApi.updateKYC(currentClientId, kycData)
+          } catch (error) {
+            console.warn('Failed to save KYC:', error)
+          }
+          
+          try {
+            await documentsApi.updateDocuments(currentClientId, documentsData)
+          } catch (error) {
+            console.warn('Failed to save documents:', error)
+          }
+          
+          try {
+            await riskProfileApi.updateRiskProfile(currentClientId, riskProfileData)
+          } catch (error) {
+            console.warn('Failed to save risk profile:', error)
+          }
+          
+          try {
+            await feeScheduleApi.updateFeeSchedule(currentClientId, feeScheduleData)
+          } catch (error) {
+            console.warn('Failed to save fee schedule:', error)
+          }
+          
           ElMessage.success('Client updated successfully')
         } else {
           // 创建新 Client
@@ -858,6 +1419,31 @@ const handleSave = async () => {
                 console.error('Failed to save portfolio:', error)
               }
             }
+          }
+          
+          // 保存其他 tab 的数据
+          try {
+            await kycApi.updateKYC(currentClientId, kycData)
+          } catch (error) {
+            console.warn('Failed to save KYC:', error)
+          }
+          
+          try {
+            await documentsApi.updateDocuments(currentClientId, documentsData)
+          } catch (error) {
+            console.warn('Failed to save documents:', error)
+          }
+          
+          try {
+            await riskProfileApi.updateRiskProfile(currentClientId, riskProfileData)
+          } catch (error) {
+            console.warn('Failed to save risk profile:', error)
+          }
+          
+          try {
+            await feeScheduleApi.updateFeeSchedule(currentClientId, feeScheduleData)
+          } catch (error) {
+            console.warn('Failed to save fee schedule:', error)
           }
           
           // 确保跳转到编辑页面
@@ -985,6 +1571,182 @@ const handleSubmitPortfolio = async () => {
   })
 }
 
+// KYC 文档处理
+const handleUploadKYCDocument = () => {
+  if (!clientId.value) {
+    ElMessage.warning('Please save the client first')
+    return
+  }
+  documentUploadType.value = 'kyc'
+  fileList.value = []
+  currentUploadFile.value = null
+  documentUploadDialogVisible.value = true
+}
+
+const handleOpenKYCDocument = async (document: KYCDocument) => {
+  if (!clientId.value || !document.id) return
+  try {
+    const response = await kycApi.getKYCDocument(clientId.value, document.id)
+    const blob = new Blob([response], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    window.open(url, '_blank')
+  } catch (error) {
+    console.error('Failed to open document:', error)
+    ElMessage.error('Failed to open document')
+  }
+}
+
+const handleDeleteKYCDocument = async (document: KYCDocument) => {
+  if (!clientId.value || !document.id) return
+  try {
+    await ElMessageBox.confirm(
+      `Are you sure you want to delete "${document.document}"?`,
+      'Confirm Delete',
+      {
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        type: 'warning'
+      }
+    )
+    await kycApi.deleteKYCDocument(clientId.value, document.id)
+    const index = kycData.documents.findIndex(d => d.id === document.id)
+    if (index > -1) {
+      kycData.documents.splice(index, 1)
+    }
+    ElMessage.success('Document deleted successfully')
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('Failed to delete document:', error)
+      ElMessage.error('Failed to delete document')
+    }
+  }
+}
+
+// Documents 处理
+const handleUploadDocument = (type: DocumentType) => {
+  if (!clientId.value) {
+    ElMessage.warning('Please save the client first')
+    return
+  }
+  documentUploadType.value = type
+  fileList.value = []
+  currentUploadFile.value = null
+  documentUploadDialogVisible.value = true
+}
+
+const handleOpenDocument = async (document: Document) => {
+  if (!clientId.value || !document.id) return
+  try {
+    const response = await documentsApi.getDocument(clientId.value, document.id)
+    const blob = new Blob([response], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    window.open(url, '_blank')
+  } catch (error) {
+    console.error('Failed to open document:', error)
+    ElMessage.error('Failed to open document')
+  }
+}
+
+const handleDeleteDocument = async (document: Document) => {
+  if (!clientId.value || !document.id) return
+  try {
+    await ElMessageBox.confirm(
+      `Are you sure you want to delete "${document.document}"?`,
+      'Confirm Delete',
+      {
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        type: 'warning'
+      }
+    )
+    await documentsApi.deleteDocument(clientId.value, document.id)
+    // 从对应的数组中删除
+    const type = document.type
+    const index = documentsData[type].findIndex(d => d.id === document.id)
+    if (index > -1) {
+      documentsData[type].splice(index, 1)
+    }
+    ElMessage.success('Document deleted successfully')
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('Failed to delete document:', error)
+      ElMessage.error('Failed to delete document')
+    }
+  }
+}
+
+// 文件上传处理
+const handleFileChange = (file: UploadFile, files: UploadFiles) => {
+  if (file.raw) {
+    // 检查文件类型
+    if (file.raw.type !== 'application/pdf') {
+      ElMessage.error('Only PDF files are allowed')
+      fileList.value = []
+      return
+    }
+    // 检查文件大小 (100MB)
+    if (file.raw.size > 100 * 1024 * 1024) {
+      ElMessage.error('File size cannot exceed 100MB')
+      fileList.value = []
+      return
+    }
+    currentUploadFile.value = file.raw
+  }
+}
+
+const handleSubmitDocumentUpload = async () => {
+  if (!currentUploadFile.value || !clientId.value) {
+    ElMessage.warning('Please select a file')
+    return
+  }
+
+  uploading.value = true
+  try {
+    if (documentUploadType.value === 'kyc') {
+      const response = await kycApi.uploadKYCDocument(clientId.value, currentUploadFile.value)
+      const data = response.data || response
+      const newDoc: KYCDocument = {
+        id: data.id,
+        document: data.document || currentUploadFile.value.name,
+        size: formatFileSize(currentUploadFile.value.size),
+        uploadTime: data.uploadTime || new Date().toISOString()
+      }
+      kycData.documents.push(newDoc)
+      ElMessage.success('Document uploaded successfully')
+    } else {
+      const response = await documentsApi.uploadDocument(clientId.value, documentUploadType.value, currentUploadFile.value)
+      const data = response.data || response
+      const newDoc: Document = {
+        id: data.id,
+        document: data.document || currentUploadFile.value.name,
+        size: formatFileSize(currentUploadFile.value.size),
+        uploadTime: data.uploadTime || new Date().toISOString(),
+        type: documentUploadType.value
+      }
+      documentsData[documentUploadType.value].push(newDoc)
+      ElMessage.success('Document uploaded successfully')
+    }
+    documentUploadDialogVisible.value = false
+    fileList.value = []
+    currentUploadFile.value = null
+  } catch (error: any) {
+    console.error('Failed to upload document:', error)
+    const errorMessage = error.message || error.response?.data?.message || 'Failed to upload document'
+    ElMessage.error(errorMessage)
+  } finally {
+    uploading.value = false
+  }
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + sizes[i]
+}
+
 // 监听 Bank 变化，更新可用的 Booking Centres
 watch(() => portfolioForm.bank, () => {
   portfolioForm.bookingCentre = ''
@@ -1108,6 +1870,161 @@ onMounted(async () => {
         margin-right: 4px;
       }
     }
+  }
+}
+
+// KYC Section
+.kyc-section {
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #909399;
+  }
+}
+
+// Document Section
+.document-section {
+  margin-bottom: 40px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid #e4e7ed;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+  }
+}
+
+// Risk Profile Form
+.risk-profile-form {
+  .form-section {
+    margin-bottom: 40px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid #e4e7ed;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #303133;
+      margin-bottom: 20px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .vulnerable-questions {
+      .el-form-item {
+        margin-bottom: 15px;
+      }
+    }
+
+    .vulnerable-client-info {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+  }
+}
+
+// Fee Schedule Form
+.fee-schedule-form {
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+
+  .fee-column {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .fee-item {
+    .fee-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+
+      .fee-label {
+        font-size: 16px;
+        font-weight: 500;
+        color: #303133;
+      }
+    }
+  }
+}
+
+// Upload Dialog
+.upload-demo {
+  :deep(.el-upload) {
+    width: 100%;
+  }
+
+  :deep(.el-upload-dragger) {
+    width: 100%;
+    height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .el-icon--upload {
+    font-size: 67px;
+    color: #c0c4cc;
+    margin-bottom: 16px;
+  }
+
+  .el-upload__text {
+    color: #606266;
+    font-size: 14px;
+    text-align: center;
+
+    em {
+      color: #409eff;
+      font-style: normal;
+    }
+  }
+
+  .el-upload__tip {
+    color: #909399;
+    font-size: 12px;
+    margin-top: 7px;
+    text-align: center;
   }
 }
 </style>
