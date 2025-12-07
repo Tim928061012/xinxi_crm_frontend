@@ -53,7 +53,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'bank-centre',
         name: 'BankCentre',
-        component: () => import('@/views/admin/Account.vue'), // TODO: 创建 Bank & Centre 页面
+        component: () => import('@/views/admin/BankCentre.vue'),
         meta: { 
           requiresAuth: true,
           title: '银行与中心',
