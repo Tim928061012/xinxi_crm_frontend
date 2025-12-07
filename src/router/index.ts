@@ -43,7 +43,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'introducer',
         name: 'Introducer',
-        component: () => import('@/views/admin/Account.vue'), // TODO: 创建 Introducer 页面
+        component: () => import('@/views/admin/Introducer.vue'),
         meta: { 
           requiresAuth: true,
           title: '介绍人管理',

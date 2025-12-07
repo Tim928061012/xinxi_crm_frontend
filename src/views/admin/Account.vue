@@ -22,7 +22,11 @@
       >
       <el-table-column prop="account" label="Account" width="180" />
       <el-table-column prop="name" label="Name" width="200" />
-      <el-table-column prop="createdTime" label="Created Time" width="200" />
+      <el-table-column label="Created Time" width="200">
+        <template #default="{ row }">
+          {{ formatDateTime(row.createdTime) }}
+        </template>
+      </el-table-column>
       <el-table-column label="Status" width="150">
         <template #default="{ row }">
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -118,6 +122,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, User } from '@element-plus/icons-vue'
 import { accountApi, type Account, type CreateAccountParams, type UpdateAccountParams } from '@/api/account'
+import { formatDateTime } from '@/utils/date'
 
 const route = useRoute()
 
