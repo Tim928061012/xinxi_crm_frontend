@@ -190,7 +190,7 @@
                       placeholder="Please enter country/region"
                     >
                       <template #suffix>
-                        <el-icon><Globe /></el-icon>
+                        <el-icon><Location /></el-icon>
                       </template>
                     </el-input>
                   </el-form-item>
@@ -211,7 +211,7 @@
                       placeholder="Please enter nationality"
                     >
                       <template #suffix>
-                        <el-icon><Globe /></el-icon>
+                        <el-icon><Location /></el-icon>
                       </template>
                     </el-input>
                   </el-form-item>
@@ -319,7 +319,7 @@
                       placeholder="Please enter country/region"
                     >
                       <template #suffix>
-                        <el-icon><Globe /></el-icon>
+                        <el-icon><Location /></el-icon>
                       </template>
                     </el-input>
                   </el-form-item>
@@ -526,7 +526,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { ArrowLeft, Plus, User, Phone, Message, Globe } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, User, Phone, Message, Location } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { userClientApi, type Client, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
 import { portfolioApi, type Portfolio, type CreatePortfolioParams } from '@/api/user/portfolio'
@@ -540,10 +540,19 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const clientId = computed(() => {
+  // 如果是新建模式（路由名称为 UserClientNew 或路径包含 /new），返回 null
+  if (route.name === 'UserClientNew' || route.path.includes('/new')) {
+    return null
+  }
+  // 否则尝试从路由参数中获取 id
   const id = route.params.id as string
-  return id === 'new' ? null : parseInt(id)
+  if (!id || id === 'new') {
+    return null
+  }
+  const parsedId = parseInt(id)
+  return isNaN(parsedId) ? null : parsedId
 })
-const isEditMode = computed(() => clientId.value !== null)
+const isEditMode = computed(() => clientId.value !== null && clientId.value !== undefined)
 const isViewMode = computed(() => route.path.includes('/view'))
 
 const activeTab = ref('general')

@@ -224,24 +224,19 @@ router.beforeEach((to, from, next) => {
   }
 
   // 优先处理 /user 下的路由，确保能正常通过
+  // 对于 /user 路径下的路由，只要用户已登录，就允许自由跳转
+  // 权限检查只用于决定用户能看到哪些菜单，不影响路由跳转
   if (to.path.startsWith('/user')) {
-    // 检查角色权限
-    if (requiresAuth && to.meta.roles) {
-      const allowedRoles = to.meta.roles as string[]
-      
-      if (!userRole || !allowedRoles.includes(userRole)) {
-        // 没有权限，根据角色重定向
-        if (userRole === 'admin') {
-          next({ name: 'Account' })
-        } else {
-          next({ name: 'UserClient' })
-        }
-        NProgress.done()
-        return
-      }
+    // 如果用户已登录，直接允许通过，不进行任何权限检查或重定向
+    // 这样同一角色下的所有菜单项之间可以自由跳转
+    if (isAuthenticated) {
+      next()
+      return
     }
-    // 有权限，允许通过
-    next()
+    
+    // 如果未登录，重定向到登录页
+    next({ name: 'Login', query: { redirect: to.fullPath } })
+    NProgress.done()
     return
   }
 
@@ -271,19 +266,37 @@ router.beforeEach((to, from, next) => {
   }
 
   // 检查角色权限（非 /user 路由）
+  // 对于管理员布局下的路由，如果用户是管理员，允许自由跳转
+  // 权限检查主要用于阻止普通用户访问管理员路由
   if (requiresAuth && to.meta.roles) {
     const allowedRoles = to.meta.roles as string[]
     
-    if (!userRole || !allowedRoles.includes(userRole)) {
-      // 没有权限，根据角色重定向
-      if (userRole === 'admin') {
-        next({ name: 'Account' })
-      } else {
-        next({ name: 'UserClient' })
-      }
-      NProgress.done()
+    // 如果用户有权限，直接通过，允许自由跳转
+    if (userRole && allowedRoles.includes(userRole)) {
+      next()
       return
     }
+    
+    // 没有权限，根据角色重定向
+    // 但要避免循环重定向：如果目标路由就是重定向目标，直接允许通过
+    if (userRole === 'admin') {
+      // 如果目标已经是 Account，避免循环
+      if (to.name === 'Account' || to.path === '/account') {
+        next()
+        return
+      }
+      next({ name: 'Account' })
+    } else {
+      // 普通用户重定向到 UserClient
+      // 如果目标已经是 UserClient，避免循环
+      if (to.name === 'UserClient' || to.path === '/user/client') {
+        next()
+        return
+      }
+      next({ name: 'UserClient' })
+    }
+    NProgress.done()
+    return
   }
 
   next()

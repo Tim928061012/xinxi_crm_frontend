@@ -69,8 +69,18 @@ request.interceptors.response.use(
           result.__rawResponse = response
           return result
         } else {
+          // 403 权限错误特殊处理
+          if (data.code === 403) {
+            const error = new Error(data.msg || data.message || 'Permission denied')
+            // 标记为权限错误，方便调用方处理
+            ;(error as any).code = 403
+            ;(error as any).isPermissionError = true
+            return Promise.reject(error)
+          }
           // 不在这里显示错误消息，让调用方处理，避免重复提示
-          return Promise.reject(new Error(data.message || 'Request failed'))
+          const error = new Error(data.msg || data.message || 'Request failed')
+          ;(error as any).code = data.code
+          return Promise.reject(error)
         }
       }
       
@@ -113,7 +123,16 @@ request.interceptors.response.use(
         return Promise.reject(error)
       }
       
-      // 业务错误（400-499，除了 401）：不显示错误，让调用方处理，避免重复提示
+      // 403 权限错误特殊处理
+      if (status === 403) {
+        const error = new Error(response.data?.msg || response.data?.message || 'Permission denied')
+        ;(error as any).code = 403
+        ;(error as any).isPermissionError = true
+        ;(error as any).response = response
+        return Promise.reject(error)
+      }
+      
+      // 业务错误（400-499，除了 401 和 403）：不显示错误，让调用方处理，避免重复提示
       if (status >= 400 && status < 500) {
         return Promise.reject(error)
       }
