@@ -33,7 +33,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'client',
         name: 'Client',
-        component: () => import('@/views/admin/Account.vue'), // TODO: 创建 Client 页面
+        component: () => import('@/views/admin/Client.vue'),
         meta: { 
           requiresAuth: true,
           title: '客户管理',
