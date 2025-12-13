@@ -478,8 +478,8 @@
       <el-tab-pane label="KYC" name="kyc">
         <div class="tab-content">
           <div class="kyc-section">
-            <div class="section-header">
-              <h3 class="section-title">Upload Supporting Documents</h3>
+            <div class="kyc-upload-header">
+              <h3 class="kyc-upload-title">Upload Supporting Documents</h3>
               <el-button type="primary" :icon="Plus" @click="handleUploadKYCDocument">
                 Upload
               </el-button>
@@ -509,9 +509,6 @@
                 </template>
               </el-table-column>
             </el-table>
-            <div v-else class="empty-state">
-              <p>No documents uploaded yet. Click "Upload" to add documents.</p>
-            </div>
           </div>
         </div>
       </el-tab-pane>
@@ -632,9 +629,10 @@
             </div>
 
             <!-- Investment Knowledge & Experience Section -->
-            <div class="form-section">
+            <div class="form-section investment-knowledge-section">
               <h3 class="section-title">Investment Knowledge & Experience</h3>
-              <el-table :data="riskProfileData.investmentKnowledgeExperience.types" stripe style="width: 100%" class="investment-table">
+              <div class="investment-table-wrapper">
+                <el-table :data="riskProfileData.investmentKnowledgeExperience.types" stripe style="width: 100%" class="investment-table">
                 <el-table-column prop="type" label="Type" min-width="400" align="right" class-name="type-column">
                   <template #header>
                     <span class="table-header-bold">Type</span>
@@ -660,6 +658,7 @@
                   </template>
                 </el-table-column>
               </el-table>
+              </div>
             </div>
           </el-form>
         </div>
@@ -1996,23 +1995,23 @@ onMounted(async () => {
 
 // KYC Section
 .kyc-section {
-  .section-header {
+  .kyc-upload-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    padding: 16px 20px;
+    background-color: #fff;
+    border: 1px solid #e4e7ed;
+    border-radius: 4px;
+    margin-left: 20px; // 略微靠右
   }
 
-  .section-title {
+  .kyc-upload-title {
     font-size: 18px;
     font-weight: 600;
     color: #303133;
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 40px;
-    color: #909399;
+    margin: 0;
   }
 }
 
