@@ -632,7 +632,7 @@
             <div class="form-section investment-knowledge-section">
               <h3 class="section-title">Investment Knowledge & Experience</h3>
               <div class="investment-table-wrapper">
-                <el-table :data="riskProfileData.investmentKnowledgeExperience.types" stripe style="width: 100%" class="investment-table">
+                <el-table :data="riskProfileData.investmentKnowledgeExperience.types" stripe class="investment-table">
                 <el-table-column prop="type" label="Type" min-width="400" align="right" class-name="type-column">
                   <template #header>
                     <span class="table-header-bold">Type</span>
@@ -1921,6 +1921,7 @@ onMounted(async () => {
 
   .tab-content {
     min-height: 400px;
+    overflow: visible !important;
   }
 
   .client-form {
@@ -2041,6 +2042,8 @@ onMounted(async () => {
 
 // Risk Profile Form
 .risk-profile-form {
+  position: relative;
+  
   .form-section {
     margin-bottom: 40px;
     padding-bottom: 30px;
@@ -2126,10 +2129,30 @@ onMounted(async () => {
         margin-bottom: 0;
       }
     }
+
+    // Investment Knowledge & Experience Section
+    .investment-knowledge-section {
+      overflow: visible !important;
+      position: relative;
+      
+      .investment-table-wrapper {
+        // 将 Type、Knowledge、Experience 三个表头及其对应数据项整体向左移动 185px (300px - 35px - 50px - 30px)
+        width: 100%;
+        overflow: visible !important;
+        margin-left: -185px !important;
+        padding-right: 185px;
+      }
+    }
   }
 
   // Investment Knowledge & Experience Table
   .investment-table {
+    width: 100% !important;
+    max-width: none !important;
+    transform: translateX(-185px) !important;
+    -webkit-transform: translateX(-185px) !important;
+    margin-left: -185px !important;
+    
     :deep(.el-table__header) {
       th {
         .table-header-bold {
