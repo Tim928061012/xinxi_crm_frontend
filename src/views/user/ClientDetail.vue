@@ -620,7 +620,7 @@
                         placeholder="Select date"
                         format="DD/MM/YYYY"
                         value-format="DD/MM/YYYY"
-                        style="width: 100%"
+                        style="width: 60%"
                       />
                     </div>
                   </div>

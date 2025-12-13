@@ -25,9 +25,9 @@
           <el-date-picker
             v-model="searchForm.dateRange"
             type="datetimerange"
-            range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
+            range-separator="To"
+            start-placeholder="Start time"
+            end-placeholder="End time"
             value-format="YYYY-MM-DD HH:mm:ss"
           />
         </el-form-item>
