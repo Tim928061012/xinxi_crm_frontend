@@ -811,88 +811,101 @@
       <el-tab-pane label="Fee Schedule" name="fee">
         <div class="tab-content">
           <el-form :model="feeScheduleData" label-width="250px" class="fee-schedule-form">
-            <div class="form-row">
-              <!-- Left Column -->
-              <div class="fee-column">
-                <!-- Management Fee -->
-                <div class="fee-item">
-                  <div class="fee-header">
-                    <span class="fee-label">Management Fee</span>
-                    <el-switch
-                      v-model="feeScheduleData.managementFee.enabled"
-                      :active-value="true"
-                      :inactive-value="false"
-                    />
-                    <span style="margin-left: 8px;">{{ feeScheduleData.managementFee.enabled ? 'Yes' : 'No' }}</span>
-                  </div>
-                  <template v-if="feeScheduleData.managementFee.enabled">
-                    <el-form-item label="Yearly Management Fee (%)">
-                      <el-input v-model.number="feeScheduleData.managementFee.yearlyManagementFee" type="number" placeholder="Please enter" />
-                    </el-form-item>
-                    <el-form-item label="Minimum Management Fee (p.a.)">
-                      <el-input v-model.number="feeScheduleData.managementFee.minimumManagementFee" type="number" placeholder="Please enter" />
-                    </el-form-item>
-                  </template>
-                </div>
-
-                <!-- Retrocession -->
-                <div class="fee-item">
-                  <div class="fee-header">
-                    <span class="fee-label">Retrocession</span>
-                    <el-switch
-                      v-model="feeScheduleData.retrocession.enabled"
-                      :active-value="true"
-                      :inactive-value="false"
-                    />
-                    <span style="margin-left: 8px;">{{ feeScheduleData.retrocession.enabled ? 'Yes' : 'No' }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Right Column -->
-              <div class="fee-column">
-                <!-- Performance Fee -->
-                <div class="fee-item">
-                  <div class="fee-header">
-                    <span class="fee-label">Performance Fee</span>
-                    <el-switch
-                      v-model="feeScheduleData.performanceFee.enabled"
-                      :active-value="true"
-                      :inactive-value="false"
-                    />
-                    <span style="margin-left: 8px;">{{ feeScheduleData.performanceFee.enabled ? 'Yes' : 'No' }}</span>
-                  </div>
-                  <template v-if="feeScheduleData.performanceFee.enabled">
-                    <el-form-item label="Hurdle Rate (%)">
-                      <el-input v-model.number="feeScheduleData.performanceFee.hurdleRate" type="number" placeholder="Please enter" />
-                    </el-form-item>
-                    <el-form-item label="Profit shared to XinXi (%)">
-                      <el-input v-model.number="feeScheduleData.performanceFee.profitSharedToXinXi" type="number" placeholder="Please enter" />
-                    </el-form-item>
-                  </template>
-                </div>
-
-                <!-- Others -->
-                <div class="fee-item">
-                  <div class="fee-header">
-                    <span class="fee-label">Others</span>
-                    <el-switch
-                      v-model="feeScheduleData.others.enabled"
-                      :active-value="true"
-                      :inactive-value="false"
-                    />
-                    <span style="margin-left: 8px;">{{ feeScheduleData.others.enabled ? 'Yes' : 'No' }}</span>
-                  </div>
-                  <template v-if="feeScheduleData.others.enabled">
-                    <el-form-item label="Details">
-                      <el-input
-                        v-model="feeScheduleData.others.details"
-                        type="textarea"
-                        :rows="4"
-                        placeholder="Please enter details"
+            <div class="form-section">
+              <div class="vulnerable-assessment-container">
+                <div class="vulnerable-questions">
+                  <!-- Management Fee -->
+                  <div class="vulnerable-question-item">
+                    <div class="question-label">Management Fee</div>
+                    <div class="question-control">
+                      <el-switch
+                        v-model="feeScheduleData.managementFee.enabled"
+                        :active-value="true"
+                        :inactive-value="false"
                       />
-                    </el-form-item>
-                  </template>
+                      <span style="margin-left: 8px;">{{ feeScheduleData.managementFee.enabled ? 'Yes' : 'No' }}</span>
+                    </div>
+                    <template v-if="feeScheduleData.managementFee.enabled">
+                      <div class="fee-form-items">
+                        <div class="fee-form-item">
+                          <div class="fee-form-label">Yearly Management Fee (%)</div>
+                          <el-input v-model.number="feeScheduleData.managementFee.yearlyManagementFee" type="number" placeholder="Please enter" class="fee-input" />
+                        </div>
+                        <div class="fee-form-item">
+                          <div class="fee-form-label">Minimum Management Fee (p.a.)</div>
+                          <el-input v-model.number="feeScheduleData.managementFee.minimumManagementFee" type="number" placeholder="Please enter" class="fee-input" />
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- Retrocession -->
+                  <div class="vulnerable-question-item">
+                    <div class="question-label">Retrocession</div>
+                    <div class="question-control">
+                      <el-switch
+                        v-model="feeScheduleData.retrocession.enabled"
+                        :active-value="true"
+                        :inactive-value="false"
+                      />
+                      <span style="margin-left: 8px;">{{ feeScheduleData.retrocession.enabled ? 'Yes' : 'No' }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="vulnerable-client-info">
+                  <!-- Performance Fee -->
+                  <div class="vulnerable-question-item">
+                    <div class="question-label">Performance Fee</div>
+                    <div class="question-control">
+                      <el-switch
+                        v-model="feeScheduleData.performanceFee.enabled"
+                        :active-value="true"
+                        :inactive-value="false"
+                      />
+                      <span style="margin-left: 8px;">{{ feeScheduleData.performanceFee.enabled ? 'Yes' : 'No' }}</span>
+                    </div>
+                    <template v-if="feeScheduleData.performanceFee.enabled">
+                      <div class="fee-form-items">
+                        <div class="fee-form-item">
+                          <div class="fee-form-label">Hurdle Rate (%)</div>
+                          <el-input v-model.number="feeScheduleData.performanceFee.hurdleRate" type="number" placeholder="Please enter" class="fee-input" />
+                        </div>
+                        <div class="fee-form-item">
+                          <div class="fee-form-label">Profit shared to XinXi (%)</div>
+                          <el-input v-model.number="feeScheduleData.performanceFee.profitSharedToXinXi" type="number" placeholder="Please enter" class="fee-input" />
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- Others -->
+                  <div class="vulnerable-question-item">
+                    <div class="question-label">Others</div>
+                    <div class="question-control">
+                      <el-switch
+                        v-model="feeScheduleData.others.enabled"
+                        :active-value="true"
+                        :inactive-value="false"
+                      />
+                      <span style="margin-left: 8px;">{{ feeScheduleData.others.enabled ? 'Yes' : 'No' }}</span>
+                    </div>
+                    <template v-if="feeScheduleData.others.enabled">
+                      <div class="fee-form-items">
+                        <div class="fee-form-item">
+                          <div class="fee-form-label">Details</div>
+                          <el-input
+                            v-model="feeScheduleData.others.details"
+                            type="textarea"
+                            :rows="4"
+                            placeholder="Please enter details"
+                            class="fee-input"
+                            :resize="'none'"
+                          />
+                        </div>
+                      </div>
+                    </template>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2035,8 +2048,9 @@ onMounted(async () => {
 
   .section-title {
     font-size: 18px;
-    font-weight: 600;
-    color: #303133;
+    font-weight: 400;
+    color: #606266;
+    margin-left: 25px;
   }
 }
 
@@ -2203,29 +2217,133 @@ onMounted(async () => {
 
 // Fee Schedule Form
 .fee-schedule-form {
-  .form-row {
+  margin-left: 30px;
+
+  .form-section {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .vulnerable-assessment-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 40px;
+    gap: 20px;
+    align-items: start;
   }
 
-  .fee-column {
+  .vulnerable-questions {
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 20px;
   }
 
-  .fee-item {
-    .fee-header {
+  .vulnerable-question-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    
+    .question-label {
+      font-size: 14px;
+      color: #606266;
+      line-height: 1.5;
+      text-align: left;
+    }
+    
+    .question-control {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
+      gap: 8px;
+      text-align: left;
+    }
 
-      .fee-label {
-        font-size: 16px;
-        font-weight: 500;
-        color: #303133;
+    .fee-form-items {
+      width: 100%;
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .fee-form-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .fee-form-label {
+      font-size: 14px;
+      color: #606266;
+      line-height: 1.5;
+      text-align: left;
+    }
+
+    .fee-input {
+      width: auto;
+      min-width: 300px;
+      max-width: 600px;
+      
+      :deep(.el-textarea__inner) {
+        resize: none;
+      }
+    }
+  }
+
+  .vulnerable-client-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    
+    .vulnerable-question-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      
+      .question-label {
+        font-size: 14px;
+        color: #606266;
+        line-height: 1.5;
+        text-align: left;
+      }
+      
+      .question-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-align: left;
+      }
+
+      .fee-form-items {
+        width: 100%;
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .fee-form-item {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      .fee-form-label {
+        font-size: 14px;
+        color: #606266;
+        line-height: 1.5;
+        text-align: left;
+      }
+
+      .fee-input {
+        width: auto;
+        min-width: 300px;
+        max-width: 600px;
+        
+        :deep(.el-textarea__inner) {
+          resize: none;
+        }
       }
     }
   }
