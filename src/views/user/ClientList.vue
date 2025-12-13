@@ -115,14 +115,21 @@ const loadClients = async () => {
 }
 
 // 新建客户
-const handleNewClient = () => {
-  console.log('handleNewClient called, navigating to /user/client/new')
-  router.push({ name: 'UserClientNew' }).catch((error) => {
+const handleNewClient = async () => {
+  try {
+    console.log('handleNewClient called, navigating to /user/client/new')
+    // 直接使用路径跳转，更可靠
+    await router.push('/user/client/new')
+  } catch (error: any) {
     console.error('Navigation error:', error)
-    router.push('/user/client/new').catch((err) => {
+    // 如果命名路由失败，尝试路径路由
+    try {
+      await router.push({ path: '/user/client/new' })
+    } catch (err) {
       console.error('Navigation with path also failed:', err)
-    })
-  })
+      ElMessage.error('Failed to navigate to new client page')
+    }
+  }
 }
 
 // 查看详情

@@ -31,50 +31,13 @@
             <!-- Client Information Section -->
             <div class="form-section">
               <h3 class="section-title">Client Information</h3>
-              <div class="form-row">
-                <el-form-item label="Contact Type">
-                  <el-input v-model="clientForm.general.contactType" disabled />
-                </el-form-item>
-                <el-form-item label="Contact Nature" prop="contactNature">
-                  <el-select
-                    v-model="clientForm.general.contactNature"
-                    placeholder="Please select"
-                    style="width: 100%"
-                    :disabled="isEditMode"
-                    @change="handleContactNatureChange"
-                  >
-                    <el-option label="Individual" value="Individual" />
-                    <el-option label="Corporate" value="Corporate" />
-                  </el-select>
-                </el-form-item>
-              </div>
-
-              <div class="form-row">
-                <el-form-item label="Client Id">
-                  <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" />
-                </el-form-item>
-                <el-form-item label="Client Relationship Status">
-                  <el-select
-                    v-model="clientForm.general.clientRelationshipStatus"
-                    placeholder="Please select"
-                    style="width: 100%"
-                  >
-                    <el-option label="Prospecting" value="Prospecting" />
-                    <el-option label="On Boarding" value="On Boarding" />
-                  </el-select>
-                </el-form-item>
-              </div>
-
+              
               <!-- Individual 字段 -->
               <template v-if="clientForm.general.contactNature === 'Individual'">
+                <!-- 第1行: Contact Type, RM -->
                 <div class="form-row">
-                  <el-form-item label="Title" prop="title">
-                    <el-select v-model="(clientForm.general as any).title" placeholder="Please select" style="width: 100%">
-                      <el-option label="Mr." value="Mr." />
-                      <el-option label="Mrs." value="Mrs." />
-                      <el-option label="Miss" value="Miss" />
-                      <el-option label="Dr." value="Dr." />
-                    </el-select>
+                  <el-form-item label="Contact Type">
+                    <el-input v-model="clientForm.general.contactType" disabled />
                   </el-form-item>
                   <el-form-item label="RM" prop="rm">
                     <el-input
@@ -91,9 +54,19 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第2行: Contact Nature, Introducer -->
                 <div class="form-row">
-                  <el-form-item label="First Name" prop="firstName">
-                    <el-input v-model="(clientForm.general as any).firstName" placeholder="Please enter first name" />
+                  <el-form-item label="Contact Nature" prop="contactNature">
+                    <el-select
+                      v-model="clientForm.general.contactNature"
+                      placeholder="Please select"
+                      style="width: 100%"
+                      :disabled="isEditMode"
+                      @change="handleContactNatureChange"
+                    >
+                      <el-option label="Individual" value="Individual" />
+                      <el-option label="Corporate" value="Corporate" />
+                    </el-select>
                   </el-form-item>
                   <el-form-item label="Introducer">
                     <el-select
@@ -113,9 +86,10 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第3行: Client Id, Gender -->
                 <div class="form-row">
-                  <el-form-item label="Last Name" prop="lastName">
-                    <el-input v-model="(clientForm.general as any).lastName" placeholder="Please enter last name" />
+                  <el-form-item label="Client Id">
+                    <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" />
                   </el-form-item>
                   <el-form-item label="Gender">
                     <el-radio-group v-model="(clientForm.general as any).gender">
@@ -125,9 +99,17 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第4行: Client Relationship Status, Marital Status -->
                 <div class="form-row">
-                  <el-form-item label="Chinese Name">
-                    <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" />
+                  <el-form-item label="Client Relationship Status">
+                    <el-select
+                      v-model="clientForm.general.clientRelationshipStatus"
+                      placeholder="Please select"
+                      style="width: 100%"
+                    >
+                      <el-option label="Prospecting" value="Prospecting" />
+                      <el-option label="On Boarding" value="On Boarding" />
+                    </el-select>
                   </el-form-item>
                   <el-form-item label="Marital Status">
                     <el-select v-model="(clientForm.general as any).maritalStatus" placeholder="Please select" style="width: 100%">
@@ -139,12 +121,14 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第5行: Title, Education Level -->
                 <div class="form-row">
-                  <el-form-item label="Id Type">
-                    <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%">
-                      <el-option label="Passport" value="Passport" />
-                      <el-option label="ID Card" value="ID Card" />
-                      <el-option label="Driver License" value="Driver License" />
+                  <el-form-item label="Title" prop="title">
+                    <el-select v-model="(clientForm.general as any).title" placeholder="Please select" style="width: 100%">
+                      <el-option label="Mr." value="Mr." />
+                      <el-option label="Mrs." value="Mrs." />
+                      <el-option label="Miss" value="Miss" />
+                      <el-option label="Dr." value="Dr." />
                     </el-select>
                   </el-form-item>
                   <el-form-item label="Education Level">
@@ -157,9 +141,10 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第6行: First Name, Birthday(dd/mm/yyyy) -->
                 <div class="form-row">
-                  <el-form-item label="Id No.">
-                    <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" />
+                  <el-form-item label="First Name" prop="firstName">
+                    <el-input v-model="(clientForm.general as any).firstName" placeholder="Please enter first name" />
                   </el-form-item>
                   <el-form-item label="Birthday (dd/mm/yyyy)">
                     <el-date-picker
@@ -173,16 +158,10 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第7行: Last Name, Country/Region of Birth -->
                 <div class="form-row">
-                  <el-form-item label="Id Expiry (dd/mm/yyyy)">
-                    <el-date-picker
-                      v-model="(clientForm.general as any).idExpiry"
-                      type="date"
-                      placeholder="Select date"
-                      format="DD/MM/YYYY"
-                      value-format="DD/MM/YYYY"
-                      style="width: 100%"
-                    />
+                  <el-form-item label="Last Name" prop="lastName">
+                    <el-input v-model="(clientForm.general as any).lastName" placeholder="Please enter last name" />
                   </el-form-item>
                   <el-form-item label="Country/Region of Birth">
                     <el-input
@@ -196,7 +175,11 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第8行: Chinese Name, Dual Citizenship -->
                 <div class="form-row">
+                  <el-form-item label="Chinese Name">
+                    <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" />
+                  </el-form-item>
                   <el-form-item label="Dual Citizenship">
                     <el-switch
                       v-model="(clientForm.general as any).dualCitizenship"
@@ -204,6 +187,17 @@
                       :inactive-value="false"
                     />
                     <span style="margin-left: 8px;">{{ (clientForm.general as any).dualCitizenship ? 'Yes' : 'No' }}</span>
+                  </el-form-item>
+                </div>
+
+                <!-- 第9行: Id Type, Nationality -->
+                <div class="form-row">
+                  <el-form-item label="Id Type">
+                    <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%">
+                      <el-option label="Passport" value="Passport" />
+                      <el-option label="ID Card" value="ID Card" />
+                      <el-option label="Driver License" value="Driver License" />
+                    </el-select>
                   </el-form-item>
                   <el-form-item label="Nationality">
                     <el-input
@@ -216,13 +210,31 @@
                     </el-input>
                   </el-form-item>
                 </div>
+
+                <!-- 第10行: Id No., Id Expiry(dd/mm/yyyy) -->
+                <div class="form-row">
+                  <el-form-item label="Id No.">
+                    <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" />
+                  </el-form-item>
+                  <el-form-item label="Id Expiry (dd/mm/yyyy)">
+                    <el-date-picker
+                      v-model="(clientForm.general as any).idExpiry"
+                      type="date"
+                      placeholder="Select date"
+                      format="DD/MM/YYYY"
+                      value-format="DD/MM/YYYY"
+                      style="width: 100%"
+                    />
+                  </el-form-item>
+                </div>
               </template>
 
               <!-- Corporate 字段 -->
               <template v-else>
+                <!-- 第1行: Contact Type, RM -->
                 <div class="form-row">
-                  <el-form-item label="Company Name" prop="companyName">
-                    <el-input v-model="(clientForm.general as any).companyName" placeholder="Please enter company name" />
+                  <el-form-item label="Contact Type">
+                    <el-input v-model="clientForm.general.contactType" disabled />
                   </el-form-item>
                   <el-form-item label="RM" prop="rm">
                     <el-input
@@ -239,12 +251,18 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第2行: Contact Nature, Introducer -->
                 <div class="form-row">
-                  <el-form-item label="Corporate Type">
-                    <el-select v-model="(clientForm.general as any).corporateType" placeholder="Please select" style="width: 100%">
-                      <el-option label="Limited Company" value="Limited Company" />
-                      <el-option label="Corporation" value="Corporation" />
-                      <el-option label="Partnership" value="Partnership" />
+                  <el-form-item label="Contact Nature" prop="contactNature">
+                    <el-select
+                      v-model="clientForm.general.contactNature"
+                      placeholder="Please select"
+                      style="width: 100%"
+                      :disabled="isEditMode"
+                      @change="handleContactNatureChange"
+                    >
+                      <el-option label="Individual" value="Individual" />
+                      <el-option label="Corporate" value="Corporate" />
                     </el-select>
                   </el-form-item>
                   <el-form-item label="Introducer">
@@ -265,28 +283,27 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第3行: Client Id, Chinese Name -->
                 <div class="form-row">
-                  <el-form-item label="Industry">
-                    <el-select v-model="(clientForm.general as any).industry" placeholder="Please select" style="width: 100%">
-                      <el-option label="Finance" value="Finance" />
-                      <el-option label="Technology" value="Technology" />
-                      <el-option label="Manufacturing" value="Manufacturing" />
-                      <el-option label="Retail" value="Retail" />
-                    </el-select>
+                  <el-form-item label="Client Id">
+                    <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" />
                   </el-form-item>
                   <el-form-item label="Chinese Name">
                     <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" />
                   </el-form-item>
                 </div>
 
+                <!-- 第4行: Client Relationship Status, Id Type -->
                 <div class="form-row">
-                  <el-form-item label="State Owned">
-                    <el-switch
-                      v-model="(clientForm.general as any).stateOwned"
-                      :active-value="true"
-                      :inactive-value="false"
-                    />
-                    <span style="margin-left: 8px;">{{ (clientForm.general as any).stateOwned ? 'Yes' : 'No' }}</span>
+                  <el-form-item label="Client Relationship Status">
+                    <el-select
+                      v-model="clientForm.general.clientRelationshipStatus"
+                      placeholder="Please select"
+                      style="width: 100%"
+                    >
+                      <el-option label="Prospecting" value="Prospecting" />
+                      <el-option label="On Boarding" value="On Boarding" />
+                    </el-select>
                   </el-form-item>
                   <el-form-item label="Id Type">
                     <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%">
@@ -296,11 +313,26 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第5行: Company Name, Id No. -->
                 <div class="form-row">
+                  <el-form-item label="Company Name" prop="companyName">
+                    <el-input v-model="(clientForm.general as any).companyName" placeholder="Please enter company name" />
+                  </el-form-item>
                   <el-form-item label="Id No.">
                     <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" />
                   </el-form-item>
-                  <el-form-item label="Date of Company Search/COI Issued (dd/mm/yyyy)">
+                </div>
+
+                <!-- 第6行: Corporate Type, Date of Company Search/COI Issued(dd/mm/yyyy) -->
+                <div class="form-row">
+                  <el-form-item label="Corporate Type">
+                    <el-select v-model="(clientForm.general as any).corporateType" placeholder="Please select" style="width: 100%">
+                      <el-option label="Limited Company" value="Limited Company" />
+                      <el-option label="Corporation" value="Corporation" />
+                      <el-option label="Partnership" value="Partnership" />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item label="Date of Company Search/COI Issued (dd/mm/yyyy)" style="align-self: flex-start;">
                     <el-date-picker
                       v-model="(clientForm.general as any).dateOfCompanySearch"
                       type="date"
@@ -312,7 +344,16 @@
                   </el-form-item>
                 </div>
 
+                <!-- 第7行: Industry, Country/Region of Registration -->
                 <div class="form-row">
+                  <el-form-item label="Industry">
+                    <el-select v-model="(clientForm.general as any).industry" placeholder="Please select" style="width: 100%">
+                      <el-option label="Finance" value="Finance" />
+                      <el-option label="Technology" value="Technology" />
+                      <el-option label="Manufacturing" value="Manufacturing" />
+                      <el-option label="Retail" value="Retail" />
+                    </el-select>
+                  </el-form-item>
                   <el-form-item label="Country/Region of Registration">
                     <el-input
                       v-model="(clientForm.general as any).countryOfRegistration"
@@ -323,6 +364,19 @@
                       </template>
                     </el-input>
                   </el-form-item>
+                </div>
+
+                <!-- 第8行: State Owned -->
+                <div class="form-row">
+                  <el-form-item label="State Owned">
+                    <el-switch
+                      v-model="(clientForm.general as any).stateOwned"
+                      :active-value="true"
+                      :inactive-value="false"
+                    />
+                    <span style="margin-left: 8px;">{{ (clientForm.general as any).stateOwned ? 'Yes' : 'No' }}</span>
+                  </el-form-item>
+                  <el-form-item></el-form-item>
                 </div>
               </template>
             </div>
@@ -347,25 +401,14 @@
                 </el-form-item>
               </div>
 
-              <div class="form-row">
-                <el-form-item label="Home Phone">
+              <div class="form-row" style="margin-bottom: 10px;">
+                <el-form-item label="Home Phone" style="align-self: flex-start;">
                   <el-input v-model="clientForm.contact.homePhone" placeholder="Please enter home phone">
                     <template #suffix>
                       <el-icon><Phone /></el-icon>
                     </template>
                   </el-input>
                 </el-form-item>
-                <el-form-item label="Jurisdiction of Contact No. and Address Differs">
-                  <el-switch
-                    v-model="clientForm.contact.jurisdictionDiffers"
-                    :active-value="true"
-                    :inactive-value="false"
-                  />
-                  <span style="margin-left: 8px;">{{ clientForm.contact.jurisdictionDiffers ? 'Yes' : 'No' }}</span>
-                </el-form-item>
-              </div>
-
-              <div class="form-row">
                 <el-form-item label="Address" style="width: 100%;">
                   <el-input
                     v-model="clientForm.contact.address"
@@ -374,6 +417,18 @@
                     placeholder="Please enter address"
                   />
                 </el-form-item>
+              </div>
+
+              <div class="form-row" style="margin-top: 0; margin-bottom: 20px;">
+                <el-form-item label="Jurisdiction of Contact No. and Address Differs">
+                  <el-switch
+                    v-model="clientForm.contact.jurisdictionDiffers"
+                    :active-value="true"
+                    :inactive-value="false"
+                  />
+                  <span style="margin-left: 8px;">{{ clientForm.contact.jurisdictionDiffers ? 'Yes' : 'No' }}</span>
+                </el-form-item>
+                <el-form-item></el-form-item>
               </div>
             </div>
 
@@ -500,48 +555,78 @@
             <!-- Vulnerable Client Assessment Section -->
             <div class="form-section">
               <h3 class="section-title">Vulnerable Client Assessment</h3>
-              <div class="form-row">
+              <div class="vulnerable-assessment-container">
                 <div class="vulnerable-questions">
-                  <el-form-item>
-                    <el-checkbox v-model="riskProfileData.vulnerableClientAssessment.age65AndAbove">
-                      Age 65 years old and above
-                    </el-checkbox>
-                  </el-form-item>
-                  <el-form-item>
-                    <el-checkbox v-model="riskProfileData.vulnerableClientAssessment.physicalOrIntellectualDisabilities">
-                      Physical or intellectual disabilities
-                    </el-checkbox>
-                  </el-form-item>
-                  <el-form-item>
-                    <el-checkbox v-model="riskProfileData.vulnerableClientAssessment.notProficientInEnglish">
-                      Not proficient in written or spoken English
-                    </el-checkbox>
-                  </el-form-item>
-                  <el-form-item>
-                    <el-checkbox v-model="riskProfileData.vulnerableClientAssessment.educationPrimaryOrBelow">
-                      Education primary or below and has no investment
-                    </el-checkbox>
-                  </el-form-item>
+                  <div class="vulnerable-question-item">
+                    <div class="question-label">1. Age 65 years old and above</div>
+                    <div class="question-control">
+                      <el-switch
+                        v-model="riskProfileData.vulnerableClientAssessment.age65AndAbove"
+                        :active-value="true"
+                        :inactive-value="false"
+                      />
+                      <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.age65AndAbove ? 'Yes' : 'No' }}</span>
+                    </div>
+                  </div>
+                  <div class="vulnerable-question-item">
+                    <div class="question-label">2. Physical or intellectual disabilities</div>
+                    <div class="question-control">
+                      <el-switch
+                        v-model="riskProfileData.vulnerableClientAssessment.physicalOrIntellectualDisabilities"
+                        :active-value="true"
+                        :inactive-value="false"
+                      />
+                      <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.physicalOrIntellectualDisabilities ? 'Yes' : 'No' }}</span>
+                    </div>
+                  </div>
+                  <div class="vulnerable-question-item">
+                    <div class="question-label">3. Not proficient in written or spoken English</div>
+                    <div class="question-control">
+                      <el-switch
+                        v-model="riskProfileData.vulnerableClientAssessment.notProficientInEnglish"
+                        :active-value="true"
+                        :inactive-value="false"
+                      />
+                      <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.notProficientInEnglish ? 'Yes' : 'No' }}</span>
+                    </div>
+                  </div>
+                  <div class="vulnerable-question-item">
+                    <div class="question-label">4. Education primary or below and has no investment</div>
+                    <div class="question-control">
+                      <el-switch
+                        v-model="riskProfileData.vulnerableClientAssessment.educationPrimaryOrBelow"
+                        :active-value="true"
+                        :inactive-value="false"
+                      />
+                      <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.educationPrimaryOrBelow ? 'Yes' : 'No' }}</span>
+                    </div>
+                  </div>
                 </div>
                 <div class="vulnerable-client-info">
-                  <el-form-item label="Vulnerable Client">
-                    <el-switch
-                      v-model="riskProfileData.vulnerableClientAssessment.vulnerableClient"
-                      :active-value="true"
-                      :inactive-value="false"
-                    />
-                    <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.vulnerableClient ? 'Yes' : 'No' }}</span>
-                  </el-form-item>
-                  <el-form-item label="Review Date (dd/mm/yyyy)">
-                    <el-date-picker
-                      v-model="riskProfileData.vulnerableClientAssessment.reviewDate"
-                      type="date"
-                      placeholder="Select date"
-                      format="DD/MM/YYYY"
-                      value-format="DD/MM/YYYY"
-                      style="width: 100%"
-                    />
-                  </el-form-item>
+                  <div class="vulnerable-question-item">
+                    <div class="question-label">Vulnerable Client</div>
+                    <div class="question-control">
+                      <el-switch
+                        v-model="riskProfileData.vulnerableClientAssessment.vulnerableClient"
+                        :active-value="true"
+                        :inactive-value="false"
+                      />
+                      <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.vulnerableClient ? 'Yes' : 'No' }}</span>
+                    </div>
+                  </div>
+                  <div class="vulnerable-question-item">
+                    <div class="question-label">Review Date (dd/mm/yyyy)</div>
+                    <div class="question-control">
+                      <el-date-picker
+                        v-model="riskProfileData.vulnerableClientAssessment.reviewDate"
+                        type="date"
+                        placeholder="Select date"
+                        format="DD/MM/YYYY"
+                        value-format="DD/MM/YYYY"
+                        style="width: 100%"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -549,14 +634,27 @@
             <!-- Investment Knowledge & Experience Section -->
             <div class="form-section">
               <h3 class="section-title">Investment Knowledge & Experience</h3>
-              <el-table :data="riskProfileData.investmentKnowledgeExperience.types" stripe style="width: 100%">
-                <el-table-column prop="type" label="Type" width="400" />
+              <el-table :data="riskProfileData.investmentKnowledgeExperience.types" stripe style="width: 100%" class="investment-table">
+                <el-table-column prop="type" label="Type" min-width="400" align="right" class-name="type-column">
+                  <template #header>
+                    <span class="table-header-bold">Type</span>
+                  </template>
+                  <template #default="{ row }">
+                    <span class="type-text">{{ row.type }}</span>
+                  </template>
+                </el-table-column>
                 <el-table-column label="Knowledge" width="150" align="center">
+                  <template #header>
+                    <span class="table-header-bold">Knowledge</span>
+                  </template>
                   <template #default="{ row }">
                     <el-checkbox v-model="row.knowledge" />
                   </template>
                 </el-table-column>
                 <el-table-column label="Experience" width="150" align="center">
+                  <template #header>
+                    <span class="table-header-bold">Experience</span>
+                  </template>
                   <template #default="{ row }">
                     <el-checkbox v-model="row.experience" />
                   </template>
@@ -1753,14 +1851,19 @@ watch(() => portfolioForm.bank, () => {
 })
 
 onMounted(async () => {
-  // 新建模式下，完全不加载任何数据，页面立即渲染
-  // 编辑模式下，只加载必要的 client 数据
-  if (isEditMode.value) {
-    await loadClient()
+  try {
+    // 新建模式下，完全不加载任何数据，页面立即渲染
+    // 编辑模式下，只加载必要的 client 数据
+    if (isEditMode.value) {
+      await loadClient()
+    }
+    
+    // 下拉选项数据完全按需加载，不在 onMounted 中加载
+    // 这些数据只在用户点击对应的选择器时才加载
+  } catch (error) {
+    console.error('Error in onMounted:', error)
+    // 即使出错也不阻止页面渲染
   }
-  
-  // 下拉选项数据完全按需加载，不在 onMounted 中加载
-  // 这些数据只在用户点击对应的选择器时才加载
 })
 </script>
 
@@ -1843,6 +1946,8 @@ onMounted(async () => {
         font-weight: 600;
         color: #303133;
         margin-bottom: 20px;
+        margin-left: 0;
+        padding-left: 0;
       }
 
       .form-row {
@@ -1850,6 +1955,22 @@ onMounted(async () => {
         grid-template-columns: 1fr 1fr;
         gap: 20px;
         margin-bottom: 20px;
+        align-items: start;
+        
+        .el-form-item {
+          margin-bottom: 0;
+          
+          :deep(.el-form-item__label) {
+            line-height: 1.5;
+            white-space: normal;
+            word-break: break-word;
+            padding-bottom: 0;
+            height: auto;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+          }
+        }
       }
     }
 
@@ -1944,9 +2065,36 @@ onMounted(async () => {
       margin-bottom: 20px;
     }
 
+    .vulnerable-assessment-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
     .vulnerable-questions {
-      .el-form-item {
-        margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .vulnerable-question-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      
+      .question-label {
+        font-size: 14px;
+        color: #606266;
+        line-height: 1.5;
+        text-align: left;
+      }
+      
+      .question-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-align: left;
       }
     }
 
@@ -1954,6 +2102,79 @@ onMounted(async () => {
       display: flex;
       flex-direction: column;
       gap: 20px;
+      
+      .vulnerable-question-item {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        
+        .question-label {
+          font-size: 14px;
+          color: #606266;
+          line-height: 1.5;
+          text-align: left;
+        }
+        
+        .question-control {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          text-align: left;
+        }
+      }
+      
+      .el-form-item {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  // Investment Knowledge & Experience Table
+  .investment-table {
+    :deep(.el-table__header) {
+      th {
+        .table-header-bold {
+          font-weight: 600;
+          color: #303133;
+        }
+      }
+    }
+    
+    :deep(.el-table__body) {
+      td.type-column {
+        text-align: right;
+        padding-right: 20px;
+        
+        .type-text {
+          text-align: right;
+          display: block;
+          width: 100%;
+        }
+      }
+    }
+    
+    // 确保表头之间的间距一致
+    :deep(.el-table__header-wrapper) {
+      .el-table__header {
+        th {
+          padding-left: 20px;
+          padding-right: 20px;
+          
+          &.type-column {
+            padding-right: 20px;
+          }
+        }
+      }
+    }
+    
+    // 确保表体单元格的间距一致
+    :deep(.el-table__body-wrapper) {
+      .el-table__body {
+        td {
+          padding-left: 20px;
+          padding-right: 20px;
+        }
+      }
     }
   }
 }
