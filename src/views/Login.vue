@@ -84,7 +84,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import logoImage from '@/assets/logo.png'
+import logoImage from '@/assets/login_logo.png'
 
 const router = useRouter()
 const route = useRoute()
