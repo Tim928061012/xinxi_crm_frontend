@@ -3,7 +3,7 @@
     <!-- 左侧菜单栏 -->
     <aside class="sidebar">
       <div class="logo">
-        <div class="logo-icon">❤️</div>
+        <img :src="logoImage" alt="Logo" class="logo-icon" />
         <span class="logo-text">XinXi CRM</span>
       </div>
       
@@ -58,6 +58,7 @@ import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import logoImage from '@/assets/simple_logo.png'
 
 const route = useRoute()
 const router = useRouter()
@@ -119,15 +120,15 @@ const handleLogout = async () => {
     .logo-icon {
       width: 24px;
       height: 24px;
-      font-size: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
+      object-fit: contain;
     }
     
     .logo-text {
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 700;
       color: #409eff;
     }
   }
