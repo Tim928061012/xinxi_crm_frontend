@@ -221,7 +221,7 @@ onMounted(() => {
     .page-title {
       font-size: 24px;
       font-weight: 600;
-      color: #409eff;
+      color: #025189;
       margin: 0;
     }
 
@@ -271,12 +271,12 @@ onMounted(() => {
       
       .el-table__header {
         width: 100% !important;
-        background-color: #409eff;
+        background-color: #025189;
         color: #fff;
         box-sizing: border-box;
 
         th {
-          background-color: #409eff !important;
+          background-color: #025189 !important;
           color: #fff !important;
           border: none;
           font-weight: 500;

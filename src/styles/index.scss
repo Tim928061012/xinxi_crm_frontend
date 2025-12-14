@@ -48,10 +48,381 @@ html, body {
 
 // NProgress样式覆盖
 #nprogress .bar {
-  background: #409eff !important;
+  background: #025189 !important;
   height: 3px !important;
 }
 
 #nprogress .peg {
-  box-shadow: 0 0 10px #409eff, 0 0 5px #409eff !important;
+  box-shadow: 0 0 10px #025189, 0 0 5px #025189 !important;
+}
+
+// Element Plus 按钮颜色统一
+.el-button--primary {
+  background-color: #025189 !important;
+  border-color: #025189 !important;
+  
+  &:hover {
+    background-color: #0369a1 !important;
+    border-color: #0369a1 !important;
+  }
+  
+  &:active {
+    background-color: #014d73 !important;
+    border-color: #014d73 !important;
+  }
+  
+  &:focus {
+    background-color: #025189 !important;
+    border-color: #025189 !important;
+  }
+  
+  &.is-disabled {
+    background-color: #a0c4d3 !important;
+    border-color: #a0c4d3 !important;
+  }
+}
+
+// Element Plus Link 颜色统一
+.el-link--primary {
+  color: #025189 !important;
+  
+  &:hover {
+    color: #0369a1 !important;
+  }
+}
+
+// Element Plus 输入框聚焦颜色
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px #025189 inset !important;
+}
+
+// Element Plus 选择器聚焦颜色
+.el-select .el-input.is-focus .el-input__wrapper {
+  box-shadow: 0 0 0 1px #025189 inset !important;
+}
+
+// Element Plus 日期选择器聚焦颜色
+.el-date-editor.is-active .el-input__wrapper {
+  box-shadow: 0 0 0 1px #025189 inset !important;
+}
+
+// Element Plus Checkbox 颜色统一
+.el-checkbox {
+  .el-checkbox__input.is-checked {
+    .el-checkbox__inner {
+      background-color: #025189 !important;
+      border-color: #025189 !important;
+    }
+  }
+  
+  .el-checkbox__input.is-indeterminate {
+    .el-checkbox__inner {
+      background-color: #025189 !important;
+      border-color: #025189 !important;
+    }
+  }
+  
+  .el-checkbox__input:hover {
+    .el-checkbox__inner {
+      border-color: #025189 !important;
+    }
+  }
+  
+  .el-checkbox__input.is-focus {
+    .el-checkbox__inner {
+      border-color: #025189 !important;
+    }
+  }
+  
+  .el-checkbox__label {
+    color: #606266;
+  }
+  
+  &.is-checked {
+    .el-checkbox__label {
+      color: #606266;
+    }
+  }
+}
+
+// Element Plus Switch 颜色统一
+.el-switch {
+  &.is-checked {
+    .el-switch__core {
+      background-color: #025189 !important;
+      border-color: #025189 !important;
+    }
+  }
+  
+  .el-switch__core:hover {
+    border-color: #025189 !important;
+  }
+}
+
+// Element Plus Radio 颜色统一
+.el-radio {
+  .el-radio__input.is-checked {
+    .el-radio__inner {
+      background-color: #025189 !important;
+      border-color: #025189 !important;
+    }
+  }
+  
+  .el-radio__input:hover {
+    .el-radio__inner {
+      border-color: #025189 !important;
+    }
+  }
+  
+  .el-radio__input.is-focus {
+    .el-radio__inner {
+      border-color: #025189 !important;
+    }
+  }
+}
+
+// Element Plus Tabs 颜色统一
+.el-tabs {
+  .el-tabs__item {
+    &.is-active {
+      color: #025189 !important;
+    }
+    
+    &:hover {
+      color: #025189 !important;
+    }
+  }
+  
+  .el-tabs__active-bar {
+    background-color: #025189 !important;
+  }
+  
+  .el-tabs__nav-wrap::after {
+    background-color: #e4e7ed;
+  }
+}
+
+// Element Plus Select 下拉选项颜色统一
+.el-select-dropdown {
+  .el-select-dropdown__item {
+    &.selected {
+      color: #025189 !important;
+      font-weight: 700;
+    }
+    
+    &.hover,
+    &:hover {
+      background-color: #f0f7ff !important;
+    }
+    
+    &.is-selected {
+      color: #025189 !important;
+      background-color: #f0f7ff !important;
+    }
+  }
+}
+
+// Element Plus Cascader 级联选择器颜色统一
+.el-cascader-menu {
+  .el-cascader-node {
+    &.is-selectable.in-active-path {
+      color: #025189 !important;
+    }
+    
+    &.in-active-path,
+    &.is-active {
+      color: #025189 !important;
+      font-weight: 700;
+    }
+    
+    &:hover {
+      background-color: #f0f7ff !important;
+    }
+  }
+}
+
+// Element Plus DatePicker 日期选择器颜色统一
+.el-picker-panel {
+  .el-date-table td.available:hover {
+    color: #025189 !important;
+  }
+  
+  .el-date-table td.current:not(.disabled) {
+    color: #025189 !important;
+  }
+  
+  .el-date-table td.today span {
+    color: #025189 !important;
+    font-weight: 700;
+  }
+  
+  .el-date-table td.selected span {
+    background-color: #025189 !important;
+    color: #fff !important;
+  }
+  
+  .el-picker-panel__icon-btn:hover {
+    color: #025189 !important;
+  }
+  
+  .el-month-table td.current:not(.disabled) .cell {
+    color: #025189 !important;
+  }
+  
+  .el-month-table td.today .cell {
+    color: #025189 !important;
+    font-weight: 700;
+  }
+  
+  .el-year-table td.current:not(.disabled) .cell {
+    color: #025189 !important;
+  }
+  
+  .el-year-table td.today .cell {
+    color: #025189 !important;
+    font-weight: 700;
+  }
+}
+
+// Element Plus TimePicker 时间选择器颜色统一
+.el-time-panel {
+  .el-time-spinner__item {
+    &.active:not(.disabled) {
+      color: #025189 !important;
+    }
+    
+    &:hover:not(.disabled):not(.active) {
+      background-color: #f0f7ff !important;
+    }
+  }
+}
+
+// Element Plus Pagination 分页器颜色统一
+.el-pagination {
+  .el-pager li {
+    &.is-active {
+      color: #025189 !important;
+    }
+    
+    &:hover {
+      color: #025189 !important;
+    }
+  }
+  
+  .btn-next:hover,
+  .btn-prev:hover {
+    color: #025189 !important;
+  }
+  
+  .el-pagination__editor .el-input__inner:focus {
+    border-color: #025189 !important;
+  }
+}
+
+// Element Plus Steps 步骤条颜色统一
+.el-steps {
+  .el-step__head.is-process {
+    color: #025189 !important;
+    border-color: #025189 !important;
+  }
+  
+  .el-step__head.is-finish {
+    color: #025189 !important;
+    border-color: #025189 !important;
+  }
+  
+  .el-step__title.is-process {
+    color: #025189 !important;
+  }
+  
+  .el-step__title.is-finish {
+    color: #025189 !important;
+  }
+}
+
+// Element Plus Upload 上传组件颜色统一
+.el-upload {
+  &:hover {
+    border-color: #025189 !important;
+    color: #025189 !important;
+  }
+}
+
+// Element Plus Tree 树形控件颜色统一
+.el-tree {
+  .el-tree-node__content:hover {
+    background-color: #f0f7ff !important;
+  }
+  
+  .el-tree-node.is-current > .el-tree-node__content {
+    color: #025189 !important;
+    background-color: #f0f7ff !important;
+  }
+  
+  .el-checkbox__input.is-checked + .el-tree-node__label {
+    color: #025189 !important;
+  }
+}
+
+// Element Plus Menu 菜单颜色统一
+.el-menu {
+  .el-menu-item.is-active {
+    color: #025189 !important;
+  }
+  
+  .el-menu-item:hover {
+    background-color: #f0f7ff !important;
+    color: #025189 !important;
+  }
+  
+  .el-sub-menu__title:hover {
+    background-color: #f0f7ff !important;
+    color: #025189 !important;
+  }
+}
+
+// Element Plus Breadcrumb 面包屑颜色统一
+.el-breadcrumb {
+  .el-breadcrumb__inner {
+    &.is-link {
+      color: #606266;
+      
+      &:hover {
+        color: #025189 !important;
+      }
+    }
+  }
+}
+
+// Element Plus Tag 标签颜色统一（primary类型）
+.el-tag--primary {
+  background-color: #ecf5ff !important;
+  border-color: #b3d8ff !important;
+  color: #025189 !important;
+}
+
+// Element Plus Badge 徽章颜色统一
+.el-badge__content {
+  background-color: #025189 !important;
+  border-color: #025189 !important;
+}
+
+// Element Plus Progress 进度条颜色统一
+.el-progress-bar__inner {
+  background-color: #025189 !important;
+}
+
+// Element Plus Slider 滑块颜色统一
+.el-slider {
+  .el-slider__button {
+    border-color: #025189 !important;
+  }
+  
+  .el-slider__bar {
+    background-color: #025189 !important;
+  }
+  
+  .el-slider__button-wrapper:hover .el-slider__button {
+    border-color: #025189 !important;
+  }
 }

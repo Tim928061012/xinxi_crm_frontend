@@ -40,7 +40,7 @@ const goHome = () => {
 
     h1 {
       font-size: 120px;
-      color: #409eff;
+      color: #025189;
       margin: 0;
       line-height: 1;
     }

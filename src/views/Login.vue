@@ -227,11 +227,11 @@ const handleLogin = async () => {
     font-weight: 400;
 
     &:hover {
-      color: #1E3A5F;
+      color: #025189;
     }
 
     &.active {
-      color: #1E3A5F;
+      color: #025189;
       font-weight: 600;
 
       &::after {
@@ -241,7 +241,7 @@ const handleLogin = async () => {
         left: 0;
         right: 0;
         height: 2px;
-        background: #1E3A5F;
+        background: #025189;
         border-radius: 1px;
       }
     }
@@ -264,7 +264,7 @@ const handleLogin = async () => {
     }
 
     &.is-focus {
-      box-shadow: 0 0 0 1px #1E3A5F inset;
+      box-shadow: 0 0 0 1px #025189 inset;
     }
   }
 
@@ -275,7 +275,7 @@ const handleLogin = async () => {
   .login-button {
     width: 100%;
     height: 44px;
-    background: #1E3A5F;
+    background: #025189;
     border: none;
     border-radius: 4px;
     font-size: 16px;
@@ -286,13 +286,13 @@ const handleLogin = async () => {
     cursor: pointer;
 
     &:hover:not(:disabled) {
-      background: #2A4A6F;
+      background: #0369a1;
       transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(30, 58, 95, 0.2);
+      box-shadow: 0 4px 8px rgba(2, 81, 137, 0.2);
     }
 
     &:active:not(:disabled) {
-      background: #152A45;
+      background: #014d73;
       transform: translateY(0);
     }
 

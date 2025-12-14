@@ -113,7 +113,7 @@ const handleLogout = async () => {
     .logo-text {
       font-size: 18px;
       font-weight: 700;
-      color: #409eff;
+      color: #025189;
     }
   }
   
@@ -132,13 +132,13 @@ const handleLogout = async () => {
       
       &:hover {
         background-color: #ecf5ff;
-        color: #409eff;
+        color: #025189;
       }
       
       &.active {
         background-color: #ecf5ff;
-        color: #409eff;
-        border-left-color: #409eff;
+        color: #025189;
+        border-left-color: #025189;
         font-weight: 500;
       }
       

@@ -2385,7 +2385,7 @@ onMounted(async () => {
     text-align: center;
 
     em {
-      color: #409eff;
+      color: #025189;
       font-style: normal;
     }
   }

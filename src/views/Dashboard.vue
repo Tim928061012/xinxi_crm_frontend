@@ -99,7 +99,7 @@ const stats = ref([
     title: '总任务数',
     value: '0',
     icon: List,
-    color: '#409eff'
+    color: '#025189'
   },
   {
     title: '进行中',
@@ -128,7 +128,7 @@ const recentActivities = ref([
 ])
 
 const quickActions = ref([
-  { title: '新建任务', icon: Plus, color: '#409eff', route: '/tasks' },
+  { title: '新建任务', icon: Plus, color: '#025189', route: '/tasks' },
   { title: '数据管理', icon: Document, color: '#67c23a', route: '/data' },
   { title: '个人设置', icon: Setting, color: '#e6a23c', route: '/profile' }
 ])
@@ -224,9 +224,9 @@ const handleQuickAction = (action: any) => {
     
     &:hover {
       background-color: #f5f7fa;
-      border-color: #409eff;
+      border-color: #025189;
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+      box-shadow: 0 4px 12px rgba(2, 81, 137, 0.2);
     }
     
     .action-title {

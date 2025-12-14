@@ -129,7 +129,7 @@ const handleLogout = async () => {
     .logo-text {
       font-size: 16px;
       font-weight: 700;
-      color: #409eff;
+      color: #025189;
     }
   }
   
@@ -155,7 +155,7 @@ const handleLogout = async () => {
       
       &.active {
         background-color: #e6f4ff;
-        color: #409eff;
+        color: #025189;
         
         &::after {
           content: '';
@@ -164,7 +164,7 @@ const handleLogout = async () => {
           top: 0;
           bottom: 0;
           width: 3px;
-          background-color: #409eff;
+          background-color: #025189;
         }
       }
       
