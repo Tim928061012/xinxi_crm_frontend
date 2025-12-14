@@ -118,10 +118,10 @@
               />
             </div>
             <el-button
-              type="primary"
+              type="text"
               :icon="Plus"
-              plain
               @click="addBookingCentre('new')"
+              class="add-booking-centre-btn"
             >
               Add a new Booking Centre
             </el-button>
@@ -186,10 +186,10 @@
               />
             </div>
             <el-button
-              type="primary"
+              type="text"
               :icon="Plus"
-              plain
               @click="addBookingCentre('edit')"
+              class="add-booking-centre-btn"
             >
               Add a new Booking Centre
             </el-button>
@@ -716,6 +716,23 @@ onMounted(() => {
 
   .el-dialog__body {
     padding: 20px;
+    
+    .add-booking-centre-btn {
+      padding: 0;
+      background: transparent;
+      border: none;
+      color: #025189;
+      font-size: 14px;
+      
+      &:hover {
+        background: transparent;
+        color: #0369a1;
+      }
+      
+      .el-icon {
+        margin-right: 4px;
+      }
+    }
   }
 
   // 必填字段红色星号

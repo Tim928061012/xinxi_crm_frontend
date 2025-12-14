@@ -169,7 +169,6 @@ const handleLogout = async () => {
       }
       
       &.logout {
-        margin-top: auto;
         color: #606266;
         
         &:hover {
