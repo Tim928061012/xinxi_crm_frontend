@@ -30,7 +30,6 @@
           >
             <!-- Client Information Section -->
             <div class="form-section">
-              <h3 class="section-title">Client Information</h3>
               
               <!-- Individual 字段 -->
               <template v-if="clientForm.general.contactNature === 'Individual'">
@@ -1583,6 +1582,10 @@ const handleSave = async () => {
 }
 
 const handleNewPortfolio = () => {
+  if (!clientId.value) {
+    ElMessage.warning('Please save the client first')
+    return
+  }
   editingPortfolioIndex.value = null
   portfolioForm.clientId = clientId.value || 0
   portfolioForm.bank = ''
@@ -1959,8 +1962,14 @@ onMounted(async () => {
         font-weight: 600;
         color: #303133;
         margin-bottom: 20px;
-        margin-left: 0;
+        margin-left: 15px;
         padding-left: 0;
+      }
+      
+      .section-header {
+        .section-title {
+          margin-left: 15px;
+        }
       }
 
       .form-row {
