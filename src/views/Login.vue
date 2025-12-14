@@ -3,29 +3,7 @@
     <div class="login-content">
       <!-- Logo区域 -->
       <div class="logo-section">
-        <div class="logo">
-          <svg
-            width="80"
-            height="80"
-            viewBox="0 0 80 80"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <!-- 第一个C形/心形元素 - 青绿色，左侧 -->
-            <path
-              d="M 40 20 Q 20 20 20 40 Q 20 50 30 55 Q 40 60 40 60 Q 40 60 50 55 Q 60 50 60 40 Q 60 20 40 20 Z"
-              fill="#2EC4B6"
-              opacity="0.9"
-            />
-            <!-- 第二个C形/心形元素 - 蓝色，右侧重叠 -->
-            <path
-              d="M 40 25 Q 25 25 25 40 Q 25 48 32 52 Q 40 56 40 56 Q 40 56 48 52 Q 55 48 55 40 Q 55 25 40 25 Z"
-              fill="#4A90E2"
-              opacity="0.9"
-            />
-          </svg>
-        </div>
-        <h1 class="main-title">XinXi CRM</h1>
-        <p class="sub-title">XinXi Consulting(Hong kong) Limited</p>
+        <img :src="logoImage" alt="XinXi CRM" class="logo-image" @error="handleImageError" />
       </div>
 
       <!-- 登录表单区域 -->
@@ -106,6 +84,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import logoImage from '@/assets/logo.png'
 
 const router = useRouter()
 const route = useRoute()
@@ -127,6 +106,14 @@ const loginRules: FormRules = {
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' }
   ]
+}
+
+const handleImageError = (event: Event) => {
+  // 图片加载失败时的处理，隐藏图片避免显示破损图标
+  const img = event.target as HTMLImageElement
+  if (img) {
+    img.style.display = 'none'
+  }
 }
 
 const handleLogin = async () => {
@@ -202,33 +189,14 @@ const handleLogin = async () => {
   text-align: center;
   margin-bottom: 40px;
   width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
-  .logo {
-    margin-bottom: 24px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    
-    svg {
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-    }
-  }
-
-  .main-title {
-    font-size: 32px;
-    font-weight: 700;
-    color: #1E3A5F;
-    margin: 0 0 8px 0;
-    letter-spacing: 0.5px;
-    line-height: 1.2;
-  }
-
-  .sub-title {
-    font-size: 14px;
-    color: #6B7C93;
-    margin: 0;
-    letter-spacing: 0.3px;
-    line-height: 1.4;
+  .logo-image {
+    max-width: 300px;
+    height: auto;
+    display: block;
   }
 }
 
