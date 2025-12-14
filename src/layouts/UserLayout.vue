@@ -64,9 +64,11 @@ const handleNavClick = () => {
 const handleLogout = async () => {
   try {
     await ElMessageBox.confirm('Are you sure you want to log out?', 'Confirm', {
-      confirmButtonText: 'Confirm',
+      confirmButtonText: 'Log out',
       cancelButtonText: 'Cancel',
-      type: 'warning'
+      type: 'warning',
+      customClass: 'logout-confirm-dialog',
+      confirmButtonClass: 'logout-confirm-button'
     })
     
     await authStore.logout()
@@ -157,6 +159,29 @@ const handleLogout = async () => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+</style>
+
+<style lang="scss">
+// Logout confirm dialog styles (global, not scoped)
+.logout-confirm-dialog {
+  .el-message-box__btns {
+    .el-button--primary {
+      background-color: #f5222d !important;
+      border-color: #f5222d !important;
+      color: #fff !important;
+      
+      &:hover {
+        background-color: #ff4d4f !important;
+        border-color: #ff4d4f !important;
+      }
+      
+      &:active {
+        background-color: #cf1322 !important;
+        border-color: #cf1322 !important;
+      }
+    }
+  }
 }
 </style>
 
