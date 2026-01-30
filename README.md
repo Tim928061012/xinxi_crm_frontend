@@ -2,8 +2,6 @@
 
 基于 Vue 3 + TypeScript + Element Plus 构建的现代化CRM管理系统前端应用。
 
-> **项目位置**: 独立项目，位于 `octorparse/xinxi-crm-frontend`
-
 ## 功能特性
 
 ### 用户认证

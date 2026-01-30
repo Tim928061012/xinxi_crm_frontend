@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -41,9 +41,17 @@ request.interceptors.request.use(
   }
 )
 
+// 标记是否已经在展示登录失效弹窗，避免重复弹出
+let isAuthDialogVisible = false
+
 // 响应拦截器
 request.interceptors.response.use(
   (response: AxiosResponse) => {
+    // 如果是文件下载（blob），直接返回底层数据，避免被后续包装破坏二进制内容
+    if (response.config && response.config.responseType === 'blob') {
+      return response.data
+    }
+
     const { data } = response
 
     // 如果后端返回的数据格式是 { code, data, message } 或 { success, data, message }
@@ -111,15 +119,39 @@ request.interceptors.response.use(
           // 登录请求的 401，不显示错误，让调用方处理
           return Promise.reject(error)
         }
-        // 其他请求的 401，说明 token 过期或未授权，需要清除 token 并跳转登录
-        const authStore = useAuthStore()
-        // 清除 token
-        localStorage.removeItem('token')
-        sessionStorage.removeItem('token')
-        // 清除用户信息
-        authStore.logout()
-        // 跳转到登录页
-        router.push({ name: 'Login' })
+
+        // 其他请求的 401，说明 token 过期或未授权
+        // 只弹一次提示框，避免多个请求同时401反复弹窗
+        if (!isAuthDialogVisible) {
+          isAuthDialogVisible = true
+
+          // 先清理本地登录态
+          const authStore = useAuthStore()
+          localStorage.removeItem('token')
+          sessionStorage.removeItem('token')
+          authStore.logout()
+
+          // 提示登录态失效
+          ElMessageBox.alert(
+            '登录状态已失效，请重新登录。',
+            '登录失效',
+            {
+              showClose: false,
+              closeOnClickModal: false,
+              closeOnPressEscape: false,
+              confirmButtonText: '确定'
+            }
+          ).catch(() => {
+            // 用户可能通过编程方式关闭，保持逻辑一致
+          })
+
+          // 2 秒后跳转到登录页
+          setTimeout(() => {
+            router.push({ name: 'Login' })
+            isAuthDialogVisible = false
+          }, 2000)
+        }
+
         return Promise.reject(error)
       }
       

@@ -78,32 +78,52 @@ const loadClients = async () => {
     const response = await userClientApi.getClients()
     const data = response.data || response || []
     clientList.value = data.map((item: any) => {
-      const id = item.id || item.clientId
-      const contactNature = item.contactNature || item.contact_nature || (item.type === 'corporate' ? 'Corporate' : 'Individual')
+      const id = item.id
+      // 后端返回的clientType对应contactNature
+      const contactNature = item.clientType || item.contactNature || item.contact_nature || 'Individual'
       
-      // 根据类型生成显示名称
+      // 根据类型生成显示名称（后端ClientListDTO的逻辑）
       let clientName = ''
-      if (contactNature === 'Individual') {
-        const firstName = item.firstName || item.first_name || item.general?.firstName || ''
-        const lastName = item.lastName || item.last_name || item.general?.lastName || ''
-        clientName = `${firstName}, ${lastName}`.trim() || item.client || item.name || ''
+      if (contactNature === 'Individual' || item.clientType === 'Individual') {
+        // 个人客户：优先显示中文名，否则显示 lastName + ", " + firstName
+        if (item.chineseName && item.chineseName.trim()) {
+          clientName = item.chineseName
+        } else if (item.lastName && item.firstName) {
+          clientName = `${item.lastName}, ${item.firstName}`
+        } else if (item.lastName) {
+          clientName = item.lastName
+        } else if (item.firstName) {
+          clientName = item.firstName
+        }
       } else {
-        clientName = item.companyName || item.company_name || item.general?.companyName || item.client || item.name || ''
+        // 企业客户：优先显示中文公司名，否则显示英文公司名
+        if (item.chineseCompanyName && item.chineseCompanyName.trim()) {
+          clientName = item.chineseCompanyName
+        } else {
+          clientName = item.companyName || ''
+        }
       }
       
-      // RM 显示名称
-      const rm = item.rm || item.relationshipManager || item.relationship_manager || item.general?.rm || ''
+      // RM 显示名称（后端ClientListDTO的逻辑：lastName + ", " + firstName）
+      let rm = ''
+      if (item.rmLastName && item.rmFirstName) {
+        rm = `${item.rmLastName}, ${item.rmFirstName}`
+      } else if (item.rmLastName) {
+        rm = item.rmLastName
+      } else if (item.rmFirstName) {
+        rm = item.rmFirstName
+      }
       
       return {
         id: id,
-        clientId: item.clientId || id,
+        clientId: item.clientBusinessId || id,
         contactNature: contactNature,
         client: clientName,
         rm: rm,
         general: item.general || {},
         contact: item.contact || {},
         portfolios: item.portfolios || [],
-        createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
+        createdTime: item.createdAt || item.created_at || item.createdTime || ''
       }
     })
   } catch (error: any) {
@@ -146,12 +166,16 @@ const handleEdit = (row: Client) => {
 const handleDelete = async (row: Client) => {
   try {
     await ElMessageBox.confirm(
-      `Are you sure you want to delete client "${row.client}"?`,
-      'Confirm Delete',
+      'This action cannot be undone. Are you sure you want to delete this?',
+      '',
       {
         confirmButtonText: 'Delete',
         cancelButtonText: 'Cancel',
-        type: 'warning'
+        type: 'warning',
+        center: true,
+        customClass: 'kyc-delete-confirm-dialog',
+        confirmButtonClass: 'kyc-delete-confirm-btn',
+        showClose: false
       }
     )
     

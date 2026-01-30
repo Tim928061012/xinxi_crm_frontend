@@ -187,9 +187,19 @@ const handleEdit = (row: any) => {
 
 const handleDelete = async (row: any) => {
   try {
-    await ElMessageBox.confirm('确定要删除该数据吗？', '提示', {
-      type: 'warning'
-    })
+    await ElMessageBox.confirm(
+      'This action cannot be undone. Are you sure you want to delete this?',
+      '',
+      {
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        type: 'warning',
+        center: true,
+        customClass: 'kyc-delete-confirm-dialog',
+        confirmButtonClass: 'kyc-delete-confirm-btn',
+        showClose: false
+      }
+    )
     // TODO: 调用删除接口
     // await dataApi.deleteData(row.id)
     ElMessage.success('删除成功')

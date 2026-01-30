@@ -31,9 +31,14 @@ export interface UpdateAccountParams {
 }
 
 export const accountApi = {
-  // 获取账户列表
+  // 获取账户列表（需要Admin权限）
   getAccounts(params?: any) {
     return request.get('/system-users', { params })
+  },
+
+  // 获取RM列表（所有非admin用户，普通用户可访问）
+  getRMs() {
+    return request.get('/system-users/rms')
   },
 
   // 获取账户详情

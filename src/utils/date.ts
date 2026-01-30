@@ -9,8 +9,19 @@ export function formatDateTime(dateTime: string | Date | null | undefined): stri
   }
 
   try {
+    // 如果是字符串，优先按“原样时区”解析，避免浏览器自动按本地时区偏移（导致快/慢几小时）
+    if (typeof dateTime === 'string') {
+      // 支持形如 "2026-01-29 19:41:00" 或 "2026-01-29T19:41:00Z" / "2026-01-29T19:41:00+08:00"
+      const match = dateTime.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/)
+      if (match) {
+        const [, datePart, timePart] = match
+        return `${datePart} ${timePart}`
+      }
+      // 其他不规则格式，再退回原来的 Date 解析逻辑
+    }
+
     const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime
-    
+
     // 检查日期是否有效
     if (isNaN(date.getTime())) {
       return '-'

@@ -4,11 +4,14 @@
     <div class="top-header">
       <div class="header-left">
         <el-button :icon="ArrowLeft" circle @click="handleBack" />
-        <el-button type="primary" @click="handleSave" :loading="saving">
+        <el-button type="primary" @click="() => handleSave(false)" :loading="saving">
           Save
         </el-button>
-        <span v-if="lastSavedTime" class="last-saved">
-          Last saved {{ lastSavedTime }}...
+        <el-button @click="() => handleSave(true)" :loading="saving">
+          Save & Close
+        </el-button>
+        <span v-if="currentTabLastSaved" class="last-saved">
+          {{ currentTabLastSaved }}
         </span>
       </div>
       <div class="user-info">
@@ -30,7 +33,7 @@
           >
             <!-- Client Information Section -->
             <div class="form-section">
-              
+
               <!-- Individual 字段 -->
               <template v-if="clientForm.general.contactNature === 'Individual'">
                 <!-- 第1行: Contact Type, RM -->
@@ -38,7 +41,7 @@
                   <el-form-item label="Contact Type">
                     <el-input v-model="clientForm.general.contactType" disabled />
                   </el-form-item>
-                  <el-form-item label="RM" prop="rm">
+                  <el-form-item label="RM" prop="general.rm">
                     <el-input
                       v-model="clientForm.general.rm"
                       placeholder="Please select RM"
@@ -55,7 +58,7 @@
 
                 <!-- 第2行: Contact Nature, Introducer -->
                 <div class="form-row">
-                  <el-form-item label="Contact Nature" prop="contactNature">
+                  <el-form-item label="Contact Nature" prop="general.contactNature">
                     <el-select
                       v-model="clientForm.general.contactNature"
                       placeholder="Please select"
@@ -69,7 +72,7 @@
                   </el-form-item>
                   <el-form-item label="Introducer">
                     <el-select
-                      v-model="(clientForm.general as any).introducer"
+                      v-model="(clientForm.general as any).introducerId"
                       placeholder="Please select"
                       style="width: 100%"
                       filterable
@@ -79,7 +82,7 @@
                         v-for="intro in introducerList"
                         :key="intro.id"
                         :label="intro.introducer"
-                        :value="intro.introducer"
+                        :value="intro.id"
                       />
                     </el-select>
                   </el-form-item>
@@ -122,7 +125,7 @@
 
                 <!-- 第5行: Title, Education Level -->
                 <div class="form-row">
-                  <el-form-item label="Title" prop="title">
+                  <el-form-item label="Title" prop="general.title">
                     <el-select v-model="(clientForm.general as any).title" placeholder="Please select" style="width: 100%">
                       <el-option label="Mr." value="Mr." />
                       <el-option label="Mrs." value="Mrs." />
@@ -142,7 +145,7 @@
 
                 <!-- 第6行: First Name, Birthday(dd/mm/yyyy) -->
                 <div class="form-row">
-                  <el-form-item label="First Name" prop="firstName">
+                  <el-form-item label="First Name" prop="general.firstName">
                     <el-input v-model="(clientForm.general as any).firstName" placeholder="Please enter first name" />
                   </el-form-item>
                   <el-form-item label="Birthday (dd/mm/yyyy)">
@@ -159,7 +162,7 @@
 
                 <!-- 第7行: Last Name, Country/Region of Birth -->
                 <div class="form-row">
-                  <el-form-item label="Last Name" prop="lastName">
+                  <el-form-item label="Last Name" prop="general.lastName">
                     <el-input v-model="(clientForm.general as any).lastName" placeholder="Please enter last name" />
                   </el-form-item>
                   <el-form-item label="Country/Region of Birth">
@@ -235,7 +238,7 @@
                   <el-form-item label="Contact Type">
                     <el-input v-model="clientForm.general.contactType" disabled />
                   </el-form-item>
-                  <el-form-item label="RM" prop="rm">
+                  <el-form-item label="RM" prop="general.rm">
                     <el-input
                       v-model="clientForm.general.rm"
                       placeholder="Please select RM"
@@ -252,7 +255,7 @@
 
                 <!-- 第2行: Contact Nature, Introducer -->
                 <div class="form-row">
-                  <el-form-item label="Contact Nature" prop="contactNature">
+                  <el-form-item label="Contact Nature" prop="general.contactNature">
                     <el-select
                       v-model="clientForm.general.contactNature"
                       placeholder="Please select"
@@ -266,7 +269,7 @@
                   </el-form-item>
                   <el-form-item label="Introducer">
                     <el-select
-                      v-model="(clientForm.general as any).introducer"
+                      v-model="(clientForm.general as any).introducerId"
                       placeholder="Please select"
                       style="width: 100%"
                       filterable
@@ -276,7 +279,7 @@
                         v-for="intro in introducerList"
                         :key="intro.id"
                         :label="intro.introducer"
-                        :value="intro.introducer"
+                        :value="intro.id"
                       />
                     </el-select>
                   </el-form-item>
@@ -314,7 +317,7 @@
 
                 <!-- 第5行: Company Name, Id No. -->
                 <div class="form-row">
-                  <el-form-item label="Company Name" prop="companyName">
+                  <el-form-item label="Company Name" prop="general.companyName">
                     <el-input v-model="(clientForm.general as any).companyName" placeholder="Please enter company name" />
                   </el-form-item>
                   <el-form-item label="Id No.">
@@ -1032,6 +1035,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type Upload
 import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { userClientApi, type Client, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
+import { individualClientApi, type CreateIndividualClientRequest } from '@/api/clientIndividual'
 import { portfolioApi, type Portfolio, type CreatePortfolioParams } from '@/api/user/portfolio'
 import { accountApi, type Account } from '@/api/account'
 import { introducerApi, type Introducer } from '@/api/introducer'
@@ -1064,7 +1068,15 @@ const isViewMode = computed(() => route.path.includes('/view'))
 
 const activeTab = ref('general')
 const saving = ref(false)
-const lastSavedTime = ref<string | null>(null)
+// 各 Tab 的最后保存时间文案（进入编辑页时从后端获取，保存成功后更新）
+const tabLastSaved: Record<string, string> = reactive({
+  general: '',
+  kyc: '',
+  risk: '',
+  documents: '',
+  fee: ''
+})
+const currentTabLastSaved = computed(() => tabLastSaved[activeTab.value] || '')
 const clientFormRef = ref<FormInstance>()
 const portfolioFormRef = ref<FormInstance>()
 
@@ -1204,20 +1216,20 @@ const availableBookingCentres = computed(() => {
 // 表单验证规则
 const clientFormRules = computed<FormRules>(() => {
   const rules: FormRules = {
-    contactNature: [
+    'general.contactNature': [
       { required: true, message: 'Please select contact nature', trigger: 'change' }
     ],
-    rm: [
-      { required: true, message: 'Please select RM', trigger: 'blur' }
+    'general.rm': [
+      { required: true, message: 'Please select RM', trigger: 'change' }
     ]
   }
 
   if (clientForm.general.contactNature === 'Individual') {
-    rules.title = [{ required: true, message: 'Please select title', trigger: 'change' }]
-    rules.firstName = [{ required: true, message: 'Please enter first name', trigger: 'blur' }]
-    rules.lastName = [{ required: true, message: 'Please enter last name', trigger: 'blur' }]
+    rules['general.title'] = [{ required: true, message: 'Please select title', trigger: 'change' }]
+    rules['general.firstName'] = [{ required: true, message: 'Please enter first name', trigger: 'blur' }]
+    rules['general.lastName'] = [{ required: true, message: 'Please enter last name', trigger: 'blur' }]
   } else {
-    rules.companyName = [{ required: true, message: 'Please enter company name', trigger: 'blur' }]
+    rules['general.companyName'] = [{ required: true, message: 'Please enter company name', trigger: 'blur' }]
   }
 
   return rules
@@ -1245,30 +1257,136 @@ const loadClient = async () => {
 
     // 填充表单数据
     clientForm.contactNature = data.contactNature || data.contact_nature || 'Individual'
-    clientForm.general = data.general || {}
-    clientForm.contact = data.contact || {}
     
-    // 加载 Portfolio 列表
-    try {
-      const portfolioResponse = await portfolioApi.getPortfolios(clientId.value)
-      const portfolios = portfolioResponse.data || portfolioResponse || []
-      clientForm.portfolios = portfolios.map((item: any) => ({
+    // 处理 General 信息
+    if (data.general) {
+      const general = data.general
+      // 确保general对象有contactNature
+      if (!general.contactNature) {
+        general.contactNature = clientForm.contactNature
+      }
+      // 确保general对象有contactType
+      if (!general.contactType) {
+        general.contactType = 'Client'
+      }
+      // 处理RM名称（后端可能返回空字符串，需要从rmUserId获取）
+      if (!general.rm && general.rmUserId) {
+        // 稍后通过loadAccounts获取
+        general.rm = ''
+      }
+      // 处理Introducer名称（后端可能返回空字符串，需要从introducerId获取）
+      if (!general.introducer && general.introducerId) {
+        // 稍后通过loadIntroducers获取
+        general.introducer = ''
+      }
+      clientForm.general = general as any
+    } else {
+      // 如果没有general，创建默认值
+      if (clientForm.contactNature === 'Individual') {
+        clientForm.general = {
+          contactType: 'Client',
+          contactNature: 'Individual',
+          firstName: '',
+          lastName: '',
+          rm: ''
+        } as IndividualGeneralInfo
+      } else {
+        clientForm.general = {
+          contactType: 'Client',
+          contactNature: 'Corporate',
+          companyName: '',
+          rm: ''
+        } as CorporateGeneralInfo
+      }
+    }
+    
+    // 初始化 General Tab 的 Last saved（用后端的 updatedTime/createdTime）
+    const baseTime = data.updatedTime || data.updated_time || data.createdTime || data.created_time
+    if (baseTime) {
+      tabLastSaved.general = `Last saved: ${formatDateTime(baseTime)}`
+      // 默认情况下，其他 Tab 还没有各自的记录时，也先用这个时间
+      if (!tabLastSaved.kyc) tabLastSaved.kyc = tabLastSaved.general
+      if (!tabLastSaved.risk) tabLastSaved.risk = tabLastSaved.general
+      if (!tabLastSaved.documents) tabLastSaved.documents = tabLastSaved.general
+      if (!tabLastSaved.fee) tabLastSaved.fee = tabLastSaved.general
+    }
+
+    // 处理 Contact 信息
+    clientForm.contact = data.contact || {
+      mobilePhone: '',
+      homePhone: '',
+      primaryEmail: '',
+      address: '',
+      jurisdictionDiffers: false
+    }
+    
+    // 处理 Portfolio 列表（后端ClientDetailDTO已包含portfolios）
+    if (data.portfolios && Array.isArray(data.portfolios)) {
+      clientForm.portfolios = data.portfolios.map((item: any) => ({
         id: item.id,
         bank: item.bank || '',
         bookingCentre: item.bookingCentre || item.booking_centre || '',
         portfolioNo: item.portfolioNo || item.portfolio_no || '',
         uploadTime: item.uploadTime || item.upload_time || item.createdAt || item.created_at || ''
       }))
-    } catch (error) {
-      console.warn('Failed to load portfolios:', error)
-      clientForm.portfolios = []
+    } else {
+      // 如果没有portfolios，尝试单独加载
+      try {
+        const portfolioResponse = await portfolioApi.getPortfolios(clientId.value, clientForm.contactNature)
+        const portfolios = portfolioResponse.data || portfolioResponse || []
+        clientForm.portfolios = portfolios.map((item: any) => ({
+          id: item.portfolioId || item.id,
+          bank: item.bankName || item.bank || '',
+          bookingCentre: item.bookingCentre || item.booking_centre || '',
+          portfolioNo: item.portfolioNumber || item.portfolioNo || item.portfolio_no || '',
+          uploadTime: item.uploadTime || item.upload_time || item.createdAt || item.created_at || ''
+        }))
+      } catch (error) {
+        console.warn('Failed to load portfolios:', error)
+        clientForm.portfolios = []
+      }
+    }
+    
+    // 加载RM和Introducer名称（如果后端没有返回）
+    if (clientForm.general.rmUserId && !clientForm.general.rm) {
+      try {
+        await loadAccounts()
+        const account = accountList.value.find(a => a.userId === clientForm.general.rmUserId)
+        if (account) {
+          clientForm.general.rm = account.name || account.account || ''
+        }
+      } catch (error) {
+        console.warn('Failed to load RM name:', error)
+      }
+    }
+    
+    if ((clientForm.general as any).introducerId && !(clientForm.general as any).introducer) {
+      try {
+        await loadIntroducers()
+        const introducer = introducerList.value.find(i => i.id === (clientForm.general as any).introducerId)
+        if (introducer) {
+          (clientForm.general as any).introducer = introducer.introducer || ''
+        }
+      } catch (error) {
+        console.warn('Failed to load Introducer name:', error)
+      }
     }
 
     // 加载 KYC 数据
     try {
-      const kycResponse = await kycApi.getKYC(clientId.value)
-      const kyc = kycResponse.data || kycResponse || {}
+      const kyc = await kycApi.getKYC(clientId.value, clientForm.contactNature as any)
       kycData.documents = kyc.documents || []
+
+      // KYC Tab 的 Last saved：取最新的文档上传时间
+      const kycTimes = kycData.documents
+        .map(d => d.uploadTime)
+        .filter(Boolean)
+        .map(t => new Date(t))
+        .filter(d => !isNaN(d.getTime()))
+      if (kycTimes.length > 0) {
+        const latest = new Date(Math.max(...kycTimes.map(d => d.getTime())))
+        tabLastSaved.kyc = `Last saved: ${formatDateTime(latest)}`
+      }
     } catch (error) {
       console.warn('Failed to load KYC data:', error)
       kycData.documents = []
@@ -1276,28 +1394,42 @@ const loadClient = async () => {
 
     // 加载 Documents 数据
     try {
-      const documentsResponse = await documentsApi.getDocuments(clientId.value)
-      const documents = documentsResponse.data || documentsResponse || {}
+      const documents = await documentsApi.getDocuments(clientId.value, clientForm.contactNature as any)
       documentsData.identity = documents.identity || []
       documentsData.address = documents.address || []
       documentsData.forms = documents.forms || []
       documentsData.statements = documents.statements || []
+
+      // Documents Tab 的 Last saved：取所有文档中最新的上传时间
+      const allDocs = [
+        ...documentsData.identity,
+        ...documentsData.address,
+        ...documentsData.forms,
+        ...documentsData.statements
+      ]
+      const docTimes = allDocs
+        .map(d => d.uploadTime)
+        .filter(Boolean)
+        .map(t => new Date(t))
+        .filter(d => !isNaN(d.getTime()))
+      if (docTimes.length > 0) {
+        const latest = new Date(Math.max(...docTimes.map(d => d.getTime())))
+        tabLastSaved.documents = `Last saved: ${formatDateTime(latest)}`
+      }
     } catch (error) {
       console.warn('Failed to load documents:', error)
     }
 
     // 加载 Investment Risk Profile 数据
     try {
-      const riskResponse = await riskProfileApi.getRiskProfile(clientId.value)
-      const risk = riskResponse.data || riskResponse || {}
-      if (risk.investmentRiskRating) riskProfileData.investmentRiskRating = risk.investmentRiskRating
-      if (risk.remarks) riskProfileData.remarks = risk.remarks
-      if (risk.hongKongPI !== undefined) riskProfileData.hongKongPI = risk.hongKongPI
-      if (risk.vulnerableClientAssessment) {
-        Object.assign(riskProfileData.vulnerableClientAssessment, risk.vulnerableClientAssessment)
-      }
-      if (risk.investmentKnowledgeExperience?.types) {
-        riskProfileData.investmentKnowledgeExperience.types = risk.investmentKnowledgeExperience.types
+      const risk = await riskProfileApi.getRiskProfile(clientId.value, clientForm.contactNature as any)
+      // 用后端返回的数据整体替换前端结构，确保元数据（如 __hasExisting）也被带上
+      Object.assign(riskProfileData, risk)
+
+      // Risk Tab 的 Last saved：用后端 riskProfile 的 updatedAt/createdAt
+      const riskLast = (risk as any).__lastUpdatedAt
+      if (riskLast) {
+        tabLastSaved.risk = `Last saved: ${formatDateTime(riskLast)}`
       }
     } catch (error) {
       console.warn('Failed to load risk profile:', error)
@@ -1305,12 +1437,17 @@ const loadClient = async () => {
 
     // 加载 Fee Schedule 数据
     try {
-      const feeResponse = await feeScheduleApi.getFeeSchedule(clientId.value)
-      const fee = feeResponse.data || feeResponse || {}
+      const fee = await feeScheduleApi.getFeeSchedule(clientId.value, clientForm.contactNature as any)
       if (fee.managementFee) Object.assign(feeScheduleData.managementFee, fee.managementFee)
       if (fee.retrocession) Object.assign(feeScheduleData.retrocession, fee.retrocession)
       if (fee.performanceFee) Object.assign(feeScheduleData.performanceFee, fee.performanceFee)
       if (fee.others) Object.assign(feeScheduleData.others, fee.others)
+
+      // Fee Tab 的 Last saved：用后端 feeSchedule 的 updatedAt/createdAt
+      const feeLast = (fee as any).__lastUpdatedAt
+      if (feeLast) {
+        tabLastSaved.fee = `Last saved: ${formatDateTime(feeLast)}`
+      }
     } catch (error) {
       console.warn('Failed to load fee schedule:', error)
     }
@@ -1322,7 +1459,8 @@ const loadClient = async () => {
 
 const loadAccounts = async () => {
   try {
-    const response = await accountApi.getAccounts()
+    // 使用RM列表接口，只获取非admin用户
+    const response = await accountApi.getRMs()
     const data = response.data || response || []
     accountList.value = data.map((item: any) => {
       const firstName = item.firstName || item.first_name || ''
@@ -1335,14 +1473,44 @@ const loadAccounts = async () => {
         account: item.username || item.account || '',
         firstName: firstName,
         lastName: lastName,
-        name: `${firstName}, ${lastName}`,
+        name: `${lastName}, ${firstName}`, // RM显示格式：lastName, firstName
         isActive: item.isActive === true || item.isActive === 'true' || item.active === true,
         status: item.isActive ? 'enabled' : 'disabled',
         createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
       }
     })
   } catch (error) {
-    console.error('Failed to load accounts:', error)
+    console.error('Failed to load RM accounts:', error)
+    // 如果RM接口失败，尝试使用原接口并过滤admin
+    try {
+      const response = await accountApi.getAccounts()
+      const data = response.data || response || []
+      accountList.value = data
+        .filter((item: any) => {
+          // 过滤掉admin用户
+          const role = item.role || ''
+          return !role.toLowerCase().includes('admin')
+        })
+        .map((item: any) => {
+          const firstName = item.firstName || item.first_name || ''
+          const lastName = item.lastName || item.last_name || ''
+          const userId = item.userId || item.user_id || item.id
+
+          return {
+            id: userId,
+            userId: userId,
+            account: item.username || item.account || '',
+            firstName: firstName,
+            lastName: lastName,
+            name: `${lastName}, ${firstName}`,
+            isActive: item.isActive === true || item.isActive === 'true' || item.active === true,
+            status: item.isActive ? 'enabled' : 'disabled',
+            createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
+          }
+        })
+    } catch (fallbackError) {
+      console.error('Failed to load accounts with fallback:', fallbackError)
+    }
   }
 }
 
@@ -1450,7 +1618,7 @@ const handleRMSelect = (account: Account) => {
   rmSelectDialogVisible.value = false
 }
 
-const handleSave = async () => {
+const handleSave = async (closeAfter: boolean = false) => {
   if (!clientFormRef.value) return
 
   await clientFormRef.value.validate(async (valid) => {
@@ -1459,39 +1627,134 @@ const handleSave = async () => {
       try {
         let currentClientId = clientId.value
         
+        const buildLastSavedLabel = () => {
+          const now = new Date()
+          const day = String(now.getDate()).padStart(2, '0')
+          const month = String(now.getMonth() + 1).padStart(2, '0')
+          const year = now.getFullYear()
+          const hours = String(now.getHours()).padStart(2, '0')
+          const minutes = String(now.getMinutes()).padStart(2, '0')
+          return `Last saved: ${day}/${month}/${year} ${hours}:${minutes}`
+        }
+
         if (isEditMode.value && currentClientId) {
-          // 更新现有 Client
+          // 更新现有 Client，并保存所有 Tab 的数据
           await userClientApi.updateClient(currentClientId, clientForm)
-          
-          // 保存其他 tab 的数据
+
+          // 保存 KYC
           try {
             await kycApi.updateKYC(currentClientId, kycData)
           } catch (error) {
             console.warn('Failed to save KYC:', error)
           }
-          
+
+          // 保存 Documents
           try {
             await documentsApi.updateDocuments(currentClientId, documentsData)
           } catch (error) {
             console.warn('Failed to save documents:', error)
           }
-          
+
+          // 保存 Investment Risk Profile
           try {
-            await riskProfileApi.updateRiskProfile(currentClientId, riskProfileData)
+            await riskProfileApi.updateRiskProfile(currentClientId, riskProfileData, clientForm.contactNature as any)
           } catch (error) {
-            console.warn('Failed to save risk profile:', error)
+            console.warn('Failed to save investment risk profile:', error)
           }
-          
+
+          // 保存 Fee Schedule
           try {
-            await feeScheduleApi.updateFeeSchedule(currentClientId, feeScheduleData)
+            await feeScheduleApi.updateFeeSchedule(currentClientId, feeScheduleData, clientForm.contactNature as any)
           } catch (error) {
             console.warn('Failed to save fee schedule:', error)
           }
-          
+
           ElMessage.success('Client updated successfully')
+
+          // 更新当前会话内各 Tab 的最后保存时间
+          const label = buildLastSavedLabel()
+          tabLastSaved.general = label
+          tabLastSaved.kyc = label
+          tabLastSaved.risk = label
+          tabLastSaved.documents = label
+          tabLastSaved.fee = label
+
+          // Save & Close：返回列表
+          if (closeAfter) {
+            await nextTick()
+            await router.push('/user/client')
+          }
         } else {
           // 创建新 Client
-          const response = await userClientApi.createClient(clientForm)
+          let response
+          // 如果是个人客户，调用 /client-individuals 接口
+          if (clientForm.general.contactNature === 'Individual') {
+            const general = clientForm.general as any
+            const now = new Date()
+
+            // 使用 ISO8601 格式，匹配后端默认期望的 `yyyy-MM-dd'T'HH:mm:ss.SSSX`
+            const formatToIsoString = (date: Date | string | null | undefined): string => {
+              if (!date) return ''
+              const d = typeof date === 'string' ? new Date(date) : date
+              if (isNaN(d.getTime())) return ''
+              return d.toISOString()
+            }
+
+            const parseDdMmYyyyToDate = (value: string | null | undefined): string | null => {
+              if (!value) return null
+              const parts = value.split('/')
+              if (parts.length !== 3) return null
+              const [day, month, year] = parts
+              const d = new Date(Number(year), Number(month) - 1, Number(day))
+              if (isNaN(d.getTime())) return null
+              return formatToIsoString(d)
+            }
+
+            const genderValue = general.gender === 'Male' ? 1 : general.gender === 'Female' ? 2 : 0
+            const authUser = authStore.user
+            const creatorId = authUser ? Number((authUser as any).id) || 0 : 0
+            const creatorName = authUser?.name || authUser?.username || ''
+
+            const payload: CreateIndividualClientRequest = {
+              id: 0,
+              contactType: general.contactType || 'Client',
+              contactNature: general.contactNature || 'Individual',
+              rmUserId: general.rmUserId || 0,
+              introducerId: general.introducerId || 0,
+              clientBusinessId: general.clientId || '',
+              relationshipStatus: general.clientRelationshipStatus || '',
+              gender: genderValue,
+              maritalStatus: general.maritalStatus || '',
+              title: general.title || '',
+              firstName: general.firstName || '',
+              lastName: general.lastName || '',
+              chineseName: general.chineseName || '',
+              educationLevel: general.educationLevel || '',
+              birthday: parseDdMmYyyyToDate(general.birthday) || null,
+              birthCountry: general.countryOfBirth || '',
+              hasDualCitizenship: !!general.dualCitizenship,
+              nationality: general.nationality || '',
+              idType: general.idType || '',
+              idNumber: general.idNo || '',
+              idExpiryDate: parseDdMmYyyyToDate(general.idExpiry) || null,
+              compliance: false,
+              operation: false,
+              previousRelationshipStatus: '',
+              creatorId,
+              creatorName,
+              updatorId: creatorId,
+              updatorName: creatorName,
+              createdAt: formatToIsoString(now),
+              updatedAt: formatToIsoString(now),
+              isDeleted: false
+            }
+
+            response = await individualClientApi.createIndividualClient(payload)
+          } else {
+            // 其他类型仍然走原来的 /user/clients 接口
+            response = await userClientApi.createClient(clientForm)
+          }
+
           const responseData = response.data || response
           // 尝试多种可能的字段名获取 ID
           const newId = responseData.id || 
@@ -1529,8 +1792,8 @@ const handleSave = async () => {
               }
             }
           }
-          
-          // 保存其他 tab 的数据
+
+          // 保存其他 Tab 的数据
           try {
             await kycApi.updateKYC(currentClientId, kycData)
           } catch (error) {
@@ -1544,32 +1807,39 @@ const handleSave = async () => {
           }
           
           try {
-            await riskProfileApi.updateRiskProfile(currentClientId, riskProfileData)
+            await riskProfileApi.updateRiskProfile(currentClientId, riskProfileData, clientForm.contactNature as any)
           } catch (error) {
-            console.warn('Failed to save risk profile:', error)
+            console.warn('Failed to save investment risk profile:', error)
           }
           
           try {
-            await feeScheduleApi.updateFeeSchedule(currentClientId, feeScheduleData)
+            await feeScheduleApi.updateFeeSchedule(currentClientId, feeScheduleData, clientForm.contactNature as any)
           } catch (error) {
             console.warn('Failed to save fee schedule:', error)
           }
           
-          // 确保跳转到编辑页面
+          // 更新当前会话内各 Tab 的最后保存时间
+          const label = buildLastSavedLabel()
+          tabLastSaved.general = label
+          tabLastSaved.kyc = label
+          tabLastSaved.risk = label
+          tabLastSaved.documents = label
+          tabLastSaved.fee = label
+          
+          // 根据是否 Save & Close 决定跳转逻辑
           if (currentClientId) {
-            // 使用 nextTick 确保状态更新后再跳转
             await nextTick()
-            // 使用 push 而不是 replace，确保路由历史正确
-            await router.push(`/user/client/${currentClientId}/edit`)
+            if (closeAfter) {
+              await router.push('/user/client')
+            } else {
+              await router.push(`/user/client/${currentClientId}/edit`)
+            }
           } else {
             throw new Error('Client ID is missing after creation')
           }
         }
         
-        // 更新最后保存时间
-        const now = new Date()
-        const minutes = now.getMinutes()
-        lastSavedTime.value = `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+        // 旧的“X 分钟前”逻辑废弃，改为每次保存时设置具体时间文案（见上方 tabLastSaved）
       } catch (error: any) {
         console.error('Failed to save client:', error)
         const errorMessage = error.message || error.response?.data?.message || 'Failed to save client'
@@ -1606,18 +1876,22 @@ const handleEditPortfolio = (portfolio: Portfolio, index: number) => {
 const handleDeletePortfolio = async (index: number) => {
   try {
     await ElMessageBox.confirm(
-      'Are you sure you want to delete this portfolio?',
-      'Confirm Delete',
+      'This action cannot be undone. Are you sure you want to delete this?',
+      '',
       {
         confirmButtonText: 'Delete',
         cancelButtonText: 'Cancel',
-        type: 'warning'
+        type: 'warning',
+        center: true,
+        customClass: 'kyc-delete-confirm-dialog',
+        confirmButtonClass: 'kyc-delete-confirm-btn',
+        showClose: false
       }
     )
 
     const portfolio = clientForm.portfolios[index]
-    if (portfolio.id && clientId.value) {
-      await portfolioApi.deletePortfolio(clientId.value, portfolio.id)
+    if (portfolio.id) {
+      await portfolioApi.deletePortfolio(portfolio.id)
     }
     
     clientForm.portfolios.splice(index, 1)
@@ -1639,8 +1913,8 @@ const handleSubmitPortfolio = async () => {
         if (editingPortfolioIndex.value !== null) {
           // 编辑模式
           const portfolio = clientForm.portfolios[editingPortfolioIndex.value]
-          if (portfolio.id && clientId.value) {
-            await portfolioApi.updatePortfolio(clientId.value, portfolio.id, portfolioForm)
+          if (portfolio.id) {
+            await portfolioApi.updatePortfolio(portfolio.id, portfolioForm)
           }
           Object.assign(portfolio, {
             bank: portfolioForm.bank,
@@ -1653,13 +1927,18 @@ const handleSubmitPortfolio = async () => {
           // 新建模式
           if (clientId.value) {
             portfolioForm.clientId = clientId.value
-            const response = await portfolioApi.createPortfolio(portfolioForm)
+            // 传递clientType给createPortfolio
+            const response = await portfolioApi.createPortfolio({
+              ...portfolioForm,
+              clientType: clientForm.contactNature
+            })
+            const responseData = response.data || response
             const newPortfolio: Portfolio = {
-              id: (response.data || response).id,
+              id: responseData.portfolioId || responseData.id,
               bank: portfolioForm.bank,
               bookingCentre: portfolioForm.bookingCentre,
               portfolioNo: portfolioForm.portfolioNo,
-              uploadTime: new Date().toISOString()
+              uploadTime: responseData.uploadTime || responseData.createdAt || new Date().toISOString()
             }
             clientForm.portfolios.push(newPortfolio)
             ElMessage.success('Portfolio created successfully')
@@ -1700,7 +1979,8 @@ const handleOpenKYCDocument = async (document: KYCDocument) => {
   if (!clientId.value || !document.id) return
   try {
     const response = await kycApi.getKYCDocument(clientId.value, document.id)
-    const blob = new Blob([response], { type: 'application/pdf' })
+    const blobData = (response as any).data || response
+    const blob = blobData instanceof Blob ? blobData : new Blob([blobData], { type: 'application/pdf' })
     const url = window.URL.createObjectURL(blob)
     window.open(url, '_blank')
   } catch (error) {
@@ -1713,12 +1993,16 @@ const handleDeleteKYCDocument = async (document: KYCDocument) => {
   if (!clientId.value || !document.id) return
   try {
     await ElMessageBox.confirm(
-      `Are you sure you want to delete "${document.document}"?`,
-      'Confirm Delete',
+      'This action cannot be undone. Are you sure you want to delete this?',
+      '',
       {
         confirmButtonText: 'Delete',
         cancelButtonText: 'Cancel',
-        type: 'warning'
+        type: 'warning',
+        center: true,
+        customClass: 'kyc-delete-confirm-dialog',
+        confirmButtonClass: 'kyc-delete-confirm-btn',
+        showClose: false
       }
     )
     await kycApi.deleteKYCDocument(clientId.value, document.id)
@@ -1751,7 +2035,8 @@ const handleOpenDocument = async (document: Document) => {
   if (!clientId.value || !document.id) return
   try {
     const response = await documentsApi.getDocument(clientId.value, document.id)
-    const blob = new Blob([response], { type: 'application/pdf' })
+    const blobData = (response as any).data || response
+    const blob = blobData instanceof Blob ? blobData : new Blob([blobData], { type: 'application/pdf' })
     const url = window.URL.createObjectURL(blob)
     window.open(url, '_blank')
   } catch (error) {
@@ -1764,12 +2049,16 @@ const handleDeleteDocument = async (document: Document) => {
   if (!clientId.value || !document.id) return
   try {
     await ElMessageBox.confirm(
-      `Are you sure you want to delete "${document.document}"?`,
-      'Confirm Delete',
+      'This action cannot be undone. Are you sure you want to delete this?',
+      '',
       {
         confirmButtonText: 'Delete',
         cancelButtonText: 'Cancel',
-        type: 'warning'
+        type: 'warning',
+        center: true,
+        customClass: 'kyc-delete-confirm-dialog',
+        confirmButtonClass: 'kyc-delete-confirm-btn',
+        showClose: false
       }
     )
     await documentsApi.deleteDocument(clientId.value, document.id)
@@ -1816,7 +2105,7 @@ const handleSubmitDocumentUpload = async () => {
   uploading.value = true
   try {
     if (documentUploadType.value === 'kyc') {
-      const response = await kycApi.uploadKYCDocument(clientId.value, currentUploadFile.value)
+      const response = await kycApi.uploadKYCDocument(clientId.value, clientForm.contactNature as any, currentUploadFile.value)
       const data = response.data || response
       const newDoc: KYCDocument = {
         id: data.id,
@@ -1827,7 +2116,7 @@ const handleSubmitDocumentUpload = async () => {
       kycData.documents.push(newDoc)
       ElMessage.success('Document uploaded successfully')
     } else {
-      const response = await documentsApi.uploadDocument(clientId.value, documentUploadType.value, currentUploadFile.value)
+      const response = await documentsApi.uploadDocument(clientId.value, clientForm.contactNature as any, documentUploadType.value, currentUploadFile.value)
       const data = response.data || response
       const newDoc: Document = {
         id: data.id,
@@ -2396,6 +2685,41 @@ onMounted(async () => {
     margin-top: 7px;
     text-align: center;
   }
+}
+
+/* KYC 删除确认弹窗样式 */
+:deep(.kyc-delete-confirm-dialog) {
+  /* 去掉标题区域 */
+  .el-message-box__header {
+    display: none;
+  }
+
+  /* 去掉左侧的感叹号图标 */
+  .el-message-box__status {
+    display: none;
+  }
+
+  /* 按钮居中 */
+  .el-message-box__btns {
+    justify-content: center;
+  }
+}
+
+/* Delete 按钮红底白字（无论 Element Plus 默认主题如何，都强制覆盖） */
+:deep(.kyc-delete-confirm-dialog .el-button--primary),
+:deep(.kyc-delete-confirm-btn) {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #fff !important;
+}
+
+:deep(.kyc-delete-confirm-dialog .el-button--primary:hover),
+:deep(.kyc-delete-confirm-dialog .el-button--primary:focus),
+:deep(.kyc-delete-confirm-btn:hover),
+:deep(.kyc-delete-confirm-btn:focus) {
+  background-color: #f78989 !important;
+  border-color: #f78989 !important;
+  color: #fff !important;
 }
 </style>
 

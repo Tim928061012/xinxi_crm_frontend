@@ -426,3 +426,42 @@ html, body {
     border-color: #025189 !important;
   }
 }
+
+// =======================
+// KYC 删除弹窗（全局样式）
+// =======================
+.kyc-delete-confirm-dialog {
+  // 去掉标题和感叹号图标
+  .el-message-box__header {
+    display: none;
+  }
+
+  .el-message-box__status {
+    display: none;
+  }
+
+  // 文案居中 & 增大与顶部间距
+  .el-message-box__content {
+    text-align: center;
+    margin-top: 16px; // 比之前稍微小一些的顶部间距
+  }
+
+  // 按钮居中
+  .el-message-box__btns {
+    justify-content: center;
+  }
+
+  // Delete（确认）按钮红底白字
+  .el-button--primary {
+    background-color: #ff0000 !important;
+    border-color: #ff0000 !important;
+    color: #ffffff !important;
+  }
+
+  .el-button--primary:hover,
+  .el-button--primary:focus {
+    background-color: #ff4d4f !important;
+    border-color: #ff4d4f !important;
+    color: #ffffff !important;
+  }
+}

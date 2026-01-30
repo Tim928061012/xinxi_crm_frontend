@@ -2,7 +2,12 @@
   <div class="client-page">
     <!-- 顶部标题栏 -->
     <div class="page-header">
-      <h1 class="page-title">All Clients</h1>
+      <div class="page-header-left">
+        <el-button type="primary" @click="handleNewClient">
+          + New Client
+        </el-button>
+        <h1 class="page-title">All Clients</h1>
+      </div>
       <div class="user-info">
         <el-icon><User /></el-icon>
         <span>Administrator</span>
@@ -73,13 +78,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, onActivated } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
 import { adminClientApi, type AdminClient, type UpdateComplianceOperationParams } from '@/api/client'
 import { formatDateTime } from '@/utils/date'
 
 const route = useRoute()
+const router = useRouter()
 const clientList = ref<AdminClient[]>([])
 
 // 加载客户列表
@@ -174,6 +180,11 @@ const handleOperationChange = async (row: AdminClient) => {
 const handleView = (row: AdminClient) => {
   // TODO: 实现查看客户详情功能
   ElMessage.info('View client details (to be implemented)')
+}
+
+// 新建客户（跳转到用户端的新建客户页面）
+const handleNewClient = () => {
+  router.push('/user/client/new')
 }
 
 // 监听路由变化，当路由切换到当前页面时刷新数据
