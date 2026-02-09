@@ -84,6 +84,11 @@ export const introducerApi = {
     return request.get('/crm-introducers', { params })
   },
 
+  // 获取激活状态的介绍人列表（用于创建客户时选择）
+  getActiveIntroducers(params?: any) {
+    return request.get('/crm-introducers/active', { params })
+  },
+
   // 获取介绍人详情
   getIntroducerById(id: number) {
     return request.get(`/crm-introducers/${id}`)

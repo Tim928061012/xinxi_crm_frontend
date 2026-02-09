@@ -7,6 +7,7 @@ export interface Account {
   firstName: string
   lastName: string
   name: string // 显示用的全名，格式：firstName, lastName
+  role?: string // 用户角色，用于判断是否为 admin
   isActive: boolean // 后端返回的 isActive 字段
   status: 'enabled' | 'disabled' // 前端显示用的状态
   createdTime: string

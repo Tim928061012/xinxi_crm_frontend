@@ -42,6 +42,16 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: 'client/:id',
+        name: 'AdminClientView',
+        component: () => import('@/views/user/ClientDetail.vue'),
+        meta: { 
+          requiresAuth: true,
+          title: '客户详情',
+          roles: ['admin']
+        }
+      },
+      {
         path: 'introducer',
         name: 'Introducer',
         component: () => import('@/views/admin/Introducer.vue'),
@@ -139,7 +149,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           requiresAuth: true,
           title: '客户管理',
-          roles: ['user', 'admin']
+          roles: ['user']
         }
       },
       {
@@ -149,7 +159,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           requiresAuth: true,
           title: '新建客户',
-          roles: ['user', 'admin']
+          roles: ['user']
         }
       },
       {
@@ -159,7 +169,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           requiresAuth: true,
           title: '客户详情',
-          roles: ['user', 'admin']
+          roles: ['user']
         }
       },
       {
@@ -169,7 +179,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           requiresAuth: true,
           title: '编辑客户',
-          roles: ['user', 'admin']
+          roles: ['user']
         }
       },
       {
@@ -179,7 +189,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           requiresAuth: true,
           title: '个人中心',
-          roles: ['user', 'admin']
+          roles: ['user']
         }
       }
     ]
@@ -223,20 +233,24 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // 优先处理 /user 下的路由，确保能正常通过
-  // 对于 /user 路径下的路由，只要用户已登录，就允许自由跳转
-  // 权限检查只用于决定用户能看到哪些菜单，不影响路由跳转
+  // 优先处理 /user 下的路由
   if (to.path.startsWith('/user')) {
-    // 如果用户已登录，直接允许通过，不进行任何权限检查或重定向
-    // 这样同一角色下的所有菜单项之间可以自由跳转
-    if (isAuthenticated) {
-      next()
+    // 未登录，统一跳转到登录页
+    if (!isAuthenticated) {
+      next({ name: 'Login', query: { redirect: to.fullPath } })
+      NProgress.done()
       return
     }
-    
-    // 如果未登录，重定向到登录页
-    next({ name: 'Login', query: { redirect: to.fullPath } })
-    NProgress.done()
+
+    // admin 超级管理员不允许访问 /user 下的任何页面，强制回到 admin 首页
+    if (userRole === 'admin') {
+      next({ name: 'Account' })
+      NProgress.done()
+      return
+    }
+
+    // 普通用户可以在 /user 下自由跳转
+    next()
     return
   }
 

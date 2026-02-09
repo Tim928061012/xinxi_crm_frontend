@@ -30,13 +30,24 @@
       <el-table-column label="Status" width="150">
         <template #default="{ row }">
           <div style="display: flex; align-items: center; gap: 8px;">
+            <!-- admin 账号状态开关置灰不可修改 -->
             <el-switch
               v-model="row.isActive"
               :active-value="true"
               :inactive-value="false"
+              :disabled="row.account === 'admin' || row.role === 'Admin' || row.role === 'admin'"
               @change="handleStatusChange(row)"
             />
-            <span :style="{ color: row.isActive ? '#67c23a' : '#909399' }">
+            <span
+              :style="{
+                color:
+                  row.account === 'admin' || row.role === 'Admin' || row.role === 'admin'
+                    ? '#909399'
+                    : row.isActive
+                      ? '#67c23a'
+                      : '#909399'
+              }"
+            >
               {{ row.isActive ? 'enabled' : 'disabled' }}
             </span>
           </div>
@@ -176,7 +187,9 @@ const loadAccounts = async () => {
         account: item.username || item.account || '', // 后端返回 username，映射到前端的 account
         firstName: firstName,
         lastName: lastName,
-        name: `${firstName}, ${lastName}`, // 格式：firstName, lastName
+        // name 显示规则：两个都有 -> "firstName, lastName"，只有一个 -> 只显示该字段，避免多余逗号
+        name: firstName && lastName ? `${firstName}, ${lastName}` : (firstName || lastName || ''),
+        role: item.role || item.userRole || '', // 后端返回的角色，用于判断是否为 admin
         isActive: isActive, // 后端返回的 isActive 字段
         status: isActive ? 'enabled' : 'disabled', // 前端显示用的状态
         createdTime: item.createdAt || item.created_at || item.createdTime || item.created_time || item.createTime || ''
@@ -255,6 +268,14 @@ const handleSubmitEditAccount = async () => {
 
 // 状态切换
 const handleStatusChange = async (row: Account) => {
+  // 超级管理员账号状态不允许修改，直接还原并提示
+  if (row.account === 'admin' || (row as any).role === 'Admin' || (row as any).role === 'admin') {
+    row.isActive = true
+    row.status = 'enabled'
+    ElMessage.warning('超级管理员的状态不允许修改为不可用')
+    return
+  }
+
   const originalIsActive = row.isActive
   // 使用 userId 字段，如果没有则使用 id
   const userId = (row as any).userId || row.id

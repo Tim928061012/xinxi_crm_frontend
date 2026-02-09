@@ -44,8 +44,12 @@
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'">
-              {{ row.status === 'active' ? '启用' : '禁用' }}
+            <el-tag
+              :type="row.role === 'admin' ? 'info' : (row.status === 'active' ? 'success' : 'danger')"
+            >
+              <!-- admin 永远显示启用，置灰 -->
+              <span v-if="row.role === 'admin'">启用</span>
+              <span v-else>{{ row.status === 'active' ? '启用' : '禁用' }}</span>
             </el-tag>
           </template>
         </el-table-column>
@@ -61,6 +65,7 @@
               编辑
             </el-button>
             <el-button
+              v-if="row.role !== 'admin'"
               :type="row.status === 'active' ? 'warning' : 'success'"
               link
               size="small"

@@ -3,9 +3,6 @@
     <!-- 顶部标题栏 -->
     <div class="page-header">
       <div class="page-header-left">
-        <el-button type="primary" @click="handleNewClient">
-          + New Client
-        </el-button>
         <h1 class="page-title">All Clients</h1>
       </div>
       <div class="user-info">
@@ -176,10 +173,14 @@ const handleOperationChange = async (row: AdminClient) => {
   }
 }
 
-// 查看客户详情
+// 查看客户详情（在管理员布局下跳转到客户详情页，只读查看）
 const handleView = (row: AdminClient) => {
-  // TODO: 实现查看客户详情功能
-  ElMessage.info('View client details (to be implemented)')
+  if (!row.id) {
+    ElMessage.error('Client ID is missing, cannot open detail page')
+    return
+  }
+  // 跳转到管理员路由下的客户详情页，保持 Admin 菜单和布局
+  router.push(`/client/${row.id}`)
 }
 
 // 新建客户（跳转到用户端的新建客户页面）

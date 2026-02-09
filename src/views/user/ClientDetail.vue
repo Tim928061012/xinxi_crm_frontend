@@ -4,12 +4,15 @@
     <div class="top-header">
       <div class="header-left">
         <el-button :icon="ArrowLeft" circle @click="handleBack" />
-        <el-button type="primary" @click="() => handleSave(false)" :loading="saving">
-          Save
-        </el-button>
-        <el-button @click="() => handleSave(true)" :loading="saving">
-          Save & Close
-        </el-button>
+        <!-- View 模式下隐藏保存按钮 -->
+        <template v-if="!isViewMode">
+          <el-button type="primary" @click="() => handleSave(false)" :loading="saving">
+            Save
+          </el-button>
+          <el-button @click="() => handleSave(true)" :loading="saving">
+            Save & Close
+          </el-button>
+        </template>
         <span v-if="currentTabLastSaved" class="last-saved">
           {{ currentTabLastSaved }}
         </span>
@@ -45,9 +48,10 @@
                     <el-input
                       v-model="clientForm.general.rm"
                       placeholder="Please select RM"
-                      readonly
-                      @click="handleSelectRM"
-                      style="cursor: pointer;"
+                      :readonly="isViewMode"
+                      :disabled="isViewMode"
+                      @click="!isViewMode && handleSelectRM()"
+                      :style="isViewMode ? '' : 'cursor: pointer;'"
                     >
                       <template #suffix>
                         <el-icon><User /></el-icon>
@@ -63,7 +67,7 @@
                       v-model="clientForm.general.contactNature"
                       placeholder="Please select"
                       style="width: 100%"
-                      :disabled="isEditMode"
+                      :disabled="isEditMode || isViewMode"
                       @change="handleContactNatureChange"
                     >
                       <el-option label="Individual" value="Individual" />
@@ -75,8 +79,9 @@
                       v-model="(clientForm.general as any).introducerId"
                       placeholder="Please select"
                       style="width: 100%"
+                      :disabled="isViewMode"
                       filterable
-                      @focus="loadIntroducersIfNeeded"
+                      @focus="!isViewMode && loadIntroducersIfNeeded()"
                     >
                       <el-option
                         v-for="intro in introducerList"
@@ -91,10 +96,10 @@
                 <!-- 第3行: Client Id, Gender -->
                 <div class="form-row">
                   <el-form-item label="Client Id">
-                    <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" />
+                    <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" :disabled="isViewMode" />
                   </el-form-item>
                   <el-form-item label="Gender">
-                    <el-radio-group v-model="(clientForm.general as any).gender">
+                    <el-radio-group v-model="(clientForm.general as any).gender" :disabled="isViewMode">
                       <el-radio label="Male">Male</el-radio>
                       <el-radio label="Female">Female</el-radio>
                     </el-radio-group>
@@ -108,13 +113,14 @@
                       v-model="clientForm.general.clientRelationshipStatus"
                       placeholder="Please select"
                       style="width: 100%"
+                      :disabled="isViewMode"
                     >
                       <el-option label="Prospecting" value="Prospecting" />
                       <el-option label="On Boarding" value="On Boarding" />
                     </el-select>
                   </el-form-item>
                   <el-form-item label="Marital Status">
-                    <el-select v-model="(clientForm.general as any).maritalStatus" placeholder="Please select" style="width: 100%">
+                    <el-select v-model="(clientForm.general as any).maritalStatus" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Single" value="Single" />
                       <el-option label="Married" value="Married" />
                       <el-option label="Divorced" value="Divorced" />
@@ -126,7 +132,7 @@
                 <!-- 第5行: Title, Education Level -->
                 <div class="form-row">
                   <el-form-item label="Title" prop="general.title">
-                    <el-select v-model="(clientForm.general as any).title" placeholder="Please select" style="width: 100%">
+                    <el-select v-model="(clientForm.general as any).title" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Mr." value="Mr." />
                       <el-option label="Mrs." value="Mrs." />
                       <el-option label="Miss" value="Miss" />
@@ -134,7 +140,7 @@
                     </el-select>
                   </el-form-item>
                   <el-form-item label="Education Level">
-                    <el-select v-model="(clientForm.general as any).educationLevel" placeholder="Please select" style="width: 100%">
+                    <el-select v-model="(clientForm.general as any).educationLevel" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="High School" value="High School" />
                       <el-option label="Bachelor" value="Bachelor" />
                       <el-option label="Master" value="Master" />
@@ -146,7 +152,7 @@
                 <!-- 第6行: First Name, Birthday(dd/mm/yyyy) -->
                 <div class="form-row">
                   <el-form-item label="First Name" prop="general.firstName">
-                    <el-input v-model="(clientForm.general as any).firstName" placeholder="Please enter first name" />
+                    <el-input v-model="(clientForm.general as any).firstName" placeholder="Please enter first name" :disabled="isViewMode" />
                   </el-form-item>
                   <el-form-item label="Birthday (dd/mm/yyyy)">
                     <el-date-picker
@@ -156,6 +162,7 @@
                       format="DD/MM/YYYY"
                       value-format="DD/MM/YYYY"
                       style="width: 100%"
+                      :disabled="isViewMode"
                     />
                   </el-form-item>
                 </div>
@@ -163,12 +170,13 @@
                 <!-- 第7行: Last Name, Country/Region of Birth -->
                 <div class="form-row">
                   <el-form-item label="Last Name" prop="general.lastName">
-                    <el-input v-model="(clientForm.general as any).lastName" placeholder="Please enter last name" />
+                    <el-input v-model="(clientForm.general as any).lastName" placeholder="Please enter last name" :disabled="isViewMode" />
                   </el-form-item>
                   <el-form-item label="Country/Region of Birth">
                     <el-input
                       v-model="(clientForm.general as any).countryOfBirth"
                       placeholder="Please enter country/region"
+                      :disabled="isViewMode"
                     >
                       <template #suffix>
                         <el-icon><Location /></el-icon>
@@ -180,13 +188,14 @@
                 <!-- 第8行: Chinese Name, Dual Citizenship -->
                 <div class="form-row">
                   <el-form-item label="Chinese Name">
-                    <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" />
+                    <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" :disabled="isViewMode" />
                   </el-form-item>
                   <el-form-item label="Dual Citizenship">
                     <el-switch
                       v-model="(clientForm.general as any).dualCitizenship"
                       :active-value="true"
                       :inactive-value="false"
+                      :disabled="isViewMode"
                     />
                     <span style="margin-left: 8px;">{{ (clientForm.general as any).dualCitizenship ? 'Yes' : 'No' }}</span>
                   </el-form-item>
@@ -195,7 +204,7 @@
                 <!-- 第9行: Id Type, Nationality -->
                 <div class="form-row">
                   <el-form-item label="Id Type">
-                    <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%">
+                    <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Passport" value="Passport" />
                       <el-option label="ID Card" value="ID Card" />
                       <el-option label="Driver License" value="Driver License" />
@@ -205,6 +214,7 @@
                     <el-input
                       v-model="(clientForm.general as any).nationality"
                       placeholder="Please enter nationality"
+                      :disabled="isViewMode"
                     >
                       <template #suffix>
                         <el-icon><Location /></el-icon>
@@ -216,7 +226,7 @@
                 <!-- 第10行: Id No., Id Expiry(dd/mm/yyyy) -->
                 <div class="form-row">
                   <el-form-item label="Id No.">
-                    <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" />
+                    <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" :disabled="isViewMode" />
                   </el-form-item>
                   <el-form-item label="Id Expiry (dd/mm/yyyy)">
                     <el-date-picker
@@ -226,6 +236,7 @@
                       format="DD/MM/YYYY"
                       value-format="DD/MM/YYYY"
                       style="width: 100%"
+                      :disabled="isViewMode"
                     />
                   </el-form-item>
                 </div>
@@ -242,9 +253,10 @@
                     <el-input
                       v-model="clientForm.general.rm"
                       placeholder="Please select RM"
-                      readonly
-                      @click="handleSelectRM"
-                      style="cursor: pointer;"
+                      :readonly="isViewMode"
+                      :disabled="isViewMode"
+                      @click="!isViewMode && handleSelectRM()"
+                      :style="isViewMode ? '' : 'cursor: pointer;'"
                     >
                       <template #suffix>
                         <el-icon><User /></el-icon>
@@ -260,7 +272,7 @@
                       v-model="clientForm.general.contactNature"
                       placeholder="Please select"
                       style="width: 100%"
-                      :disabled="isEditMode"
+                      :disabled="isEditMode || isViewMode"
                       @change="handleContactNatureChange"
                     >
                       <el-option label="Individual" value="Individual" />
@@ -272,8 +284,9 @@
                       v-model="(clientForm.general as any).introducerId"
                       placeholder="Please select"
                       style="width: 100%"
+                      :disabled="isViewMode"
                       filterable
-                      @focus="loadIntroducersIfNeeded"
+                      @focus="!isViewMode && loadIntroducersIfNeeded()"
                     >
                       <el-option
                         v-for="intro in introducerList"
@@ -288,10 +301,10 @@
                 <!-- 第3行: Client Id, Chinese Name -->
                 <div class="form-row">
                   <el-form-item label="Client Id">
-                    <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" />
+                    <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" :disabled="isViewMode" />
                   </el-form-item>
                   <el-form-item label="Chinese Name">
-                    <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" />
+                    <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" :disabled="isViewMode" />
                   </el-form-item>
                 </div>
 
@@ -308,7 +321,7 @@
                     </el-select>
                   </el-form-item>
                   <el-form-item label="Id Type">
-                    <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%">
+                    <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Business License" value="Business License" />
                       <el-option label="Registration Certificate" value="Registration Certificate" />
                     </el-select>
@@ -318,17 +331,17 @@
                 <!-- 第5行: Company Name, Id No. -->
                 <div class="form-row">
                   <el-form-item label="Company Name" prop="general.companyName">
-                    <el-input v-model="(clientForm.general as any).companyName" placeholder="Please enter company name" />
+                    <el-input v-model="(clientForm.general as any).companyName" placeholder="Please enter company name" :disabled="isViewMode" />
                   </el-form-item>
                   <el-form-item label="Id No.">
-                    <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" />
+                    <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" :disabled="isViewMode" />
                   </el-form-item>
                 </div>
 
                 <!-- 第6行: Corporate Type, Date of Company Search/COI Issued(dd/mm/yyyy) -->
                 <div class="form-row">
                   <el-form-item label="Corporate Type">
-                    <el-select v-model="(clientForm.general as any).corporateType" placeholder="Please select" style="width: 100%">
+                    <el-select v-model="(clientForm.general as any).corporateType" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Limited Company" value="Limited Company" />
                       <el-option label="Corporation" value="Corporation" />
                       <el-option label="Partnership" value="Partnership" />
@@ -342,6 +355,7 @@
                       format="DD/MM/YYYY"
                       value-format="DD/MM/YYYY"
                       style="width: 100%"
+                      :disabled="isViewMode"
                     />
                   </el-form-item>
                 </div>
@@ -349,7 +363,7 @@
                 <!-- 第7行: Industry, Country/Region of Registration -->
                 <div class="form-row">
                   <el-form-item label="Industry">
-                    <el-select v-model="(clientForm.general as any).industry" placeholder="Please select" style="width: 100%">
+                    <el-select v-model="(clientForm.general as any).industry" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Finance" value="Finance" />
                       <el-option label="Technology" value="Technology" />
                       <el-option label="Manufacturing" value="Manufacturing" />
@@ -360,6 +374,7 @@
                     <el-input
                       v-model="(clientForm.general as any).countryOfRegistration"
                       placeholder="Please enter country/region"
+                      :disabled="isViewMode"
                     >
                       <template #suffix>
                         <el-icon><Location /></el-icon>
@@ -375,6 +390,7 @@
                       v-model="(clientForm.general as any).stateOwned"
                       :active-value="true"
                       :inactive-value="false"
+                      :disabled="isViewMode"
                     />
                     <span style="margin-left: 8px;">{{ (clientForm.general as any).stateOwned ? 'Yes' : 'No' }}</span>
                   </el-form-item>
@@ -388,14 +404,14 @@
               <h3 class="section-title">Contact</h3>
               <div class="form-row">
                 <el-form-item label="Mobile Phone">
-                  <el-input v-model="clientForm.contact.mobilePhone" placeholder="Please enter mobile phone">
+                  <el-input v-model="clientForm.contact.mobilePhone" placeholder="Please enter mobile phone" :disabled="isViewMode">
                     <template #suffix>
                       <el-icon><Phone /></el-icon>
                     </template>
                   </el-input>
                 </el-form-item>
                 <el-form-item label="Primary Email">
-                  <el-input v-model="clientForm.contact.primaryEmail" placeholder="Please enter email">
+                  <el-input v-model="clientForm.contact.primaryEmail" placeholder="Please enter email" :disabled="isViewMode">
                     <template #suffix>
                       <el-icon><Message /></el-icon>
                     </template>
@@ -405,7 +421,7 @@
 
               <div class="form-row" style="margin-bottom: 10px;">
                 <el-form-item label="Home Phone" style="align-self: flex-start;">
-                  <el-input v-model="clientForm.contact.homePhone" placeholder="Please enter home phone">
+                  <el-input v-model="clientForm.contact.homePhone" placeholder="Please enter home phone" :disabled="isViewMode">
                     <template #suffix>
                       <el-icon><Phone /></el-icon>
                     </template>
@@ -417,6 +433,7 @@
                     type="textarea"
                     :rows="3"
                     placeholder="Please enter address"
+                    :disabled="isViewMode"
                   />
                 </el-form-item>
               </div>
@@ -427,6 +444,7 @@
                     v-model="clientForm.contact.jurisdictionDiffers"
                     :active-value="true"
                     :inactive-value="false"
+                    :disabled="isViewMode"
                   />
                   <span style="margin-left: 8px;">{{ clientForm.contact.jurisdictionDiffers ? 'Yes' : 'No' }}</span>
                 </el-form-item>
@@ -438,7 +456,7 @@
             <div class="form-section">
               <div class="section-header">
                 <h3 class="section-title">Portfolio</h3>
-                <el-button type="primary" :icon="Plus" @click="handleNewPortfolio">
+                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleNewPortfolio">
                   New Portfolio
                 </el-button>
               </div>
@@ -459,13 +477,15 @@
                 </el-table-column>
                 <el-table-column label="Actions" width="150">
                   <template #default="{ row, $index }">
-                    <el-link type="primary" @click="handleEditPortfolio(row, $index)" :underline="false">
-                      Edit
-                    </el-link>
-                    <el-divider direction="vertical" />
-                    <el-link type="primary" @click="handleDeletePortfolio($index)" :underline="false">
-                      Delete
-                    </el-link>
+                    <template v-if="!isViewMode">
+                      <el-link type="primary" @click="handleEditPortfolio(row, $index)" :underline="false">
+                        Edit
+                      </el-link>
+                      <el-divider direction="vertical" />
+                      <el-link type="primary" @click="handleDeletePortfolio($index)" :underline="false">
+                        Delete
+                      </el-link>
+                    </template>
                   </template>
                 </el-table-column>
               </el-table>
@@ -482,7 +502,7 @@
           <div class="kyc-section">
             <div class="kyc-upload-header">
               <h3 class="kyc-upload-title">Upload Supporting Documents</h3>
-              <el-button type="primary" :icon="Plus" @click="handleUploadKYCDocument">
+              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument">
                 Upload
               </el-button>
             </div>
@@ -505,7 +525,7 @@
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link type="primary" @click="handleDeleteKYCDocument(row)" :underline="false">
+                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteKYCDocument(row)" :underline="false">
                     Delete
                   </el-link>
                 </template>
@@ -522,7 +542,7 @@
             <div class="form-section">
               <div class="form-row">
                 <el-form-item label="Investment Risk Rating">
-                  <el-select v-model="riskProfileData.investmentRiskRating" placeholder="Please select" style="width: 100%">
+                  <el-select v-model="riskProfileData.investmentRiskRating" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                     <el-option label="Conservative" value="Conservative" />
                     <el-option label="Moderate" value="Moderate" />
                     <el-option label="Balanced" value="Balanced" />
@@ -535,6 +555,7 @@
                     v-model="riskProfileData.hongKongPI"
                     :active-value="true"
                     :inactive-value="false"
+                    :disabled="isViewMode"
                   />
                   <span style="margin-left: 8px;">{{ riskProfileData.hongKongPI ? 'Yes' : 'No' }}</span>
                 </el-form-item>
@@ -546,6 +567,7 @@
                     type="textarea"
                     :rows="4"
                     placeholder="Please enter remarks"
+                    :disabled="isViewMode"
                   />
                 </el-form-item>
               </div>
@@ -563,6 +585,7 @@
                         v-model="riskProfileData.vulnerableClientAssessment.age65AndAbove"
                         :active-value="true"
                         :inactive-value="false"
+                        :disabled="isViewMode"
                       />
                       <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.age65AndAbove ? 'Yes' : 'No' }}</span>
                     </div>
@@ -574,6 +597,7 @@
                         v-model="riskProfileData.vulnerableClientAssessment.physicalOrIntellectualDisabilities"
                         :active-value="true"
                         :inactive-value="false"
+                        :disabled="isViewMode"
                       />
                       <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.physicalOrIntellectualDisabilities ? 'Yes' : 'No' }}</span>
                     </div>
@@ -585,6 +609,7 @@
                         v-model="riskProfileData.vulnerableClientAssessment.notProficientInEnglish"
                         :active-value="true"
                         :inactive-value="false"
+                        :disabled="isViewMode"
                       />
                       <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.notProficientInEnglish ? 'Yes' : 'No' }}</span>
                     </div>
@@ -596,6 +621,7 @@
                         v-model="riskProfileData.vulnerableClientAssessment.educationPrimaryOrBelow"
                         :active-value="true"
                         :inactive-value="false"
+                        :disabled="isViewMode"
                       />
                       <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.educationPrimaryOrBelow ? 'Yes' : 'No' }}</span>
                     </div>
@@ -609,6 +635,7 @@
                         v-model="riskProfileData.vulnerableClientAssessment.vulnerableClient"
                         :active-value="true"
                         :inactive-value="false"
+                        :disabled="isViewMode"
                       />
                       <span style="margin-left: 8px;">{{ riskProfileData.vulnerableClientAssessment.vulnerableClient ? 'Yes' : 'No' }}</span>
                     </div>
@@ -623,6 +650,7 @@
                         format="DD/MM/YYYY"
                         value-format="DD/MM/YYYY"
                         style="width: 60%"
+                        :disabled="isViewMode"
                       />
                     </div>
                   </div>
@@ -648,7 +676,7 @@
                     <span class="table-header-bold">Knowledge</span>
                   </template>
                   <template #default="{ row }">
-                    <el-checkbox v-model="row.knowledge" />
+                    <el-checkbox v-model="row.knowledge" :disabled="isViewMode" />
                   </template>
                 </el-table-column>
                 <el-table-column label="Experience" width="150" align="center">
@@ -656,7 +684,7 @@
                     <span class="table-header-bold">Experience</span>
                   </template>
                   <template #default="{ row }">
-                    <el-checkbox v-model="row.experience" />
+                    <el-checkbox v-model="row.experience" :disabled="isViewMode" />
                   </template>
                 </el-table-column>
               </el-table>
@@ -672,7 +700,7 @@
           <div class="document-section">
             <div class="section-header">
               <h3 class="section-title">Upload Identity Proof</h3>
-              <el-button type="primary" :icon="Plus" @click="handleUploadDocument('identity')">
+              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('identity')">
                 Upload
               </el-button>
             </div>
@@ -695,7 +723,7 @@
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
                     Delete
                   </el-link>
                 </template>
@@ -707,7 +735,7 @@
           <div class="document-section">
             <div class="section-header">
               <h3 class="section-title">Upload Address Proof</h3>
-              <el-button type="primary" :icon="Plus" @click="handleUploadDocument('address')">
+              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('address')">
                 Upload
               </el-button>
             </div>
@@ -730,7 +758,7 @@
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
                     Delete
                   </el-link>
                 </template>
@@ -742,7 +770,7 @@
           <div class="document-section">
             <div class="section-header">
               <h3 class="section-title">Upload Forms</h3>
-              <el-button type="primary" :icon="Plus" @click="handleUploadDocument('forms')">
+              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('forms')">
                 Upload
               </el-button>
             </div>
@@ -765,7 +793,7 @@
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
                     Delete
                   </el-link>
                 </template>
@@ -777,7 +805,7 @@
           <div class="document-section">
             <div class="section-header">
               <h3 class="section-title">Upload XinXi Statements</h3>
-              <el-button type="primary" :icon="Plus" @click="handleUploadDocument('statements')">
+              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('statements')">
                 Upload
               </el-button>
             </div>
@@ -800,7 +828,7 @@
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
                     Delete
                   </el-link>
                 </template>
@@ -824,6 +852,7 @@
                         v-model="feeScheduleData.managementFee.enabled"
                         :active-value="true"
                         :inactive-value="false"
+                        :disabled="isViewMode"
                       />
                       <span style="margin-left: 8px;">{{ feeScheduleData.managementFee.enabled ? 'Yes' : 'No' }}</span>
                     </div>
@@ -831,11 +860,11 @@
                       <div class="fee-form-items">
                         <div class="fee-form-item">
                           <div class="fee-form-label">Yearly Management Fee (%)</div>
-                          <el-input v-model.number="feeScheduleData.managementFee.yearlyManagementFee" type="number" placeholder="Please enter" class="fee-input" />
+                          <el-input v-model.number="feeScheduleData.managementFee.yearlyManagementFee" type="number" placeholder="Please enter" class="fee-input" :disabled="isViewMode" />
                         </div>
                         <div class="fee-form-item">
                           <div class="fee-form-label">Minimum Management Fee (p.a.)</div>
-                          <el-input v-model.number="feeScheduleData.managementFee.minimumManagementFee" type="number" placeholder="Please enter" class="fee-input" />
+                          <el-input v-model.number="feeScheduleData.managementFee.minimumManagementFee" type="number" placeholder="Please enter" class="fee-input" :disabled="isViewMode" />
                         </div>
                       </div>
                     </template>
@@ -849,6 +878,7 @@
                         v-model="feeScheduleData.retrocession.enabled"
                         :active-value="true"
                         :inactive-value="false"
+                        :disabled="isViewMode"
                       />
                       <span style="margin-left: 8px;">{{ feeScheduleData.retrocession.enabled ? 'Yes' : 'No' }}</span>
                     </div>
@@ -864,6 +894,7 @@
                         v-model="feeScheduleData.performanceFee.enabled"
                         :active-value="true"
                         :inactive-value="false"
+                        :disabled="isViewMode"
                       />
                       <span style="margin-left: 8px;">{{ feeScheduleData.performanceFee.enabled ? 'Yes' : 'No' }}</span>
                     </div>
@@ -871,11 +902,11 @@
                       <div class="fee-form-items">
                         <div class="fee-form-item">
                           <div class="fee-form-label">Hurdle Rate (%)</div>
-                          <el-input v-model.number="feeScheduleData.performanceFee.hurdleRate" type="number" placeholder="Please enter" class="fee-input" />
+                          <el-input v-model.number="feeScheduleData.performanceFee.hurdleRate" type="number" placeholder="Please enter" class="fee-input" :disabled="isViewMode" />
                         </div>
                         <div class="fee-form-item">
                           <div class="fee-form-label">Profit shared to XinXi (%)</div>
-                          <el-input v-model.number="feeScheduleData.performanceFee.profitSharedToXinXi" type="number" placeholder="Please enter" class="fee-input" />
+                          <el-input v-model.number="feeScheduleData.performanceFee.profitSharedToXinXi" type="number" placeholder="Please enter" class="fee-input" :disabled="isViewMode" />
                         </div>
                       </div>
                     </template>
@@ -889,6 +920,7 @@
                         v-model="feeScheduleData.others.enabled"
                         :active-value="true"
                         :inactive-value="false"
+                        :disabled="isViewMode"
                       />
                       <span style="margin-left: 8px;">{{ feeScheduleData.others.enabled ? 'Yes' : 'No' }}</span>
                     </div>
@@ -902,6 +934,7 @@
                             :rows="4"
                             placeholder="Please enter details"
                             class="fee-input"
+                            :disabled="isViewMode"
                             :resize="'none'"
                           />
                         </div>
@@ -960,8 +993,9 @@
             v-model="portfolioForm.bank" 
             placeholder="Please select bank" 
             style="width: 100%" 
+            :disabled="isViewMode"
             filterable
-            @focus="loadBanksIfNeeded"
+            @focus="!isViewMode && loadBanksIfNeeded()"
           >
             <el-option
               v-for="bank in bankList"
@@ -972,7 +1006,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="Booking Centre" prop="bookingCentre" required>
-          <el-select v-model="portfolioForm.bookingCentre" placeholder="Please select booking centre" style="width: 100%" filterable>
+          <el-select v-model="portfolioForm.bookingCentre" placeholder="Please select booking centre" style="width: 100%" :disabled="isViewMode" filterable>
             <el-option
               v-for="centre in availableBookingCentres"
               :key="centre"
@@ -982,7 +1016,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="Portfolio No." prop="portfolioNo" required>
-          <el-input v-model="portfolioForm.portfolioNo" placeholder="Please enter portfolio number" />
+          <el-input v-model="portfolioForm.portfolioNo" placeholder="Please enter portfolio number" :disabled="isViewMode" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -1064,7 +1098,20 @@ const clientId = computed(() => {
   return isNaN(parsedId) ? null : parsedId
 })
 const isEditMode = computed(() => clientId.value !== null && clientId.value !== undefined)
-const isViewMode = computed(() => route.path.includes('/view'))
+// View 模式：路径包含 /view 或者是 admin 的 view 路由（/client/:id 且不是 /client/:id/edit）
+const isViewMode = computed(() => {
+  const path = route.path
+  const routeName = route.name
+  // 如果是 admin 的 view 路由（AdminClientView），或者是路径包含 /view
+  if (routeName === 'AdminClientView' || path.includes('/view')) {
+    return true
+  }
+  // 如果是 /client/:id 且不是 /client/:id/edit，也是 view 模式
+  if (path.startsWith('/client/') && !path.includes('/edit') && !path.includes('/new')) {
+    return true
+  }
+  return false
+})
 
 const activeTab = ref('general')
 const saving = ref(false)
@@ -1443,6 +1490,12 @@ const loadClient = async () => {
       if (fee.performanceFee) Object.assign(feeScheduleData.performanceFee, fee.performanceFee)
       if (fee.others) Object.assign(feeScheduleData.others, fee.others)
 
+      // 把后端返回的元数据（id、是否已存在、最后更新时间）同步到当前会话的 feeScheduleData 上，
+      // 这样后续保存时 feeScheduleApi.updateFeeSchedule 才能正确区分是创建还是更新
+      ;(feeScheduleData as any).__id = (fee as any).__id ?? null
+      ;(feeScheduleData as any).__hasExisting = (fee as any).__hasExisting === true
+      ;(feeScheduleData as any).__lastUpdatedAt = (fee as any).__lastUpdatedAt || null
+
       // Fee Tab 的 Last saved：用后端 feeSchedule 的 updatedAt/createdAt
       const feeLast = (fee as any).__lastUpdatedAt
       if (feeLast) {
@@ -1459,29 +1512,35 @@ const loadClient = async () => {
 
 const loadAccounts = async () => {
   try {
-    // 使用RM列表接口，只获取非admin用户
+    // 使用RM列表接口，只获取非admin用户（后端已经过滤了 isActive == true）
     const response = await accountApi.getRMs()
     const data = response.data || response || []
-    accountList.value = data.map((item: any) => {
-      const firstName = item.firstName || item.first_name || ''
-      const lastName = item.lastName || item.last_name || ''
-      const userId = item.userId || item.user_id || item.id
+    // 前端再次过滤，确保只返回 enabled 状态的账户
+    accountList.value = data
+      .filter((item: any) => {
+        const isActive = item.isActive === true || item.isActive === 'true' || item.active === true
+        return isActive
+      })
+      .map((item: any) => {
+        const firstName = item.firstName || item.first_name || ''
+        const lastName = item.lastName || item.last_name || ''
+        const userId = item.userId || item.user_id || item.id
 
-      return {
-        id: userId,
-        userId: userId,
-        account: item.username || item.account || '',
-        firstName: firstName,
-        lastName: lastName,
-        name: `${lastName}, ${firstName}`, // RM显示格式：lastName, firstName
-        isActive: item.isActive === true || item.isActive === 'true' || item.active === true,
-        status: item.isActive ? 'enabled' : 'disabled',
-        createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
-      }
-    })
+        return {
+          id: userId,
+          userId: userId,
+          account: item.username || item.account || '',
+          firstName: firstName,
+          lastName: lastName,
+          name: `${lastName}, ${firstName}`, // RM显示格式：lastName, firstName
+          isActive: true, // 已经过滤，所以都是 active
+          status: 'enabled',
+          createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
+        }
+      })
   } catch (error) {
     console.error('Failed to load RM accounts:', error)
-    // 如果RM接口失败，尝试使用原接口并过滤admin
+    // 如果RM接口失败，尝试使用原接口并过滤admin和disabled状态
     try {
       const response = await accountApi.getAccounts()
       const data = response.data || response || []
@@ -1489,7 +1548,10 @@ const loadAccounts = async () => {
         .filter((item: any) => {
           // 过滤掉admin用户
           const role = item.role || ''
-          return !role.toLowerCase().includes('admin')
+          const isAdmin = role.toLowerCase().includes('admin')
+          // 只返回 enabled 状态的账户
+          const isActive = item.isActive === true || item.isActive === 'true' || item.active === true
+          return !isAdmin && isActive
         })
         .map((item: any) => {
           const firstName = item.firstName || item.first_name || ''
@@ -1503,8 +1565,8 @@ const loadAccounts = async () => {
             firstName: firstName,
             lastName: lastName,
             name: `${lastName}, ${firstName}`,
-            isActive: item.isActive === true || item.isActive === 'true' || item.active === true,
-            status: item.isActive ? 'enabled' : 'disabled',
+            isActive: true, // 已经过滤，所以都是 active
+            status: 'enabled',
             createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
           }
         })
@@ -1516,27 +1578,64 @@ const loadAccounts = async () => {
 
 const loadIntroducers = async () => {
   try {
-    const response = await introducerApi.getIntroducers()
+    // 使用激活状态的介绍人接口，只获取 enabled 状态的介绍人
+    const response = await introducerApi.getActiveIntroducers()
     const data = response.data || response || []
-    introducerList.value = data.map((item: any) => {
-      const contactNature = item.contactNature || item.contact_nature || 'Individual'
-      let introducerName = ''
-      if (contactNature === 'Individual') {
-        const firstName = item.firstName || item.first_name || ''
-        const lastName = item.lastName || item.last_name || ''
-        introducerName = `${firstName}, ${lastName}`.trim()
-      } else {
-        introducerName = item.companyName || item.company_name || ''
-      }
+    // 前端再次过滤，确保只返回 enabled 状态的介绍人
+    introducerList.value = data
+      .filter((item: any) => {
+        const isActive = item.isActive === true || item.isActive === 'true' || item.is_active === true || item.active === true
+        return isActive
+      })
+      .map((item: any) => {
+        const contactNature = item.contactNature || item.contact_nature || 'Individual'
+        let introducerName = ''
+        if (contactNature === 'Individual') {
+          const firstName = item.firstName || item.first_name || ''
+          const lastName = item.lastName || item.last_name || ''
+          introducerName = `${firstName}, ${lastName}`.trim()
+        } else {
+          introducerName = item.companyName || item.company_name || ''
+        }
 
-      return {
-        id: item.introducerId || item.id,
-        introducer: introducerName,
-        contactNature: contactNature
-      }
-    })
+        return {
+          id: item.introducerId || item.id,
+          introducer: introducerName,
+          contactNature: contactNature
+        }
+      })
   } catch (error) {
     console.error('Failed to load introducers:', error)
+    // 如果 active 接口失败，尝试使用原接口并过滤 disabled 状态
+    try {
+      const response = await introducerApi.getIntroducers()
+      const data = response.data || response || []
+      introducerList.value = data
+        .filter((item: any) => {
+          // 只返回 enabled 状态的介绍人
+          const isActive = item.isActive === true || item.isActive === 'true' || item.is_active === true || item.active === true
+          return isActive
+        })
+        .map((item: any) => {
+          const contactNature = item.contactNature || item.contact_nature || 'Individual'
+          let introducerName = ''
+          if (contactNature === 'Individual') {
+            const firstName = item.firstName || item.first_name || ''
+            const lastName = item.lastName || item.last_name || ''
+            introducerName = `${firstName}, ${lastName}`.trim()
+          } else {
+            introducerName = item.companyName || item.company_name || ''
+          }
+
+          return {
+            id: item.introducerId || item.id,
+            introducer: introducerName,
+            contactNature: contactNature
+          }
+        })
+    } catch (fallbackError) {
+      console.error('Failed to load introducers with fallback:', fallbackError)
+    }
   }
 }
 
@@ -1679,10 +1778,11 @@ const handleSave = async (closeAfter: boolean = false) => {
           tabLastSaved.documents = label
           tabLastSaved.fee = label
 
-          // Save & Close：返回列表
+          // Save & Close：返回列表（根据当前路由前缀区分 admin 和 user）
           if (closeAfter) {
             await nextTick()
-            await router.push('/user/client')
+            const isAdminRoute = route.path.startsWith('/client')
+            await router.push(isAdminRoute ? '/client' : '/user/client')
           }
         } else {
           // 创建新 Client
@@ -1826,13 +1926,16 @@ const handleSave = async (closeAfter: boolean = false) => {
           tabLastSaved.documents = label
           tabLastSaved.fee = label
           
-          // 根据是否 Save & Close 决定跳转逻辑
+          // 根据是否 Save & Close 决定跳转逻辑（根据当前路由前缀区分 admin 和 user）
           if (currentClientId) {
             await nextTick()
+            const isAdminRoute = route.path.startsWith('/client')
             if (closeAfter) {
-              await router.push('/user/client')
+              await router.push(isAdminRoute ? '/client' : '/user/client')
             } else {
-              await router.push(`/user/client/${currentClientId}/edit`)
+              await router.push(
+                isAdminRoute ? `/client/${currentClientId}` : `/user/client/${currentClientId}/edit`
+              )
             }
           } else {
             throw new Error('Client ID is missing after creation')
