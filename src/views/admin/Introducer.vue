@@ -23,7 +23,16 @@
         >
           <el-table-column prop="introducer" label="Introducer" width="200" />
           <el-table-column prop="contactNature" label="Contact Nature" width="150" />
-          <el-table-column prop="rm" label="RM" width="200" />
+          <el-table-column label="RM" width="200">
+            <template #default="{ row }">
+              <span>{{ row.rm }}</span>
+              <!-- 仅当 RM 被禁用时显示红点 -->
+              <span
+                v-if="row.rmDisabled"
+                class="rm-disabled-dot"
+              />
+            </template>
+          </el-table-column>
           <el-table-column label="Status" width="150">
             <template #default="{ row }">
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -410,19 +419,19 @@ const loadIntroducers = async () => {
     const response = await introducerApi.getIntroducers()
     const data = response.data || response || []
     
-    // 先加载账户列表，用于根据 rmUserId 查找 RM 名称
-    let accountMap = new Map<number, string>()
+    // 先加载账户列表，用于根据 rmUserId 查找 RM 名称和状态
+    let accountMap = new Map<number, { name: string; isActive: boolean }>()
     try {
       const accountResponse = await accountApi.getAccounts()
       const accounts = accountResponse.data || accountResponse || []
       accounts.forEach((acc: any) => {
         const userId = acc.userId || acc.user_id || acc.id
+        if (!userId) return
         const firstName = acc.firstName || acc.first_name || ''
         const lastName = acc.lastName || acc.last_name || ''
         const name = `${firstName}, ${lastName}`.trim() || acc.name || acc.account || ''
-        if (userId) {
-          accountMap.set(userId, name)
-        }
+        const isActive = acc.isActive === true || acc.isActive === 'true' || acc.active === true
+        accountMap.set(Number(userId), { name, isActive })
       })
     } catch (error) {
       console.warn('Failed to load accounts for RM mapping:', error)
@@ -447,10 +456,13 @@ const loadIntroducers = async () => {
         introducerName = item.companyName || item.company_name || ''
       }
       
-      // 根据 rmUserId 查找 RM 名称
+      // 根据 rmUserId 查找 RM 名称和状态
       let rmName = ''
-      if (rmUserId && accountMap.has(rmUserId)) {
-        rmName = accountMap.get(rmUserId) || ''
+      let rmDisabled = false
+      if (rmUserId && accountMap.has(Number(rmUserId))) {
+        const acc = accountMap.get(Number(rmUserId))!
+        rmName = acc.name || ''
+        rmDisabled = acc.isActive === false
       }
       
       return {
@@ -459,6 +471,7 @@ const loadIntroducers = async () => {
         contactNature: contactNature,
         rm: rmName, // 根据 rmUserId 查找的名称
         rmUserId: rmUserId, // 保存 rmUserId
+        rmDisabled: rmDisabled,
         status: isActive ? 'enabled' : 'disabled',
         isActive: isActive,
         createdTime: createdAt, // 映射自 createdAt
@@ -893,6 +906,16 @@ onMounted(() => {
     align-items: center;
     min-height: calc(100vh - 100px);
   }
+}
+
+/* RM 禁用红点样式：与 Client 模块保持一致，放在根作用域 */
+.rm-disabled-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ff0000;
+  margin-left: 6px;
 }
 
 :deep(.el-dialog) {

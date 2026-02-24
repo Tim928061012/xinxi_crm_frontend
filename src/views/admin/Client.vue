@@ -20,7 +20,16 @@
         style="width: 100%"
       >
         <el-table-column prop="client" label="Client" width="200" />
-        <el-table-column prop="rm" label="RM" width="200" />
+        <el-table-column label="RM" width="200">
+          <template #default="{ row }">
+            <span>{{ row.rm }}</span>
+            <!-- 仅当 RM 被禁用时显示红点 -->
+            <span
+              v-if="row.rmDisabled"
+              class="rm-disabled-dot"
+            />
+          </template>
+        </el-table-column>
         <el-table-column label="Compliance" width="150">
           <template #default="{ row }">
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -79,6 +88,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { accountApi } from '@/api/account'
 import { adminClientApi, type AdminClient, type UpdateComplianceOperationParams } from '@/api/client'
 import { formatDateTime } from '@/utils/date'
 
@@ -86,6 +96,28 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const clientList = ref<AdminClient[]>([])
+
+// RM 启用状态映射：key 为 rmUserId，value 为是否启用
+const rmActiveMap = ref<Map<number, boolean>>(new Map())
+
+// 加载 RM 账户状态（用于在列表中标记禁用 RM）
+const loadRmStatus = async () => {
+  try {
+    const response = await accountApi.getAccounts()
+    const data = response.data || response || []
+    const map = new Map<number, boolean>()
+    data.forEach((item: any) => {
+      const userId = item.userId || item.user_id || item.id
+      if (!userId) return
+      const isActive = item.isActive === true || item.isActive === 'true' || item.active === true
+      map.set(Number(userId), !!isActive)
+    })
+    rmActiveMap.value = map
+  } catch (error) {
+    console.warn('Failed to load RM status:', error)
+    rmActiveMap.value = new Map()
+  }
+}
 
 // 加载客户列表
 const loadClients = async () => {
@@ -95,26 +127,64 @@ const loadClients = async () => {
     // 转换数据格式
     clientList.value = data.map((item: any) => {
       // 判断客户类型：根据接口返回的数据结构判断
-      // 如果有 clientId 或 client_id，可能是个人客户；如果有 corporateId 或 corporate_id，可能是企业客户
-      // 或者根据 type 字段判断
       let type: 'individual' | 'corporate' = 'individual' // 默认为个人客户
-      if (item.type) {
+      if (item.clientType) {
+        type = item.clientType === 'Corporate' ? 'corporate' : 'individual'
+      } else if (item.type) {
         type = item.type === 'corporate' || item.type === 'Corporate' ? 'corporate' : 'individual'
       } else if (item.corporateId || item.corporate_id) {
         type = 'corporate'
       }
       
-      // 获取客户ID：个人客户使用 clientId，企业客户使用 corporateId
-      const id = item.id || (type === 'individual' ? (item.clientId || item.client_id) : (item.corporateId || item.corporate_id))
+      // 获取客户ID：个人客户使用 id / clientId，企业客户使用 corporateId
+      const id =
+        item.id ||
+        (type === 'individual'
+          ? (item.clientId || item.client_id)
+          : (item.corporateId || item.corporate_id))
+
+      const rmUserId = item.rmUserId || item.rm_user_id
+
+      // Client 显示名称：优先使用服务端的 clientName；否则按普通规则拼接
+      let clientName = item.clientName || item.client_name || ''
+      if (!clientName) {
+        const firstName = item.firstName || ''
+        const lastName = item.lastName || ''
+        clientName = (item.chineseName && item.chineseName.trim())
+          ? item.chineseName
+          : (lastName && firstName ? `${lastName}, ${firstName}` : (lastName || firstName || ''))
+      }
+
+      // RM 显示名称：与 Account 页保持一致（firstName, lastName）
+      const rmFirstName = item.rmFirstName || item.rm_first_name || ''
+      const rmLastName = item.rmLastName || item.rm_last_name || ''
+      let rmName = ''
+      if (rmFirstName || rmLastName) {
+        rmName = rmFirstName && rmLastName ? `${rmFirstName}, ${rmLastName}` : (rmFirstName || rmLastName)
+      } else {
+        rmName = item.rmName || item.rm_name || item.rm || item.relationshipManager || item.relationship_manager || ''
+      }
       
+      const numericRmUserId = rmUserId ? Number(rmUserId) : undefined
+      // 后端已经返回 rmActive，直接使用；没有时再退回账户表
+      const rmActiveFromServer = item.rmActive
+
       return {
         id: id,
-        clientId: item.clientId || item.client_id,
-        client: item.client || item.name || item.clientName || item.client_name || '',
-        rm: item.rm || item.relationshipManager || item.relationship_manager || item.rmName || item.rm_name || '',
+        clientId: item.clientBusinessId || item.clientId || item.client_id,
+        client: clientName,
+        rm: rmName,
+        rmUserId: numericRmUserId,
+        // 优先使用服务端 rmActive；当 rmActive 为 false 时，一定标红
+        rmDisabled:
+          rmActiveFromServer === false
+            ? true
+            : (rmActiveFromServer === true
+                ? false
+                : (numericRmUserId ? rmActiveMap.value.get(numericRmUserId) === false : false)),
         compliance: item.compliance === true || item.compliance === 'true' || item.compliance === 'Yes' || item.compliance === 'yes',
         operation: item.operation === true || item.operation === 'true' || item.operation === 'Yes' || item.operation === 'yes',
-        createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || item.createTime || '',
+        createdTime: item.createdAt || item.created_at || item.createdTime || item.created_time || item.createTime || '',
         type: type
       }
     })
@@ -193,21 +263,24 @@ const handleNewClient = () => {
 // 监听路由变化，当路由切换到当前页面时刷新数据
 watch(
   () => route.path,
-  (newPath) => {
+  async (newPath) => {
     if (newPath === '/client') {
-      loadClients()
+      await loadRmStatus()
+      await loadClients()
     }
   },
   { immediate: false }
 )
 
 // 当组件被激活时（从其他路由切换回来时）刷新数据
-onActivated(() => {
-  loadClients()
+onActivated(async () => {
+  await loadRmStatus()
+  await loadClients()
 })
 
-onMounted(() => {
-  loadClients()
+onMounted(async () => {
+  await loadRmStatus()
+  await loadClients()
 })
 </script>
 
@@ -345,6 +418,16 @@ onMounted(() => {
     color: #909399;
     font-size: 16px;
   }
+}
+
+/* RM 禁用红点样式：放在根作用域，避免被 header/body 选择器影响 */
+.rm-disabled-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ff0000;
+  margin-left: 6px;
 }
 </style>
 

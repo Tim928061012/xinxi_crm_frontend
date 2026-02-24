@@ -5,7 +5,9 @@ export interface AdminClient {
   id: number
   clientId?: number // 用于区分个人客户和企业客户
   client: string // 客户名称
-  rm: string // Relationship Manager
+  rm: string // Relationship Manager 名称
+  rmUserId?: number // RM 对应的用户ID（用于判断是否被禁用）
+  rmDisabled?: boolean // RM 是否被禁用（前端计算字段，用于显示红点）
   compliance: boolean // 合规状态
   operation: boolean // 运营状态
   createdTime: string
