@@ -7,7 +7,7 @@
       </div>
       <div class="user-info">
         <el-icon><User /></el-icon>
-        <span>Administrator</span>
+        <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
       </div>
     </div>
 
@@ -78,11 +78,13 @@ import { ref, onMounted, watch, onActivated } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/auth'
 import { adminClientApi, type AdminClient, type UpdateComplianceOperationParams } from '@/api/client'
 import { formatDateTime } from '@/utils/date'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const clientList = ref<AdminClient[]>([])
 
 // 加载客户列表

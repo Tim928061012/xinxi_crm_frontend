@@ -39,7 +39,7 @@ export const accountApi = {
 
   // 获取RM列表（所有非admin用户，普通用户可访问）
   getRMs() {
-    return request.get('/system-users/rms')
+    return request.get('/system-users/rm-list')
   },
 
   // 获取账户详情

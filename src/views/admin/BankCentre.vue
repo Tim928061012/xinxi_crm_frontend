@@ -1,19 +1,19 @@
 <template>
   <div class="bank-centre-page">
-    <!-- 有数据时显示顶部操作栏和表格 -->
-    <template v-if="bankList.length > 0">
-      <div class="page-header">
-        <el-button type="primary" @click="handleNewBank">
-          <el-icon><Plus /></el-icon>
-          New Bank & Centre
-        </el-button>
-        <div class="user-info">
-          <el-icon><User /></el-icon>
-          <span>Administrator</span>
-        </div>
+    <!-- 顶部操作栏（始终显示当前账号信息） -->
+    <div class="page-header">
+      <el-button type="primary" @click="handleNewBank">
+        <el-icon><Plus /></el-icon>
+        New Bank & Centre
+      </el-button>
+      <div class="user-info">
+        <el-icon><User /></el-icon>
+        <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
       </div>
+    </div>
 
-      <!-- 银行表格 -->
+    <!-- 有数据时显示表格 -->
+    <template v-if="bankList.length > 0">
       <div class="table-wrapper">
         <el-table
           :data="bankList"
@@ -245,10 +245,12 @@ import { ref, reactive, onMounted, watch, onActivated, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, User, Minus } from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/auth'
 import { bankApi, type BankCentre, type CreateBankCentreParams, type UpdateBankCentreParams, type BookingCentre } from '@/api/bank'
 import { formatDateTime } from '@/utils/date'
 
 const route = useRoute()
+const authStore = useAuthStore()
 const bankList = ref<BankCentre[]>([])
 const newBankDialogVisible = ref(false)
 const editBankDialogVisible = ref(false)

@@ -1,19 +1,19 @@
 <template>
   <div class="introducer-page">
-    <!-- 有数据时显示顶部操作栏和表格 -->
-    <template v-if="introducerList.length > 0">
-      <div class="page-header">
-        <el-button type="primary" @click="handleNewIntroducer">
-          <el-icon><Plus /></el-icon>
-          New Introducer
-        </el-button>
-        <div class="user-info">
-          <el-icon><User /></el-icon>
-          <span>Administrator</span>
-        </div>
+    <!-- 顶部操作栏（始终显示当前账号信息） -->
+    <div class="page-header">
+      <el-button type="primary" @click="handleNewIntroducer">
+        <el-icon><Plus /></el-icon>
+        New Introducer
+      </el-button>
+      <div class="user-info">
+        <el-icon><User /></el-icon>
+        <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
       </div>
+    </div>
 
-      <!-- 介绍人表格 -->
+    <!-- 有数据时显示表格 -->
+    <template v-if="introducerList.length > 0">
       <div class="table-wrapper">
         <el-table
           :data="introducerList"
@@ -314,11 +314,13 @@ import { ref, reactive, onMounted, watch, onActivated, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, User, Message, Phone } from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/auth'
 import { introducerApi, type Introducer, type CreateIntroducerParams, type UpdateIntroducerParams } from '@/api/introducer'
 import { accountApi, type Account } from '@/api/account'
 import { formatDateTime } from '@/utils/date'
 
 const route = useRoute()
+const authStore = useAuthStore()
 const introducerList = ref<Introducer[]>([])
 const newIntroducerDialogVisible = ref(false)
 const editIntroducerDialogVisible = ref(false)
@@ -661,23 +663,31 @@ const loadAccountsForRM = async () => {
   try {
     const response = await accountApi.getAccounts()
     const data = response.data || response || []
-    accountList.value = data.map((item: any) => {
-      const firstName = item.firstName || item.first_name || ''
-      const lastName = item.lastName || item.last_name || ''
-      const userId = item.userId || item.user_id || item.id
-      
-      return {
-        id: userId,
-        userId: userId,
-        account: item.username || item.account || '',
-        firstName: firstName,
-        lastName: lastName,
-        name: `${firstName}, ${lastName}`, // 格式：firstName, lastName
-        isActive: item.isActive === true || item.isActive === 'true' || item.active === true,
-        status: item.isActive ? 'enabled' : 'disabled',
-        createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
-      }
-    })
+    // 仅保留非 admin 且启用的用户，用于 RM 选择
+    accountList.value = data
+      .filter((item: any) => {
+        const role = (item.role || '').toLowerCase()
+        const isAdmin = role === 'admin'
+        const isActive = item.isActive === true || item.isActive === 'true' || item.active === true
+        return !isAdmin && isActive
+      })
+      .map((item: any) => {
+        const firstName = item.firstName || item.first_name || ''
+        const lastName = item.lastName || item.last_name || ''
+        const userId = item.userId || item.user_id || item.id
+        
+        return {
+          id: userId,
+          userId: userId,
+          account: item.username || item.account || '',
+          firstName: firstName,
+          lastName: lastName,
+          name: `${firstName}, ${lastName}`, // 格式：firstName, lastName
+          isActive: true,
+          status: 'enabled',
+          createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
+        }
+      })
   } catch (error) {
     console.error('Failed to load account list:', error)
     ElMessage.error('Failed to load account list')

@@ -1,19 +1,19 @@
 <template>
   <div class="client-list-page">
-    <!-- 有数据时显示顶部操作栏和表格 -->
-    <template v-if="clientList.length > 0">
-      <div class="page-header">
-        <el-button type="primary" @click="handleNewClient">
-          <el-icon><Plus /></el-icon>
-          New Client
-        </el-button>
-        <div class="user-info">
-          <el-icon><User /></el-icon>
-          <span>{{ authStore.user?.name || 'User' }}</span>
-        </div>
+    <!-- 顶部操作栏（始终显示当前账号信息） -->
+    <div class="page-header">
+      <el-button type="primary" @click="handleNewClient">
+        <el-icon><Plus /></el-icon>
+        New Client
+      </el-button>
+      <div class="user-info">
+        <el-icon><User /></el-icon>
+        <span>{{ authStore.user?.username || authStore.user?.account || 'User' }}</span>
       </div>
+    </div>
 
-      <!-- 客户表格 -->
+    <!-- 有数据时显示表格 -->
+    <template v-if="clientList.length > 0">
       <div class="table-wrapper">
         <el-table
           :data="clientList"

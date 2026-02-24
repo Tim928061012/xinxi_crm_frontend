@@ -19,7 +19,7 @@
       </div>
       <div class="user-info">
         <el-icon><User /></el-icon>
-        <span>{{ authStore.user?.name || 'User' }}</span>
+        <span>{{ authStore.user?.username || authStore.user?.account || 'User' }}</span>
       </div>
     </div>
 
@@ -84,7 +84,7 @@
                       @focus="!isViewMode && loadIntroducersIfNeeded()"
                     >
                       <el-option
-                        v-for="intro in introducerList"
+                        v-for="intro in visibleIntroducers"
                         :key="intro.id"
                         :label="intro.introducer"
                         :value="intro.id"
@@ -299,7 +299,7 @@
                       @focus="!isViewMode && loadIntroducersIfNeeded()"
                     >
                       <el-option
-                        v-for="intro in introducerList"
+                        v-for="intro in visibleIntroducers"
                         :key="intro.id"
                         :label="intro.introducer"
                         :value="intro.id"
@@ -971,7 +971,7 @@
       width="600px"
     >
       <el-table
-        :data="accountList"
+        :data="accountList.filter(account => account.isActive || account.userId === clientForm.general.rmUserId || account.id === clientForm.general.rmUserId)"
         stripe
         style="width: 100%"
         @row-click="handleRMSelect"
@@ -1253,6 +1253,15 @@ const accountList = ref<Account[]>([])
 const introducerList = ref<Introducer[]>([])
 const bankList = ref<BankCentre[]>([])
 
+// Introducer 下拉可见列表：只显示启用的 + 当前已选中的（即使已禁用也保留）
+const visibleIntroducers = computed(() => {
+  const currentId = (clientForm.general as any).introducerId
+  return (introducerList.value || []).filter((intro: any) => {
+    if (!intro) return false
+    return intro.isActive || intro.id === currentId
+  })
+})
+
 // Portfolio 管理
 const portfolioDialogVisible = ref(false)
 const editingPortfolioIndex = ref<number | null>(null)
@@ -1416,16 +1425,6 @@ const loadClient = async () => {
       if (!general.contactType) {
         general.contactType = 'Client'
       }
-      // 处理RM名称（后端可能返回空字符串，需要从rmUserId获取）
-      if (!general.rm && general.rmUserId) {
-        // 稍后通过loadAccounts获取
-        general.rm = ''
-      }
-      // 处理Introducer名称（后端可能返回空字符串，需要从introducerId获取）
-      if (!general.introducer && general.introducerId) {
-        // 稍后通过loadIntroducers获取
-        general.introducer = ''
-      }
       clientForm.general = general as any
     } else {
       // 如果没有general，创建默认值
@@ -1447,6 +1446,15 @@ const loadClient = async () => {
       }
     }
     
+    // 如果存在 introducerId，则预先加载 Introducer 列表，保证下拉中有对应的名称
+    if ((clientForm.general as any).introducerId) {
+      try {
+        await loadIntroducers()
+      } catch (e) {
+        console.warn('Failed to preload introducers for existing client:', e)
+      }
+    }
+
     // 初始化 General Tab 的 Last saved（用后端的 updatedTime/createdTime）
     const baseTime = data.updatedTime || data.updated_time || data.createdTime || data.created_time
     if (baseTime) {
@@ -1612,32 +1620,28 @@ const loadClient = async () => {
 
 const loadAccounts = async () => {
   try {
-    // 使用RM列表接口，只获取非admin用户（后端已经过滤了 isActive == true）
+    // 使用 RM 列表接口，获取所有非 admin 的 RM 账号（包括禁用的，用于保持历史关联）
     const response = await accountApi.getRMs()
     const data = response.data || response || []
-    // 前端再次过滤，确保只返回 enabled 状态的账户
-    accountList.value = data
-      .filter((item: any) => {
-        const isActive = item.isActive === true || item.isActive === 'true' || item.active === true
-        return isActive
-      })
-      .map((item: any) => {
-        const firstName = item.firstName || item.first_name || ''
-        const lastName = item.lastName || item.last_name || ''
-        const userId = item.userId || item.user_id || item.id
+    // 不过滤 isActive，确保下拉选项中仍能包含已禁用的 RM，以便显示历史关联
+    accountList.value = data.map((item: any) => {
+      const firstName = item.firstName || item.first_name || ''
+      const lastName = item.lastName || item.last_name || ''
+      const userId = item.userId || item.user_id || item.id
+      const isActive = item.isActive === true || item.isActive === 'true' || item.active === true
 
-        return {
-          id: userId,
-          userId: userId,
-          account: item.username || item.account || '',
-          firstName: firstName,
-          lastName: lastName,
-          name: `${lastName}, ${firstName}`, // RM显示格式：lastName, firstName
-          isActive: true, // 已经过滤，所以都是 active
-          status: 'enabled',
-          createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
-        }
-      })
+      return {
+        id: userId,
+        userId: userId,
+        account: item.username || item.account || '',
+        firstName: firstName,
+        lastName: lastName,
+        name: `${lastName}, ${firstName}`, // RM显示格式：lastName, firstName
+        isActive,
+        status: isActive ? 'enabled' : 'disabled',
+        createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
+      }
+    })
   } catch (error) {
     console.error('Failed to load RM accounts:', error)
     // 如果RM接口失败，尝试使用原接口并过滤admin和disabled状态
@@ -1645,18 +1649,17 @@ const loadAccounts = async () => {
       const response = await accountApi.getAccounts()
       const data = response.data || response || []
       accountList.value = data
+        // 仍然过滤掉 admin 账号，但保留启用和禁用的 RM
         .filter((item: any) => {
-          // 过滤掉admin用户
-          const role = item.role || ''
-          const isAdmin = role.toLowerCase().includes('admin')
-          // 只返回 enabled 状态的账户
-          const isActive = item.isActive === true || item.isActive === 'true' || item.active === true
-          return !isAdmin && isActive
+          const role = (item.role || '').toLowerCase()
+          const isAdmin = role === 'admin'
+          return !isAdmin
         })
         .map((item: any) => {
           const firstName = item.firstName || item.first_name || ''
           const lastName = item.lastName || item.last_name || ''
           const userId = item.userId || item.user_id || item.id
+          const isActive = item.isActive === true || item.isActive === 'true' || item.active === true
 
           return {
             id: userId,
@@ -1665,8 +1668,8 @@ const loadAccounts = async () => {
             firstName: firstName,
             lastName: lastName,
             name: `${lastName}, ${firstName}`,
-            isActive: true, // 已经过滤，所以都是 active
-            status: 'enabled',
+            isActive,
+            status: isActive ? 'enabled' : 'disabled',
             createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
           }
         })
@@ -1678,64 +1681,34 @@ const loadAccounts = async () => {
 
 const loadIntroducers = async () => {
   try {
-    // 使用激活状态的介绍人接口，只获取 enabled 状态的介绍人
-    const response = await introducerApi.getActiveIntroducers()
+    // 使用介绍人列表接口，获取所有介绍人（包括禁用的，用于保持历史关联）
+    const response = await introducerApi.getIntroducers()
     const data = response.data || response || []
-    // 前端再次过滤，确保只返回 enabled 状态的介绍人
-    introducerList.value = data
-      .filter((item: any) => {
-        const isActive = item.isActive === true || item.isActive === 'true' || item.is_active === true || item.active === true
-        return isActive
-      })
-      .map((item: any) => {
-        const contactNature = item.contactNature || item.contact_nature || 'Individual'
-        let introducerName = ''
-        if (contactNature === 'Individual') {
-          const firstName = item.firstName || item.first_name || ''
-          const lastName = item.lastName || item.last_name || ''
-          introducerName = `${firstName}, ${lastName}`.trim()
-        } else {
-          introducerName = item.companyName || item.company_name || ''
-        }
+    // 不过滤 isActive，确保下拉选项中仍能包含已禁用的 Introducer，以便显示历史关联
+    introducerList.value = data.map((item: any) => {
+      const contactNature = item.contactNature || item.contact_nature || 'Individual'
+      let introducerName = ''
+      if (contactNature === 'Individual') {
+        const firstName = item.firstName || item.first_name || ''
+        const lastName = item.lastName || item.last_name || ''
+        introducerName = `${firstName}, ${lastName}`.trim()
+      } else {
+        introducerName = item.companyName || item.company_name || ''
+      }
+      const isActive = item.isActive === true || item.isActive === 'true' || item.is_active === true || item.active === true
 
-        return {
-          id: item.introducerId || item.id,
-          introducer: introducerName,
-          contactNature: contactNature
-        }
-      })
+      return {
+        id: item.introducerId || item.id,
+        introducer: introducerName,
+        contactNature: contactNature,
+        isActive,
+        status: isActive ? 'enabled' : 'disabled'
+      }
+    })
   } catch (error) {
     console.error('Failed to load introducers:', error)
-    // 如果 active 接口失败，尝试使用原接口并过滤 disabled 状态
-    try {
-      const response = await introducerApi.getIntroducers()
-      const data = response.data || response || []
-      introducerList.value = data
-        .filter((item: any) => {
-          // 只返回 enabled 状态的介绍人
-          const isActive = item.isActive === true || item.isActive === 'true' || item.is_active === true || item.active === true
-          return isActive
-        })
-        .map((item: any) => {
-          const contactNature = item.contactNature || item.contact_nature || 'Individual'
-          let introducerName = ''
-          if (contactNature === 'Individual') {
-            const firstName = item.firstName || item.first_name || ''
-            const lastName = item.lastName || item.last_name || ''
-            introducerName = `${firstName}, ${lastName}`.trim()
-          } else {
-            introducerName = item.companyName || item.company_name || ''
-          }
-
-          return {
-            id: item.introducerId || item.id,
-            introducer: introducerName,
-            contactNature: contactNature
-          }
-        })
-    } catch (fallbackError) {
-      console.error('Failed to load introducers with fallback:', fallbackError)
-    }
+    // 如果接口失败，保留现有列表，避免清空已有关联
+    console.error('Failed to load introducers with fallback:', error)
   }
 }
 
@@ -1769,7 +1742,13 @@ const loadBanks = async () => {
 
 // 处理函数
 const handleBack = () => {
-  router.push('/user/client')
+  // admin 在 /client/* 下查看时，返回 admin 的 Client 列表
+  // 普通用户在 /user/client/* 下查看时，返回 user 的 Client 列表
+  if (route.path.startsWith('/client')) {
+    router.push('/client')
+  } else {
+    router.push('/user/client')
+  }
 }
 
 const handleContactNatureChange = () => {

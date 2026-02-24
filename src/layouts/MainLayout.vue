@@ -36,6 +36,13 @@
         >
           Bank & Centre
         </router-link>
+        <router-link
+          to="/profile"
+          class="nav-item"
+          :class="{ active: activeMenu === '/profile' }"
+        >
+          Profile
+        </router-link>
         <div class="nav-item logout" @click="handleLogout">
           Log out
         </div>
@@ -66,6 +73,22 @@ const authStore = useAuthStore()
 
 const activeMenu = computed(() => {
   const { path } = route
+  // 统一高亮规则：详情页仍高亮所属菜单
+  if (path === '/account' || path.startsWith('/account/')) {
+    return '/account'
+  }
+  if (path === '/client' || path.startsWith('/client/')) {
+    return '/client'
+  }
+  if (path === '/introducer' || path.startsWith('/introducer/')) {
+    return '/introducer'
+  }
+  if (path === '/bank-centre' || path.startsWith('/bank-centre/')) {
+    return '/bank-centre'
+  }
+  if (path === '/profile' || path.startsWith('/profile')) {
+    return '/profile'
+  }
   return path
 })
 

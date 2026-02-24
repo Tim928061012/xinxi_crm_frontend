@@ -8,7 +8,7 @@
       </el-button>
       <div class="user-info">
         <el-icon><User /></el-icon>
-        <span>Administrator</span>
+        <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
       </div>
     </div>
 
@@ -55,10 +55,13 @@
       </el-table-column>
       <el-table-column label="Actions" width="220">
         <template #default="{ row }">
-          <el-link type="primary" @click="handleEdit(row)" :underline="false">
-            Edit
-          </el-link>
-          <el-divider direction="vertical" />
+          <!-- Admin 账号不允许 Edit，只允许 Reset Password -->
+          <template v-if="row.account !== 'admin' && row.role !== 'Admin' && row.role !== 'admin'">
+            <el-link type="primary" @click="handleEdit(row)" :underline="false">
+              Edit
+            </el-link>
+            <el-divider direction="vertical" />
+          </template>
           <el-link type="primary" @click="handleResetPassword(row)" :underline="false">
             Reset Password
           </el-link>
@@ -132,10 +135,12 @@ import { ref, reactive, onMounted, watch, onActivated } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, User } from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/auth'
 import { accountApi, type Account, type CreateAccountParams, type UpdateAccountParams } from '@/api/account'
 import { formatDateTime } from '@/utils/date'
 
 const route = useRoute()
+const authStore = useAuthStore()
 
 const accountList = ref<Account[]>([])
 const newAccountDialogVisible = ref(false)
@@ -180,6 +185,7 @@ const loadAccounts = async () => {
       const isActive = item.isActive === true || item.isActive === 'true' || item.active === true || item.active === 'true'
       // 使用 userId 字段，如果没有则使用 id
       const userId = item.userId || item.user_id || item.id
+      const isAdmin = (item.username || item.account || '') === 'admin' || item.role === 'Admin' || item.role === 'admin'
       
       return {
         id: userId, // 使用 userId 作为 id
@@ -187,8 +193,9 @@ const loadAccounts = async () => {
         account: item.username || item.account || '', // 后端返回 username，映射到前端的 account
         firstName: firstName,
         lastName: lastName,
-        // name 显示规则：两个都有 -> "firstName, lastName"，只有一个 -> 只显示该字段，避免多余逗号
-        name: firstName && lastName ? `${firstName}, ${lastName}` : (firstName || lastName || ''),
+        // Admin 账号 Name 固定为 "admin"，不可编辑
+        // 其他账号：两个都有 -> "firstName, lastName"，只有一个 -> 只显示该字段，避免多余逗号
+        name: isAdmin ? 'admin' : (firstName && lastName ? `${firstName}, ${lastName}` : (firstName || lastName || '')),
         role: item.role || item.userRole || '', // 后端返回的角色，用于判断是否为 admin
         isActive: isActive, // 后端返回的 isActive 字段
         status: isActive ? 'enabled' : 'disabled', // 前端显示用的状态
