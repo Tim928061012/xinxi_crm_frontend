@@ -9,9 +9,14 @@ export function formatDateTime(dateTime: string | Date | null | undefined): stri
   }
 
   try {
-    // 如果是字符串，优先按“原样时区”解析，避免浏览器自动按本地时区偏移（导致快/慢几小时）
+    // 如果是字符串，**严格按后端返回的字符串展示本地时间**：
+    // - 不做任何时区换算
+    // - 只截取到分钟，保持与接口中时间一致，避免快/慢 8 小时的问题
     if (typeof dateTime === 'string') {
-      // 支持形如 "2026-01-29 19:41:00" 或 "2026-01-29T19:41:00Z" / "2026-01-29T19:41:00+08:00"
+      // 兼容格式：
+      // - "2026-01-29 19:41:00"
+      // - "2026-01-29T19:41:00"
+      // - "2026-01-29T19:41:00.000+00:00" / 带时区后缀
       const match = dateTime.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/)
       if (match) {
         const [, datePart, timePart] = match
@@ -20,6 +25,7 @@ export function formatDateTime(dateTime: string | Date | null | undefined): stri
       // 其他不规则格式，再退回原来的 Date 解析逻辑
     }
 
+    // 兜底：只有在字符串无法匹配预期格式时，才退回 Date 解析
     const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime
 
     // 检查日期是否有效
