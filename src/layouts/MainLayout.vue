@@ -126,10 +126,12 @@ const handleLogout = async () => {
 
 .sidebar {
   width: 200px;
-  background-color: #f5f5f5;
+  background-color: #ffffff;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e4e7ed;
+  // 去掉生硬的灰色分割线，改为右侧阴影
+  border-right: none;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
   
   .logo {
     height: 60px;
@@ -138,7 +140,8 @@ const handleLogout = async () => {
     justify-content: center;
     gap: 8px;
     padding: 0 20px;
-    border-bottom: 1px solid #e4e7ed;
+    // 下边界改为更柔和的浅色线，弱化“灰线”存在感
+    border-bottom: 1px solid #f0f0f5;
     
     .logo-icon {
       width: 24px;
@@ -173,22 +176,12 @@ const handleLogout = async () => {
       position: relative;
       
       &:hover {
-        background-color: #f0f0f0;
+        background-color: #f5f7fa;
       }
       
       &.active {
         background-color: #e6f4ff;
         color: #025189;
-        
-        &::after {
-          content: '';
-          position: absolute;
-          right: 0;
-          top: 0;
-          bottom: 0;
-          width: 3px;
-          background-color: #025189;
-        }
       }
       
       &.logout {

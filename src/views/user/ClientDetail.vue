@@ -12,10 +12,17 @@
         </template>
         <!-- Edit/New 模式下，仅普通用户显示保存按钮；admin 不显示 -->
         <template v-else-if="!isViewMode && route.path.startsWith('/user/client')">
-          <el-button type="primary" @click="() => handleSave(false)" :loading="saving">
+          <el-button
+            type="primary"
+            @click="() => handleSave(false)"
+            :disabled="saving"
+          >
             Save
           </el-button>
-          <el-button @click="() => handleSave(true)" :loading="saving">
+          <el-button
+            @click="() => handleSave(true)"
+            :disabled="saving"
+          >
             Save & Close
           </el-button>
         </template>
@@ -737,28 +744,26 @@
                 v-if="clientForm.portfolios && clientForm.portfolios.length > 0"
                 :data="clientForm.portfolios"
                 class="portfolio-table"
-                style="width: 100%"
                 border
               >
-                <el-table-column prop="bank" label="Bank" width="200" />
-                <el-table-column prop="bookingCentre" label="Booking Centre" width="200" />
-                <el-table-column prop="portfolioNo" label="Portfolio No." width="200" />
-                <el-table-column label="Upload Time" width="200">
+                <el-table-column prop="bank" label="Bank" />
+                <el-table-column prop="bookingCentre" label="Booking Centre" />
+                <el-table-column prop="portfolioNo" label="Portfolio No." />
+                <el-table-column label="Upload Time">
                   <template #default="{ row }">
                     {{ formatDateTime(row.uploadTime) }}
                   </template>
                 </el-table-column>
-                <el-table-column label="Actions" width="150">
+                <!-- 仅在可编辑模式下展示操作列，且去掉列头文案 -->
+                <el-table-column v-if="!isViewMode" width="150">
                   <template #default="{ row, $index }">
-                    <template v-if="!isViewMode">
-                      <el-link type="primary" @click="handleEditPortfolio(row, $index)" :underline="false">
-                        Edit
-                      </el-link>
-                      <el-divider direction="vertical" />
-                      <el-link type="primary" @click="handleDeletePortfolio($index)" :underline="false">
-                        Delete
-                      </el-link>
-                    </template>
+                    <el-link type="primary" @click="handleEditPortfolio(row, $index)" :underline="false">
+                      Edit
+                    </el-link>
+                    <el-divider direction="vertical" />
+                    <el-link type="primary" @click="handleDeletePortfolio($index)" :underline="false">
+                      Delete
+                    </el-link>
                   </template>
                 </el-table-column>
               </el-table>
@@ -792,13 +797,14 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Actions" width="200">
+              <!-- 仅在可编辑模式下展示操作列，且去掉列头文案 -->
+              <el-table-column v-if="!isViewMode" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenKYCDocument(row)" :underline="false">
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteKYCDocument(row)" :underline="false">
+                  <el-link type="primary" @click="handleDeleteKYCDocument(row)" :underline="false">
                     Delete
                   </el-link>
                 </template>
@@ -1045,13 +1051,14 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Actions" width="200">
+              <!-- 仅在可编辑模式下展示操作列，且去掉列头文案 -->
+              <el-table-column v-if="!isViewMode" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
                     Delete
                   </el-link>
                 </template>
@@ -1080,13 +1087,14 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Actions" width="200">
+              <!-- 仅在可编辑模式下展示操作列，且去掉列头文案 -->
+              <el-table-column v-if="!isViewMode" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
                     Delete
                   </el-link>
                 </template>
