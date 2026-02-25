@@ -725,7 +725,7 @@
             </div>
 
             <!-- Portfolio Section -->
-            <div class="form-section">
+            <div class="form-section portfolio-section">
               <div class="section-header">
                 <h3 class="section-title">Portfolio</h3>
                 <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleNewPortfolio">
@@ -736,8 +736,9 @@
               <el-table
                 v-if="clientForm.portfolios && clientForm.portfolios.length > 0"
                 :data="clientForm.portfolios"
-                stripe
+                class="portfolio-table"
                 style="width: 100%"
+                border
               >
                 <el-table-column prop="bank" label="Bank" width="200" />
                 <el-table-column prop="bookingCentre" label="Booking Centre" width="200" />
@@ -2541,10 +2542,25 @@ const handleNewPortfolio = () => {
   portfolioDialogVisible.value = true
 }
 
-const handleEditPortfolio = (portfolio: Portfolio, index: number) => {
+const handleEditPortfolio = async (portfolio: Portfolio, index: number) => {
   editingPortfolioIndex.value = index
   portfolioForm.clientId = clientId.value || 0
+
+  // 每次编辑前先重置，避免上一次残留状态干扰
+  portfolioForm.bank = ''
+  portfolioForm.bookingCentre = ''
+  portfolioForm.portfolioNo = ''
+
+  // 确保 Bank 列表已加载，availableBookingCentres 中有对应选项
+  if (bankList.value.length === 0) {
+    await loadBanks()
+  }
+
+  // 先设置 Bank，让 availableBookingCentres 计算出对应的 Booking Centres
   portfolioForm.bank = portfolio.bank
+  await nextTick()
+
+  // 再设置 Booking Centre，确保在选项列表中能够正确匹配显示
   portfolioForm.bookingCentre = portfolio.bookingCentre
   portfolioForm.portfolioNo = portfolio.portfolioNo
   portfolioDialogVisible.value = true
@@ -3052,6 +3068,49 @@ onMounted(async () => {
         .el-form-item:first-child {
           grid-column: 1;
           max-width: 100%;
+        }
+      }
+
+      // Portfolio section 特殊样式：去掉底部灰线
+      &.portfolio-section {
+        border-bottom: none;
+        padding-bottom: 0;
+        margin-bottom: 24px;
+
+        // 让表格左边与「Portfolio」标题对齐
+        .portfolio-table {
+          margin-left: 15px;
+          width: calc(100% - 15px);
+        }
+      }
+
+      // Portfolio 表格样式，参照示例图
+      .portfolio-table {
+        margin-top: 8px;
+
+        :deep(.el-table__header-wrapper) {
+          background-color: #f5f7fa;
+
+          th {
+            background-color: #f5f7fa !important;
+            color: #606266;
+            font-weight: 600;
+            text-align: left;
+            border-bottom: 1px solid #ebeef5;
+          }
+        }
+
+        :deep(.el-table__body-wrapper) {
+          td {
+            border-bottom: 1px solid #ebeef5;
+            color: #303133;
+          }
+        }
+
+        // 去掉 hover / 选中高亮效果
+        :deep(.el-table__body tr:hover > td),
+        :deep(.el-table__body tr.current-row > td) {
+          background-color: #ffffff !important;
         }
       }
     }
