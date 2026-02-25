@@ -1126,6 +1126,7 @@
         drag
         :auto-upload="false"
         :on-change="handleFileChange"
+        :on-exceed="handleFileExceed"
         :file-list="fileList"
         :limit="1"
         accept=".pdf"
@@ -1134,11 +1135,9 @@
         <div class="el-upload__text">
           Drag & drop files here, or <em>click to upload</em>
         </div>
-        <template #tip>
-          <div class="el-upload__tip">
-            Only pdf can be uploaded, and the size does not exceed 100MB
-          </div>
-        </template>
+        <div class="el-upload__tip">
+          Only pdf can be uploaded, and the size does not exceed 100MB
+        </div>
       </el-upload>
       <template #footer>
         <el-button @click="documentUploadDialogVisible = false">Cancel</el-button>
@@ -2448,21 +2447,51 @@ const handleDeleteDocument = async (document: Document) => {
 }
 
 // 文件上传处理
-const handleFileChange = (file: UploadFile, files: UploadFiles) => {
+const handleFileChange = (file: UploadFile) => {
   if (file.raw) {
     // 检查文件类型
     if (file.raw.type !== 'application/pdf') {
       ElMessage.error('Only PDF files are allowed')
-      fileList.value = []
+      // 移除无效文件
+      fileList.value = fileList.value.filter(f => f.uid !== file.uid)
       return
     }
     // 检查文件大小 (100MB)
     if (file.raw.size > 100 * 1024 * 1024) {
       ElMessage.error('File size cannot exceed 100MB')
-      fileList.value = []
+      // 移除无效文件
+      fileList.value = fileList.value.filter(f => f.uid !== file.uid)
       return
     }
+    // 文件验证通过，更新当前上传文件和文件列表
     currentUploadFile.value = file.raw
+    // 确保 fileList 只包含当前文件（替换旧文件）
+    // 直接设置为只包含当前文件，实现替换效果
+    fileList.value = [file]
+  }
+}
+
+// 处理文件超出限制（允许替换旧文件）
+const handleFileExceed = (files: File[]) => {
+  // 当用户选择新文件时，如果已经有文件，允许替换
+  if (files.length > 0 && files[0]) {
+    const newFile = files[0]
+    // 先清空旧文件
+    fileList.value = []
+    currentUploadFile.value = null
+    // 使用 nextTick 确保清空后再处理新文件
+    nextTick(() => {
+      // 手动触发文件选择，创建 UploadFile 对象
+      const uploadFile: UploadFile = {
+        uid: Date.now(),
+        name: newFile.name,
+        size: newFile.size,
+        raw: newFile as any, // 类型转换，因为 File 类型可能不完全匹配
+        status: 'ready'
+      }
+      // 直接调用 handleFileChange 进行验证和设置
+      handleFileChange(uploadFile)
+    })
   }
 }
 
@@ -3091,6 +3120,7 @@ onMounted(async () => {
     color: #606266;
     font-size: 14px;
     text-align: center;
+    margin-bottom: 8px;
 
     em {
       color: #025189;
@@ -3101,6 +3131,7 @@ onMounted(async () => {
   .el-upload__tip {
     color: #909399;
     font-size: 12px;
+    text-align: center;
     margin-top: 7px;
     text-align: center;
   }
