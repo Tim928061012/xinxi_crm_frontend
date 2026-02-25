@@ -1456,6 +1456,11 @@ const availableBookingCentres = computed(() => {
 
 // 表单验证规则
 const clientFormRules = computed<FormRules>(() => {
+  // 在 View 模式下，不应用任何验证规则
+  if (isViewMode.value) {
+    return {}
+  }
+
   const rules: FormRules = {
     'general.contactNature': [
       { required: true, message: 'Please select contact nature', trigger: 'change' }
@@ -1476,17 +1481,25 @@ const clientFormRules = computed<FormRules>(() => {
   return rules
 })
 
-const portfolioFormRules: FormRules = {
-  bank: [
-    { required: true, message: 'Please select bank', trigger: 'change' }
-  ],
-  bookingCentre: [
-    { required: true, message: 'Please select booking centre', trigger: 'change' }
-  ],
-  portfolioNo: [
-    { required: true, message: 'Please enter portfolio number', trigger: 'blur' }
-  ]
-}
+// Portfolio 表单验证规则（在 View 模式下不应用验证）
+const portfolioFormRules = computed<FormRules>(() => {
+  // 在 View 模式下，不应用任何验证规则
+  if (isViewMode.value) {
+    return {}
+  }
+
+  return {
+    bank: [
+      { required: true, message: 'Please select bank', trigger: 'change' }
+    ],
+    bookingCentre: [
+      { required: true, message: 'Please select booking centre', trigger: 'change' }
+    ],
+    portfolioNo: [
+      { required: true, message: 'Please enter portfolio number', trigger: 'blur' }
+    ]
+  }
+})
 
 // 加载数据
 const loadClient = async () => {
@@ -1713,6 +1726,14 @@ const loadClient = async () => {
       }
     } catch (error) {
       console.warn('Failed to load fee schedule:', error)
+    }
+
+    // 在 View 模式下，清除所有表单验证错误
+    if (isViewMode.value) {
+      nextTick(() => {
+        clientFormRef.value?.clearValidate()
+        portfolioFormRef.value?.clearValidate()
+      })
     }
   } catch (error: any) {
     console.error('Failed to load client:', error)
@@ -2465,6 +2486,17 @@ const formatFileSize = (bytes: number): string => {
 // 监听 Bank 变化，更新可用的 Booking Centres
 watch(() => portfolioForm.bank, () => {
   portfolioForm.bookingCentre = ''
+})
+
+// 监听 View 模式变化，清除验证错误
+watch(isViewMode, (newVal) => {
+  if (newVal) {
+    // 进入 View 模式时，清除所有表单验证错误
+    nextTick(() => {
+      clientFormRef.value?.clearValidate()
+      portfolioFormRef.value?.clearValidate()
+    })
+  }
 })
 
 onMounted(async () => {
