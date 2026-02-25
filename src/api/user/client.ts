@@ -24,6 +24,8 @@ export interface IndividualGeneralInfo {
   idExpiry?: string
   rm: string
   rmUserId?: number
+  arm?: string
+  armUserId?: number
   introducer?: string
   introducerId?: number
   gender?: 'Male' | 'Female'
@@ -47,6 +49,8 @@ export interface CorporateGeneralInfo {
   stateOwned?: boolean
   rm: string
   rmUserId?: number
+  arm?: string
+  armUserId?: number
   introducer?: string
   introducerId?: number
   chineseName?: string

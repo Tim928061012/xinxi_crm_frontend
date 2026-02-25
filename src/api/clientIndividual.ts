@@ -6,6 +6,7 @@ export interface CreateIndividualClientRequest {
   contactType: string
   contactNature: string
   rmUserId: number
+  armUserId?: number
   introducerId: number
   clientBusinessId: string
   relationshipStatus: string

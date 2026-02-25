@@ -66,7 +66,7 @@
                   </el-form-item>
                 </div>
 
-                <!-- 第2行: Contact Nature, Introducer -->
+                <!-- 第2行: Contact Nature, ARM -->
                 <div class="form-row">
                   <el-form-item label="Contact Nature" prop="general.contactNature">
                     <el-select
@@ -80,6 +80,24 @@
                       <el-option label="Corporate" value="Corporate" />
                     </el-select>
                   </el-form-item>
+                  <el-form-item label="ARM">
+                    <el-input
+                      v-model="(clientForm.general as any).arm"
+                      placeholder="Please select ARM"
+                      :readonly="isViewMode"
+                      :disabled="isViewMode"
+                      @click.native.stop="!isViewMode && handleSelectARM()"
+                      :style="isViewMode ? '' : 'cursor: pointer;'"
+                    >
+                      <template #suffix>
+                        <el-icon><User /></el-icon>
+                      </template>
+                    </el-input>
+                  </el-form-item>
+                </div>
+
+                <!-- 第3行: Introducer, Client Id -->
+                <div class="form-row">
                   <el-form-item label="Introducer">
                     <el-select
                       v-model="(clientForm.general as any).introducerId"
@@ -97,23 +115,19 @@
                       />
                     </el-select>
                   </el-form-item>
-                </div>
-
-                <!-- 第3行: Client Id, Gender -->
-                <div class="form-row">
                   <el-form-item label="Client Id">
                     <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" :disabled="isViewMode" />
                   </el-form-item>
+                </div>
+
+                <!-- 第4行: Gender, Client Relationship Status -->
+                <div class="form-row">
                   <el-form-item label="Gender">
                     <el-radio-group v-model="(clientForm.general as any).gender" :disabled="isViewMode">
                       <el-radio label="Male">Male</el-radio>
                       <el-radio label="Female">Female</el-radio>
                     </el-radio-group>
                   </el-form-item>
-                </div>
-
-                <!-- 第4行: Client Relationship Status, Marital Status -->
-                <div class="form-row">
                   <el-form-item label="Client Relationship Status">
                     <el-select
                       v-model="clientForm.general.clientRelationshipStatus"
@@ -125,6 +139,10 @@
                       <el-option label="On Boarding" value="On Boarding" />
                     </el-select>
                   </el-form-item>
+                </div>
+
+                <!-- 第5行: Marital Status, Title -->
+                <div class="form-row">
                   <el-form-item label="Marital Status">
                     <el-select v-model="(clientForm.general as any).maritalStatus" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Single" value="Single" />
@@ -133,10 +151,6 @@
                       <el-option label="Widowed" value="Widowed" />
                     </el-select>
                   </el-form-item>
-                </div>
-
-                <!-- 第5行: Title, Education Level -->
-                <div class="form-row">
                   <el-form-item label="Title" prop="general.title">
                     <el-select v-model="(clientForm.general as any).title" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Mr." value="Mr." />
@@ -145,6 +159,10 @@
                       <el-option label="Dr." value="Dr." />
                     </el-select>
                   </el-form-item>
+                </div>
+
+                <!-- 第6行: Education Level, First Name -->
+                <div class="form-row">
                   <el-form-item label="Education Level">
                     <el-select v-model="(clientForm.general as any).educationLevel" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="High School" value="High School" />
@@ -153,13 +171,13 @@
                       <el-option label="PhD" value="PhD" />
                     </el-select>
                   </el-form-item>
-                </div>
-
-                <!-- 第6行: First Name, Birthday(dd/mm/yyyy) -->
-                <div class="form-row">
                   <el-form-item label="First Name" prop="general.firstName">
                     <el-input v-model="(clientForm.general as any).firstName" placeholder="Please enter first name" :disabled="isViewMode" />
                   </el-form-item>
+                </div>
+
+                <!-- 第7行: Birthday(dd/mm/yyyy), Last Name -->
+                <div class="form-row">
                   <el-form-item label="Birthday (dd/mm/yyyy)">
                     <el-date-picker
                       v-model="(clientForm.general as any).birthday"
@@ -171,13 +189,13 @@
                       :disabled="isViewMode"
                     />
                   </el-form-item>
-                </div>
-
-                <!-- 第7行: Last Name, Country/Region of Birth -->
-                <div class="form-row">
                   <el-form-item label="Last Name" prop="general.lastName">
                     <el-input v-model="(clientForm.general as any).lastName" placeholder="Please enter last name" :disabled="isViewMode" />
                   </el-form-item>
+                </div>
+
+                <!-- 第8行: Country/Region of Birth, Chinese Name -->
+                <div class="form-row">
                   <el-form-item label="Country/Region of Birth">
                     <el-select
                       v-model="(clientForm.general as any).countryOfBirth"
@@ -194,13 +212,13 @@
                       />
                     </el-select>
                   </el-form-item>
-                </div>
-
-                <!-- 第8行: Chinese Name, Dual Citizenship -->
-                <div class="form-row">
                   <el-form-item label="Chinese Name">
                     <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" :disabled="isViewMode" />
                   </el-form-item>
+                </div>
+
+                <!-- 第9行: Dual Citizenship, Id Type -->
+                <div class="form-row">
                   <el-form-item label="Dual Citizenship">
                     <el-switch
                       v-model="(clientForm.general as any).dualCitizenship"
@@ -210,10 +228,6 @@
                     />
                     <span style="margin-left: 8px;">{{ (clientForm.general as any).dualCitizenship ? 'Yes' : 'No' }}</span>
                   </el-form-item>
-                </div>
-
-                <!-- 第9行: Id Type, Nationality -->
-                <div class="form-row">
                   <el-form-item label="Id Type">
                     <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Passport" value="Passport" />
@@ -221,6 +235,10 @@
                       <el-option label="Driver License" value="Driver License" />
                     </el-select>
                   </el-form-item>
+                </div>
+
+                <!-- 第10行: Nationality, Id No. -->
+                <div class="form-row">
                   <el-form-item label="Nationality">
                     <el-select
                       v-model="(clientForm.general as any).nationality"
@@ -237,13 +255,13 @@
                       />
                     </el-select>
                   </el-form-item>
-                </div>
-
-                <!-- 第10行: Id No., Id Expiry(dd/mm/yyyy) -->
-                <div class="form-row">
                   <el-form-item label="Id No.">
                     <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" :disabled="isViewMode" />
                   </el-form-item>
+                </div>
+
+                <!-- 第11行: Id Expiry(dd/mm/yyyy) - 单独一行，靠左 -->
+                <div class="form-row form-row-single">
                   <el-form-item label="Id Expiry (dd/mm/yyyy)">
                     <el-date-picker
                       v-model="(clientForm.general as any).idExpiry"
@@ -281,7 +299,7 @@
                   </el-form-item>
                 </div>
 
-                <!-- 第2行: Contact Nature, Introducer -->
+                <!-- 第2行: Contact Nature, ARM -->
                 <div class="form-row">
                   <el-form-item label="Contact Nature" prop="general.contactNature">
                     <el-select
@@ -295,6 +313,24 @@
                       <el-option label="Corporate" value="Corporate" />
                     </el-select>
                   </el-form-item>
+                  <el-form-item label="ARM">
+                    <el-input
+                      v-model="(clientForm.general as any).arm"
+                      placeholder="Please select ARM"
+                      :readonly="isViewMode"
+                      :disabled="isViewMode"
+                      @click.native.stop="!isViewMode && handleSelectARM()"
+                      :style="isViewMode ? '' : 'cursor: pointer;'"
+                    >
+                      <template #suffix>
+                        <el-icon><User /></el-icon>
+                      </template>
+                    </el-input>
+                  </el-form-item>
+                </div>
+
+                <!-- 第3行: Introducer, Client Id -->
+                <div class="form-row">
                   <el-form-item label="Introducer">
                     <el-select
                       v-model="(clientForm.general as any).introducerId"
@@ -312,50 +348,47 @@
                       />
                     </el-select>
                   </el-form-item>
-                </div>
-
-                <!-- 第3行: Client Id, Chinese Name -->
-                <div class="form-row">
                   <el-form-item label="Client Id">
                     <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" :disabled="isViewMode" />
                   </el-form-item>
+                </div>
+
+                <!-- 第4行: Chinese Name, Client Relationship Status -->
+                <div class="form-row">
                   <el-form-item label="Chinese Name">
                     <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" :disabled="isViewMode" />
                   </el-form-item>
-                </div>
-
-                <!-- 第4行: Client Relationship Status, Id Type -->
-                <div class="form-row">
                   <el-form-item label="Client Relationship Status">
                     <el-select
                       v-model="clientForm.general.clientRelationshipStatus"
                       placeholder="Please select"
                       style="width: 100%"
+                      :disabled="isViewMode"
                     >
                       <el-option label="Prospecting" value="Prospecting" />
                       <el-option label="On Boarding" value="On Boarding" />
                     </el-select>
                   </el-form-item>
+                </div>
+
+                <!-- 第5行: Id Type, Company Name -->
+                <div class="form-row">
                   <el-form-item label="Id Type">
                     <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Business License" value="Business License" />
                       <el-option label="Registration Certificate" value="Registration Certificate" />
                     </el-select>
                   </el-form-item>
-                </div>
-
-                <!-- 第5行: Company Name, Id No. -->
-                <div class="form-row">
                   <el-form-item label="Company Name" prop="general.companyName">
                     <el-input v-model="(clientForm.general as any).companyName" placeholder="Please enter company name" :disabled="isViewMode" />
                   </el-form-item>
+                </div>
+
+                <!-- 第6行: Id No., Corporate Type -->
+                <div class="form-row">
                   <el-form-item label="Id No.">
                     <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" :disabled="isViewMode" />
                   </el-form-item>
-                </div>
-
-                <!-- 第6行: Corporate Type, Date of Company Search/COI Issued(dd/mm/yyyy) -->
-                <div class="form-row">
                   <el-form-item label="Corporate Type">
                     <el-select v-model="(clientForm.general as any).corporateType" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Limited Company" value="Limited Company" />
@@ -363,6 +396,10 @@
                       <el-option label="Partnership" value="Partnership" />
                     </el-select>
                   </el-form-item>
+                </div>
+
+                <!-- 第7行: Date of Company Search/COI Issued(dd/mm/yyyy), Industry -->
+                <div class="form-row">
                   <el-form-item label="Date of Company Search/COI Issued (dd/mm/yyyy)" style="align-self: flex-start;">
                     <el-date-picker
                       v-model="(clientForm.general as any).dateOfCompanySearch"
@@ -374,10 +411,6 @@
                       :disabled="isViewMode"
                     />
                   </el-form-item>
-                </div>
-
-                <!-- 第7行: Industry, Country/Region of Registration -->
-                <div class="form-row">
                   <el-form-item label="Industry">
                     <el-select v-model="(clientForm.general as any).industry" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                       <el-option label="Finance" value="Finance" />
@@ -386,6 +419,10 @@
                       <el-option label="Retail" value="Retail" />
                     </el-select>
                   </el-form-item>
+                </div>
+
+                <!-- 第8行: Country/Region of Registration - 单独一行，靠左 -->
+                <div class="form-row form-row-single">
                   <el-form-item label="Country/Region of Registration">
                     <el-select
                       v-model="(clientForm.general as any).countryOfRegistration"
@@ -996,6 +1033,32 @@
       </template>
     </el-dialog>
 
+    <!-- ARM 选择对话框 -->
+    <el-dialog
+      v-model="armSelectDialogVisible"
+      title="Select ARM"
+      width="600px"
+    >
+      <el-table
+        :data="accountList.filter(account => account.isActive || account.userId === (clientForm.general as any).armUserId || account.id === (clientForm.general as any).armUserId)"
+        stripe
+        style="width: 100%"
+        @row-click="handleARMSelect"
+        highlight-current-row
+      >
+        <el-table-column prop="account" label="Account" width="180" />
+        <el-table-column prop="name" label="Name" width="200" />
+        <el-table-column label="Created Time" width="200">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdTime) }}
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="armSelectDialogVisible = false">Cancel</el-button>
+      </template>
+    </el-dialog>
+
     <!-- Portfolio 对话框 -->
     <el-dialog
       v-model="portfolioDialogVisible"
@@ -1246,7 +1309,8 @@ const clientForm = reactive<CreateClientParams & { portfolios: Portfolio[] }>({
     contactNature: 'Individual',
     firstName: '',
     lastName: '',
-    rm: ''
+    rm: '',
+    arm: ''
   } as IndividualGeneralInfo,
   contact: {
     mobilePhone: '',
@@ -1258,8 +1322,9 @@ const clientForm = reactive<CreateClientParams & { portfolios: Portfolio[] }>({
   portfolios: []
 })
 
-// RM 和 Introducer 选择
+// RM、ARM 和 Introducer 选择
 const rmSelectDialogVisible = ref(false)
+const armSelectDialogVisible = ref(false)
 const accountList = ref<Account[]>([])
 const introducerList = ref<Introducer[]>([])
 const bankList = ref<BankCentre[]>([])
@@ -1454,14 +1519,16 @@ const loadClient = async () => {
           contactNature: 'Individual',
           firstName: '',
           lastName: '',
-          rm: ''
+          rm: '',
+          arm: ''
         } as IndividualGeneralInfo
       } else {
         clientForm.general = {
           contactType: 'Client',
           contactNature: 'Corporate',
           companyName: '',
-          rm: ''
+          rm: '',
+          arm: ''
         } as CorporateGeneralInfo
       }
     }
@@ -1522,7 +1589,7 @@ const loadClient = async () => {
       }
     }
     
-    // 加载RM和Introducer名称（如果后端没有返回）
+    // 加载RM和ARM和Introducer名称（如果后端没有返回）
     if (clientForm.general.rmUserId && !clientForm.general.rm) {
       try {
         await loadAccounts()
@@ -1532,6 +1599,21 @@ const loadClient = async () => {
         }
       } catch (error) {
         console.warn('Failed to load RM name:', error)
+      }
+    }
+    
+    // 加载ARM名称（如果后端没有返回）
+    if ((clientForm.general as any).armUserId && !(clientForm.general as any).arm) {
+      try {
+        if (accountList.value.length === 0) {
+          await loadAccounts()
+        }
+        const account = accountList.value.find(a => a.userId === (clientForm.general as any).armUserId || a.id === (clientForm.general as any).armUserId)
+        if (account) {
+          (clientForm.general as any).arm = account.name || account.account || ''
+        }
+      } catch (error) {
+        console.warn('Failed to load ARM name:', error)
       }
     }
     
@@ -1792,14 +1874,16 @@ const handleContactNatureChange = () => {
       contactNature: 'Individual',
       firstName: '',
       lastName: '',
-      rm: clientForm.general.rm || ''
+      rm: clientForm.general.rm || '',
+      arm: (clientForm.general as any).arm || ''
     } as IndividualGeneralInfo
   } else {
     clientForm.general = {
       contactType: 'Client',
       contactNature: 'Corporate',
       companyName: '',
-      rm: clientForm.general.rm || ''
+      rm: clientForm.general.rm || '',
+      arm: (clientForm.general as any).arm || ''
     } as CorporateGeneralInfo
   }
 }
@@ -1827,6 +1911,19 @@ const handleRMSelect = (account: Account) => {
   clientForm.general.rm = account.name || account.account || ''
   ;(clientForm.general as any).rmUserId = account.userId || account.id
   rmSelectDialogVisible.value = false
+}
+
+const handleSelectARM = () => {
+  if (accountList.value.length === 0) {
+    loadAccounts()
+  }
+  armSelectDialogVisible.value = true
+}
+
+const handleARMSelect = (account: Account) => {
+  ;(clientForm.general as any).arm = account.name || account.account || ''
+  ;(clientForm.general as any).armUserId = account.userId || account.id
+  armSelectDialogVisible.value = false
 }
 
 const handleSave = async (closeAfter: boolean = false) => {
@@ -1932,6 +2029,7 @@ const handleSave = async (closeAfter: boolean = false) => {
               contactType: general.contactType || 'Client',
               contactNature: general.contactNature || 'Individual',
               rmUserId: general.rmUserId || 0,
+              armUserId: (general as any).armUserId || 0,
               introducerId: general.introducerId || 0,
               clientBusinessId: general.clientId || '',
               relationshipStatus: general.clientRelationshipStatus || '',
@@ -2498,6 +2596,15 @@ onMounted(async () => {
             pointer-events: none; // 禁用 label 的点击聚焦行为
             cursor: default; // 将鼠标指针改为默认样式
           }
+        }
+      }
+
+      .form-row-single {
+        grid-template-columns: 1fr 1fr;
+        
+        .el-form-item:first-child {
+          grid-column: 1;
+          max-width: 100%;
         }
       }
     }
