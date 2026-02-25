@@ -12,8 +12,13 @@
       </div>
     </div>
 
+    <!-- Loading 状态 -->
+    <div v-loading="loading" class="table-wrapper" v-if="loading">
+      <div style="min-height: 400px;"></div>
+    </div>
+
     <!-- 有数据时显示表格 -->
-    <template v-if="introducerList.length > 0">
+    <template v-else-if="introducerList.length > 0">
       <div class="table-wrapper">
         <el-table
           :data="introducerList"
@@ -331,6 +336,7 @@ import { formatDateTime } from '@/utils/date'
 const route = useRoute()
 const authStore = useAuthStore()
 const introducerList = ref<Introducer[]>([])
+const loading = ref(false)
 const newIntroducerDialogVisible = ref(false)
 const editIntroducerDialogVisible = ref(false)
 const viewDialogVisible = ref(false)
@@ -415,6 +421,7 @@ const editIntroducerFormRules = computed<FormRules>(() => {
 
 // 加载介绍人列表
 const loadIntroducers = async () => {
+  loading.value = true
   try {
     const response = await introducerApi.getIntroducers()
     const data = response.data || response || []
@@ -495,6 +502,10 @@ const loadIntroducers = async () => {
       ElMessage.error('Failed to load introducer list')
     }
     introducerList.value = []
+  } finally {
+    // 添加最小延迟，避免闪烁
+    await new Promise(resolve => setTimeout(resolve, 300))
+    loading.value = false
   }
 }
 

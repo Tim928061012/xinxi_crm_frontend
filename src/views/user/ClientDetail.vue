@@ -1,5 +1,5 @@
 <template>
-  <div class="client-detail-page">
+  <div class="client-detail-page" v-loading="pageLoading" element-loading-text="Loading client data...">
     <!-- 顶部导航栏 -->
     <div class="top-header">
       <div class="header-left">
@@ -55,12 +55,13 @@
                       v-model="clientForm.general.rm"
                       placeholder="Please select RM"
                       :readonly="isViewMode"
-                      :disabled="isViewMode"
+                      :disabled="isViewMode || rmLoading"
                       @click.native.stop="!isViewMode && handleSelectRM()"
                       :style="isViewMode ? '' : 'cursor: pointer;'"
                     >
                       <template #suffix>
-                        <el-icon><User /></el-icon>
+                        <el-icon v-if="rmLoading" class="is-loading"><Loading /></el-icon>
+                        <el-icon v-else><User /></el-icon>
                       </template>
                     </el-input>
                   </el-form-item>
@@ -103,7 +104,8 @@
                       v-model="(clientForm.general as any).introducerId"
                       placeholder="Please select"
                       style="width: 100%"
-                      :disabled="isViewMode"
+                      :disabled="isViewMode || introducerLoading"
+                      :loading="introducerLoading"
                       filterable
                       @focus="!isViewMode && loadIntroducersIfNeeded()"
                     >
@@ -288,12 +290,13 @@
                       v-model="clientForm.general.rm"
                       placeholder="Please select RM"
                       :readonly="isViewMode"
-                      :disabled="isViewMode"
+                      :disabled="isViewMode || rmLoading"
                       @click.native.stop="!isViewMode && handleSelectRM()"
                       :style="isViewMode ? '' : 'cursor: pointer;'"
                     >
                       <template #suffix>
-                        <el-icon><User /></el-icon>
+                        <el-icon v-if="rmLoading" class="is-loading"><Loading /></el-icon>
+                        <el-icon v-else><User /></el-icon>
                       </template>
                     </el-input>
                   </el-form-item>
@@ -336,7 +339,8 @@
                       v-model="(clientForm.general as any).introducerId"
                       placeholder="Please select"
                       style="width: 100%"
-                      :disabled="isViewMode"
+                      :disabled="isViewMode || introducerLoading"
+                      :loading="introducerLoading"
                       filterable
                       @focus="!isViewMode && loadIntroducersIfNeeded()"
                     >
@@ -556,7 +560,7 @@
       </el-tab-pane>
 
       <el-tab-pane label="KYC" name="kyc">
-        <div class="tab-content">
+        <div class="tab-content" v-loading="tabLoading.kyc" element-loading-text="Loading KYC data...">
           <div class="kyc-section">
             <div class="kyc-upload-header">
               <h3 class="kyc-upload-title">Upload Supporting Documents</h3>
@@ -594,7 +598,7 @@
       </el-tab-pane>
 
       <el-tab-pane label="Investment Risk Profile" name="risk">
-        <div class="tab-content">
+        <div class="tab-content" v-loading="tabLoading.risk" element-loading-text="Loading risk profile data...">
           <el-form :model="riskProfileData" label-width="250px" class="risk-profile-form">
             <!-- Investment Risk Rating Section -->
             <div class="form-section">
@@ -753,7 +757,7 @@
       </el-tab-pane>
 
       <el-tab-pane label="Documents" name="documents">
-        <div class="tab-content">
+        <div class="tab-content" v-loading="tabLoading.documents" element-loading-text="Loading documents...">
           <!-- Upload Identity Proof -->
           <div class="document-section">
             <div class="section-header">
@@ -897,7 +901,7 @@
       </el-tab-pane>
 
       <el-tab-pane label="Fee Schedule" name="fee">
-        <div class="tab-content">
+        <div class="tab-content" v-loading="tabLoading.fee" element-loading-text="Loading fee schedule data...">
           <el-form :model="feeScheduleData" label-width="250px" class="fee-schedule-form">
             <div class="form-section">
               <div class="vulnerable-assessment-container">
@@ -1150,7 +1154,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
-import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled, Loading } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { userClientApi, type Client, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
 import { individualClientApi, type CreateIndividualClientRequest } from '@/api/clientIndividual'
@@ -1204,6 +1208,15 @@ const isViewMode = computed(() => {
 
 const activeTab = ref('general')
 const saving = ref(false)
+const pageLoading = ref(false)
+const rmLoading = ref(false)
+const introducerLoading = ref(false)
+const tabLoading: Record<string, boolean> = reactive({
+  kyc: false,
+  risk: false,
+  documents: false,
+  fee: false
+})
 // 各 Tab 的最后保存时间文案（进入编辑页时从后端获取，保存成功后更新）
 const tabLastSaved: Record<string, string> = reactive({
   general: '',
@@ -1505,6 +1518,7 @@ const portfolioFormRules = computed<FormRules>(() => {
 const loadClient = async () => {
   if (!clientId.value) return
 
+  pageLoading.value = true
   try {
     const response = await userClientApi.getClientById(clientId.value)
     const data = response.data || response
@@ -1604,6 +1618,7 @@ const loadClient = async () => {
     
     // 加载RM和ARM和Introducer名称（如果后端没有返回）
     if (clientForm.general.rmUserId && !clientForm.general.rm) {
+      rmLoading.value = true
       try {
         await loadAccounts()
         const account = accountList.value.find(a => a.userId === clientForm.general.rmUserId)
@@ -1612,6 +1627,8 @@ const loadClient = async () => {
         }
       } catch (error) {
         console.warn('Failed to load RM name:', error)
+      } finally {
+        rmLoading.value = false
       }
     }
     
@@ -1631,6 +1648,7 @@ const loadClient = async () => {
     }
     
     if ((clientForm.general as any).introducerId && !(clientForm.general as any).introducer) {
+      introducerLoading.value = true
       try {
         await loadIntroducers()
         const introducer = introducerList.value.find(i => i.id === (clientForm.general as any).introducerId)
@@ -1639,10 +1657,13 @@ const loadClient = async () => {
         }
       } catch (error) {
         console.warn('Failed to load Introducer name:', error)
+      } finally {
+        introducerLoading.value = false
       }
     }
 
     // 加载 KYC 数据
+    tabLoading.kyc = true
     try {
       const kyc = await kycApi.getKYC(clientId.value, clientForm.contactNature as any)
       kycData.documents = kyc.documents || []
@@ -1660,9 +1681,12 @@ const loadClient = async () => {
     } catch (error) {
       console.warn('Failed to load KYC data:', error)
       kycData.documents = []
+    } finally {
+      tabLoading.kyc = false
     }
 
     // 加载 Documents 数据
+    tabLoading.documents = true
     try {
       const documents = await documentsApi.getDocuments(clientId.value, clientForm.contactNature as any)
       documentsData.identity = documents.identity || []
@@ -1688,9 +1712,12 @@ const loadClient = async () => {
       }
     } catch (error) {
       console.warn('Failed to load documents:', error)
+    } finally {
+      tabLoading.documents = false
     }
 
     // 加载 Investment Risk Profile 数据
+    tabLoading.risk = true
     try {
       const risk = await riskProfileApi.getRiskProfile(clientId.value, clientForm.contactNature as any)
       // 用后端返回的数据整体替换前端结构，确保元数据（如 __hasExisting）也被带上
@@ -1703,9 +1730,12 @@ const loadClient = async () => {
       }
     } catch (error) {
       console.warn('Failed to load risk profile:', error)
+    } finally {
+      tabLoading.risk = false
     }
 
     // 加载 Fee Schedule 数据
+    tabLoading.fee = true
     try {
       const fee = await feeScheduleApi.getFeeSchedule(clientId.value, clientForm.contactNature as any)
       if (fee.managementFee) Object.assign(feeScheduleData.managementFee, fee.managementFee)
@@ -1726,6 +1756,8 @@ const loadClient = async () => {
       }
     } catch (error) {
       console.warn('Failed to load fee schedule:', error)
+    } finally {
+      tabLoading.fee = false
     }
 
     // 在 View 模式下，清除所有表单验证错误
@@ -1741,6 +1773,10 @@ const loadClient = async () => {
     if (!(error as any)?.isAuthError && (error as any)?.response?.status !== 401) {
       ElMessage.error('Failed to load client details')
     }
+  } finally {
+    // 添加最小延迟，避免闪烁
+    await new Promise(resolve => setTimeout(resolve, 300))
+    pageLoading.value = false
   }
 }
 
@@ -2572,6 +2608,21 @@ onMounted(async () => {
   .tab-content {
     min-height: 400px;
     overflow: visible !important;
+    position: relative;
+  }
+
+  // Loading 图标旋转动画
+  .is-loading {
+    animation: rotating 2s linear infinite;
+  }
+
+  @keyframes rotating {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 
   .client-form {

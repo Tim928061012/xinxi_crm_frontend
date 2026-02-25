@@ -12,8 +12,13 @@
       </div>
     </div>
 
+    <!-- Loading 状态 -->
+    <div v-loading="loading" class="table-wrapper" v-if="loading">
+      <div style="min-height: 400px;"></div>
+    </div>
+
     <!-- 有数据时显示表格 -->
-    <template v-if="clientList.length > 0">
+    <template v-else-if="clientList.length > 0">
       <div class="table-wrapper">
         <el-table
           :data="clientList"
@@ -71,9 +76,11 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const clientList = ref<Client[]>([])
+const loading = ref(false)
 
 // 加载客户列表
 const loadClients = async () => {
+  loading.value = true
   try {
     const response = await userClientApi.getClients()
     const data = response.data || response || []
@@ -131,6 +138,10 @@ const loadClients = async () => {
     // 不显示错误消息，避免干扰用户体验
     // 如果 API 调用失败，保持空列表
     clientList.value = []
+  } finally {
+    // 添加最小延迟，避免闪烁
+    await new Promise(resolve => setTimeout(resolve, 300))
+    loading.value = false
   }
 }
 

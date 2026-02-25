@@ -12,8 +12,13 @@
       </div>
     </div>
 
+    <!-- Loading 状态 -->
+    <div v-loading="loading" class="table-wrapper" v-if="loading">
+      <div style="min-height: 400px;"></div>
+    </div>
+
     <!-- 有数据时显示表格 -->
-    <template v-if="bankList.length > 0">
+    <template v-else-if="bankList.length > 0">
       <div class="table-wrapper">
         <el-table
           :data="bankList"
@@ -257,6 +262,7 @@ import { formatDateTime } from '@/utils/date'
 const route = useRoute()
 const authStore = useAuthStore()
 const bankList = ref<BankCentre[]>([])
+const loading = ref(false)
 const newBankDialogVisible = ref(false)
 const editBankDialogVisible = ref(false)
 const viewDialogVisible = ref(false)
@@ -311,6 +317,7 @@ const editBankFormRules: FormRules = {
 
 // 加载银行列表
 const loadBanks = async () => {
+  loading.value = true
   try {
     const response = await bankApi.getBanks()
     const data = response.data || response || []
@@ -348,6 +355,10 @@ const loadBanks = async () => {
       ElMessage.error('Failed to load bank list')
     }
     bankList.value = []
+  } finally {
+    // 添加最小延迟，避免闪烁
+    await new Promise(resolve => setTimeout(resolve, 300))
+    loading.value = false
   }
 }
 

@@ -11,8 +11,13 @@
       </div>
     </div>
 
+    <!-- Loading 状态 -->
+    <div v-loading="loading" class="table-wrapper" v-if="loading">
+      <div style="min-height: 400px;"></div>
+    </div>
+
     <!-- 客户表格 -->
-    <div class="table-wrapper" v-if="clientList.length > 0">
+    <div class="table-wrapper" v-else-if="clientList.length > 0">
       <el-table
         :data="clientList"
         stripe
@@ -96,6 +101,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const clientList = ref<AdminClient[]>([])
+const loading = ref(false)
 
 // RM 启用状态映射：key 为 rmUserId，value 为是否启用
 const rmActiveMap = ref<Map<number, boolean>>(new Map())
@@ -121,6 +127,7 @@ const loadRmStatus = async () => {
 
 // 加载客户列表
 const loadClients = async () => {
+  loading.value = true
   try {
     const response = await adminClientApi.getClients()
     const data = response.data || response || []
@@ -199,6 +206,10 @@ const loadClients = async () => {
       ElMessage.error('Failed to load client list')
     }
     clientList.value = []
+  } finally {
+    // 添加最小延迟，避免闪烁
+    await new Promise(resolve => setTimeout(resolve, 300))
+    loading.value = false
   }
 }
 
