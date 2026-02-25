@@ -145,14 +145,18 @@ const loadClients = async () => {
 
       const rmUserId = item.rmUserId || item.rm_user_id
 
-      // Client 显示名称：优先使用服务端的 clientName；否则按普通规则拼接
+      // Client 显示名称：Individual 类型显示为 "Last Name, First Name"，不使用 Chinese Name
       let clientName = item.clientName || item.client_name || ''
       if (!clientName) {
-        const firstName = item.firstName || ''
-        const lastName = item.lastName || ''
-        clientName = (item.chineseName && item.chineseName.trim())
-          ? item.chineseName
-          : (lastName && firstName ? `${lastName}, ${firstName}` : (lastName || firstName || ''))
+        if (type === 'individual') {
+          // Individual 类型：显示为 "Last Name, First Name"
+          const firstName = item.firstName || item.first_name || ''
+          const lastName = item.lastName || item.last_name || ''
+          clientName = lastName && firstName ? `${lastName}, ${firstName}` : (lastName || firstName || '')
+        } else {
+          // Corporate 类型：使用公司名称
+          clientName = item.companyName || item.company_name || item.chineseCompanyName || item.chinese_company_name || ''
+        }
       }
 
       // RM 显示名称：与 Account 页保持一致（firstName, lastName）

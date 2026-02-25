@@ -82,25 +82,25 @@ const loadClients = async () => {
       // 后端返回的clientType对应contactNature
       const contactNature = item.clientType || item.contactNature || item.contact_nature || 'Individual'
       
-      // 根据类型生成显示名称（后端ClientListDTO的逻辑）
+      // 根据类型生成显示名称：Individual 类型显示为 "Last Name, First Name"，不使用 Chinese Name
       let clientName = ''
       if (contactNature === 'Individual' || item.clientType === 'Individual') {
-        // 个人客户：优先显示中文名，否则显示 lastName + ", " + firstName
-        if (item.chineseName && item.chineseName.trim()) {
-          clientName = item.chineseName
-        } else if (item.lastName && item.firstName) {
-          clientName = `${item.lastName}, ${item.firstName}`
-        } else if (item.lastName) {
-          clientName = item.lastName
-        } else if (item.firstName) {
-          clientName = item.firstName
+        // 个人客户：显示为 "Last Name, First Name"（不使用 Chinese Name）
+        const firstName = item.firstName || item.first_name || ''
+        const lastName = item.lastName || item.last_name || ''
+        if (lastName && firstName) {
+          clientName = `${lastName}, ${firstName}`
+        } else if (lastName) {
+          clientName = lastName
+        } else if (firstName) {
+          clientName = firstName
         }
       } else {
         // 企业客户：优先显示中文公司名，否则显示英文公司名
         if (item.chineseCompanyName && item.chineseCompanyName.trim()) {
           clientName = item.chineseCompanyName
         } else {
-          clientName = item.companyName || ''
+          clientName = item.companyName || item.company_name || ''
         }
       }
       

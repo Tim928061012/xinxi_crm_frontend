@@ -963,6 +963,8 @@ onMounted(() => {
       line-height: 1.2;
       word-break: break-word;
       white-space: normal;
+      pointer-events: none !important; // 禁用 label 的点击聚焦行为
+      cursor: default !important; // 将鼠标指针改为默认样式
       
       // 针对 Client Relationship Status 特殊处理，缩小行间距
       &[for*="clientRelationshipStatus"] {

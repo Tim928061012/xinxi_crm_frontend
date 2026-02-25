@@ -465,3 +465,13 @@ html, body {
     color: #ffffff !important;
   }
 }
+
+// =======================
+// 全局表单样式：禁用 label 的点击聚焦行为
+// =======================
+// 所有表单的 label 禁用点击聚焦，只有点击表单项本体才能激活
+// 使用 !important 确保优先级，覆盖所有页面的表单
+:deep(.el-form-item__label) {
+  pointer-events: none !important;
+  cursor: default !important;
+}

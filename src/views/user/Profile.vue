@@ -5,6 +5,7 @@
 
       <!-- Account Information Section -->
       <div class="section">
+        <h2 class="section-title">Account</h2>
         <div class="info-form">
           <div class="info-row">
             <label class="info-label">Account</label>
@@ -216,7 +217,7 @@ onMounted(() => {
     .page-title {
       font-size: 24px;
       font-weight: 600;
-      color: #303133;
+      color: #025189; // 一级标题使用蓝色
       margin: 0 0 30px 0;
       padding-bottom: 15px;
       border-bottom: 1px solid #ebeef5;
@@ -235,6 +236,7 @@ onMounted(() => {
         color: #303133;
         margin: 0 0 20px 0;
         padding-bottom: 10px;
+        padding-left: 20px; // 二级标题缩进，与一级标题对齐
         border-bottom: 1px solid #ebeef5;
       }
 
@@ -287,6 +289,8 @@ onMounted(() => {
           box-sizing: border-box;
           text-align: right;
           line-height: 32px;
+          pointer-events: none !important; // 禁用 label 的点击聚焦行为
+          cursor: default !important; // 将鼠标指针改为默认样式
         }
 
         :deep(.el-button) {

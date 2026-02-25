@@ -380,4 +380,10 @@ const handlePageChange = () => {
     justify-content: flex-end;
   }
 }
+
+// 禁用所有表单 label 的点击聚焦行为
+:deep(.el-form-item__label) {
+  pointer-events: none !important;
+  cursor: default !important;
+}
 </style>

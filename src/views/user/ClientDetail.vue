@@ -50,7 +50,7 @@
                       placeholder="Please select RM"
                       :readonly="isViewMode"
                       :disabled="isViewMode"
-                      @click="!isViewMode && handleSelectRM()"
+                      @click.native.stop="!isViewMode && handleSelectRM()"
                       :style="isViewMode ? '' : 'cursor: pointer;'"
                     >
                       <template #suffix>
@@ -265,7 +265,7 @@
                       placeholder="Please select RM"
                       :readonly="isViewMode"
                       :disabled="isViewMode"
-                      @click="!isViewMode && handleSelectRM()"
+                      @click.native.stop="!isViewMode && handleSelectRM()"
                       :style="isViewMode ? '' : 'cursor: pointer;'"
                     >
                       <template #suffix>
@@ -1013,7 +1013,7 @@
             @focus="!isViewMode && loadBanksIfNeeded()"
           >
             <el-option
-              v-for="bank in bankList"
+              v-for="bank in visibleBanks"
               :key="bank.id"
               :label="bank.bank"
               :value="bank.bank"
@@ -1259,6 +1259,15 @@ const visibleIntroducers = computed(() => {
   return (introducerList.value || []).filter((intro: any) => {
     if (!intro) return false
     return intro.isActive || intro.id === currentId
+  })
+})
+
+// Bank 下拉可见列表：只显示启用的 + 当前已选中的（即使已禁用也保留）
+const visibleBanks = computed(() => {
+  const currentBank = portfolioForm.bank
+  return (bankList.value || []).filter((bank: any) => {
+    if (!bank) return false
+    return bank.isActive || bank.bank === currentBank
   })
 })
 
@@ -2465,6 +2474,8 @@ onMounted(async () => {
             min-height: 32px;
             display: flex;
             align-items: center;
+            pointer-events: none; // 禁用 label 的点击聚焦行为
+            cursor: default; // 将鼠标指针改为默认样式
           }
         }
       }
@@ -2562,6 +2573,12 @@ onMounted(async () => {
       grid-template-columns: 1fr 1fr;
       gap: 20px;
       margin-bottom: 20px;
+    }
+
+    // 禁用 label 的点击聚焦行为
+    :deep(.el-form-item__label) {
+      pointer-events: none;
+      cursor: default;
     }
 
     .vulnerable-assessment-container {
@@ -2706,6 +2723,12 @@ onMounted(async () => {
     margin-bottom: 0;
     padding-bottom: 0;
     border-bottom: none;
+
+    // 禁用 label 的点击聚焦行为
+    :deep(.el-form-item__label) {
+      pointer-events: none;
+      cursor: default;
+    }
   }
 
   .vulnerable-assessment-container {
