@@ -2964,6 +2964,17 @@ onMounted(async () => {
       gap: 8px;
       color: #606266;
       font-size: 14px;
+
+      :deep(.el-icon) {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: #d9dde3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #5a6473;
+      }
     }
   }
 
@@ -3006,13 +3017,12 @@ onMounted(async () => {
 
   .client-form {
     .form-section {
-      margin-bottom: 40px;
-      padding-bottom: 30px;
-      border-bottom: 1px solid #e4e7ed;
-
-      &:last-child {
-        border-bottom: none;
-      }
+      // 每个模块上方增加分栏间隔 + 分割线，实现内容分块
+      margin-top: 32px;
+      margin-bottom: 32px;
+      padding-top: 16px;
+      padding-bottom: 16px;
+      border-top: 1px solid #e4e7ed;
 
       .section-header {
         display: flex;
@@ -3081,8 +3091,7 @@ onMounted(async () => {
 
       // Portfolio section 特殊样式：去掉底部灰线
       &.portfolio-section {
-        border-bottom: none;
-        padding-bottom: 0;
+        // Portfolio 区域沿用统一的分栏间隔规则，只在内部微调
         margin-bottom: 24px;
 
         // 让表格左边与「Portfolio」标题对齐
