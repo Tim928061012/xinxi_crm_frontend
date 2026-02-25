@@ -49,9 +49,9 @@
                 View
               </el-link>
               <el-divider direction="vertical" />
-              <el-link type="primary" @click="handleEdit(row)" :underline="false">
-                Edit
-              </el-link>
+            <el-link type="primary" @click="handleEdit(row)" :underline="false">
+              Edit
+            </el-link>
             </template>
           </el-table-column>
         </el-table>
@@ -83,9 +83,14 @@
           <el-input v-model="newBankForm.bank" placeholder="Please enter bank name" />
         </el-form-item>
 
-        <el-form-item prop="bookingCentres" required>
+        <el-form-item prop="bookingCentres" required class="booking-centre-form-item">
           <template #label>
-            <span>Booking Centre <span style="color: #f56c6c;">*</span> <span style="color: #909399; font-size: 12px;">(At least 1 required)</span></span>
+            <span class="booking-centre-label">
+              Booking Centre
+              <span style="color: #909399; font-size: 12px; margin-left: 4px;">
+                (At least 1 required)
+              </span>
+            </span>
           </template>
           <div class="booking-centres-wrapper">
             <div
@@ -98,16 +103,7 @@
                 :placeholder="`Booking Centre ${index + 1}`"
                 style="flex: 1; margin-right: 8px;"
               />
-              <div class="centre-status">
-                <el-switch
-                  v-model="centre.isActive"
-                  :active-value="true"
-                  :inactive-value="false"
-                />
-                <span :style="{ color: centre.isActive ? '#67c23a' : '#909399', marginLeft: '8px' }">
-                  {{ centre.isActive ? 'Enabled' : 'Disabled' }}
-                </span>
-              </div>
+              <!-- 新建时：只允许删除未保存的 Booking Centre，不提供启用/禁用开关 -->
               <el-button
                 v-if="newBankForm.bookingCentres.length > 1"
                 type="danger"
@@ -151,9 +147,14 @@
           <el-input v-model="editBankForm.bank" placeholder="Please enter bank name" />
         </el-form-item>
 
-        <el-form-item prop="bookingCentres" required>
+        <el-form-item prop="bookingCentres" required class="booking-centre-form-item">
           <template #label>
-            <span>Booking Centre <span style="color: #f56c6c;">*</span> <span style="color: #909399; font-size: 12px;">(At least 1 required)</span></span>
+            <span class="booking-centre-label">
+              Booking Centre
+              <span style="color: #909399; font-size: 12px; margin-left: 4px;">
+                (At least 1 required)
+              </span>
+            </span>
           </template>
           <div class="booking-centres-wrapper">
             <div
@@ -166,7 +167,11 @@
                 :placeholder="`Booking Centre ${index + 1}`"
                 style="flex: 1; margin-right: 8px;"
               />
-              <div class="centre-status">
+              <!-- 编辑时：已存在的 Centre 只能启用/禁用，不能删除；新添加的 Centre 只能删除，不能启用/禁用 -->
+              <div
+                v-if="!centre.isNew"
+                class="centre-status"
+              >
                 <el-switch
                   v-model="centre.isActive"
                   :active-value="true"
@@ -177,7 +182,7 @@
                 </span>
               </div>
               <el-button
-                v-if="editBankForm.bookingCentres.length > 1"
+                v-if="centre.isNew && editBankForm.bookingCentres.length > 1"
                 type="danger"
                 :icon="Minus"
                 circle
@@ -264,7 +269,7 @@ const newBankForm = reactive<CreateBankCentreParams>({
   bookingCentres: [{ name: '', isActive: true }]
 })
 
-const editBankForm = reactive<UpdateBankCentreParams & { id?: number }>({
+const editBankForm = reactive<UpdateBankCentreParams & { id?: number; bookingCentres: (BookingCentre & { isNew?: boolean })[] }>({
   bank: '',
   bookingCentres: [{ name: '', isActive: true }]
 })
@@ -338,7 +343,10 @@ const loadBanks = async () => {
     })
   } catch (error) {
     console.error('Failed to load bank list:', error)
-    ElMessage.error('Failed to load bank list')
+    // 登录态失效（401）时，全局拦截器已经提示并跳转，这里不再额外提示
+    if (!(error as any)?.isAuthError && (error as any)?.response?.status !== 401) {
+      ElMessage.error('Failed to load bank list')
+    }
     bankList.value = []
   }
 }
@@ -354,20 +362,25 @@ const handleNewBank = () => {
 // 添加 Booking Centre
 const addBookingCentre = (type: 'new' | 'edit') => {
   if (type === 'new') {
+    // 新建表单：所有 Booking Centre 都是“未保存”的，只支持删除，不支持禁用
     newBankForm.bookingCentres.push({ name: '', isActive: true })
   } else {
-    editBankForm.bookingCentres.push({ name: '', isActive: true })
+    // 编辑表单：新添加的 Booking Centre 标记为 isNew，只支持删除，不支持禁用
+    editBankForm.bookingCentres.push({ name: '', isActive: true, isNew: true } as BookingCentre & { isNew?: boolean })
   }
 }
 
 // 删除 Booking Centre
 const removeBookingCentre = (type: 'new' | 'edit', index: number) => {
   if (type === 'new') {
+    // 新建表单：允许删除任意未保存的 Booking Centre（至少保留 1 个）
     if (newBankForm.bookingCentres.length > 1) {
       newBankForm.bookingCentres.splice(index, 1)
     }
   } else {
-    if (editBankForm.bookingCentres.length > 1) {
+    // 编辑表单：只允许删除当前会话中新添加的 Booking Centre（isNew = true），已存在的不能删除
+    const centre = editBankForm.bookingCentres[index] as BookingCentre & { isNew?: boolean }
+    if (centre?.isNew && editBankForm.bookingCentres.length > 1) {
       editBankForm.bookingCentres.splice(index, 1)
     }
   }
@@ -408,6 +421,11 @@ const handleSubmitNewBank = async () => {
 
 // 编辑银行
 const handleEdit = async (row: BankCentre) => {
+  // 如果 Bank 已被禁用，不允许编辑
+  if (!row.isActive) {
+    ElMessage.warning('Please enable this Bank before editing')
+    return
+  }
   try {
     // 获取详情数据
     const response = await bankApi.getBankById(row.id)
@@ -423,8 +441,12 @@ const handleEdit = async (row: BankCentre) => {
     editBankForm.bank = bankName
     editBankForm.bookingCentres = centres.map((centre: any) => ({
       name: typeof centre === 'string' ? centre : (centre.name || ''),
-      isActive: typeof centre === 'string' ? true : (centre.isEnabled === true || centre.isEnabled === 'true' || centre.isActive === true || centre.isActive === 'true' || centre.active === true)
-    }))
+      isActive: typeof centre === 'string'
+        ? true
+        : (centre.isEnabled === true || centre.isEnabled === 'true' || centre.isActive === true || centre.isActive === 'true' || centre.active === true),
+      // 从后端加载的 Booking Centre 视为“已存在”，不能删除，只能启用/禁用
+      isNew: false
+    })) as (BookingCentre & { isNew?: boolean })[]
     
     // 确保至少有一个
     if (editBankForm.bookingCentres.length === 0) {
@@ -744,6 +766,22 @@ onMounted(() => {
         content: '*';
         color: #f56c6c;
         margin-right: 4px;
+      }
+    }
+  }
+  
+  // 针对 Booking Centre 字段，缩小星号和文字间距以匹配 Bank 标签
+  .booking-centre-form-item.is-required {
+    .el-form-item__label {
+      &::before {
+        margin-right: 4px !important;
+      }
+      
+      .booking-centre-label {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        display: inline !important;
+        vertical-align: baseline;
       }
     }
   }

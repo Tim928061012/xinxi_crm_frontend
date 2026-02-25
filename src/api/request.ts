@@ -113,7 +113,7 @@ request.interceptors.response.use(
     if (response) {
       const status = response.status
       
-      // 401 特殊处理：未授权，需要跳转到登录页
+      // 401 特殊处理：未授权，需要提示登录失效并跳转到登录页
       if (status === 401) {
         if (isLoginRequest) {
           // 登录请求的 401，不显示错误，让调用方处理
@@ -121,9 +121,12 @@ request.interceptors.response.use(
         }
 
         // 其他请求的 401，说明 token 过期或未授权
-        // 只弹一次提示框，避免多个请求同时401反复弹窗
+        // 只弹一次提示，避免多个请求同时 401 反复提示
         if (!isAuthDialogVisible) {
           isAuthDialogVisible = true
+
+          // 标记为认证错误，供调用方识别避免重复提示
+          ;(error as any).isAuthError = true
 
           // 先清理本地登录态
           const authStore = useAuthStore()
@@ -131,25 +134,42 @@ request.interceptors.response.use(
           sessionStorage.removeItem('token')
           authStore.logout()
 
-          // 提示登录态失效
+          // 使用弹窗显示错误信息（等待2秒后自动跳转，或用户点击OK后立即跳转）
+          let hasJumped = false
+          const jumpToLogin = () => {
+            if (hasJumped) return
+            hasJumped = true
+            ElMessageBox.close()
+            const redirect = router.currentRoute.value.fullPath
+            router.push({ name: 'Login', query: { redirect } }).finally(() => {
+              isAuthDialogVisible = false
+            })
+          }
+
           ElMessageBox.alert(
-            '登录状态已失效，请重新登录。',
-            '登录失效',
+            'Your login session has expired, please log in again.',
+            'Session Expired',
             {
+              type: 'warning',
+              confirmButtonText: 'OK',
               showClose: false,
               closeOnClickModal: false,
-              closeOnPressEscape: false,
-              confirmButtonText: '确定'
+              closeOnPressEscape: false
             }
-          ).catch(() => {
-            // 用户可能通过编程方式关闭，保持逻辑一致
+          ).then(() => {
+            // 用户点击OK后立即跳转
+            jumpToLogin()
+          }).catch(() => {
+            // 忽略其他错误
           })
 
-          // 2 秒后跳转到登录页
+          // 等待2秒后自动关闭弹窗并跳转到登录页（如果用户还没点击OK）
           setTimeout(() => {
-            router.push({ name: 'Login' })
-            isAuthDialogVisible = false
+            jumpToLogin()
           }, 2000)
+        } else {
+          // 如果已经有弹窗在显示，直接标记为认证错误，不重复处理
+          ;(error as any).isAuthError = true
         }
 
         return Promise.reject(error)

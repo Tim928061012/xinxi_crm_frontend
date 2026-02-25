@@ -204,7 +204,10 @@ const loadAccounts = async () => {
     })
   } catch (error) {
     console.error('Failed to load account list:', error)
-    ElMessage.error('Failed to load account list')
+    // 登录态失效（401）时，全局拦截器已经提示并跳转，这里不再额外提示
+    if (!(error as any)?.isAuthError && (error as any)?.response?.status !== 401) {
+      ElMessage.error('Failed to load account list')
+    }
     accountList.value = []
   }
 }
