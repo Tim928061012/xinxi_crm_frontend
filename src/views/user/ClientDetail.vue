@@ -4,14 +4,14 @@
     <div class="top-header">
       <div class="header-left">
         <el-button :icon="ArrowLeft" circle @click="handleBack" />
-        <!-- View 模式下显示 Edit 按钮（仅普通用户，admin 没有编辑功能） -->
+        <!-- View 模式下仅普通用户显示 Edit 按钮；admin view 不显示 Edit / Save -->
         <template v-if="isViewMode && route.path.startsWith('/user/client/')">
           <el-button type="primary" @click="handleEdit">
             Edit
           </el-button>
         </template>
-        <!-- Edit/New 模式下显示保存按钮 -->
-        <template v-else>
+        <!-- Edit/New 模式下，仅普通用户显示保存按钮；admin 不显示 -->
+        <template v-else-if="!isViewMode && route.path.startsWith('/user/client')">
           <el-button type="primary" @click="() => handleSave(false)" :loading="saving">
             Save
           </el-button>
@@ -2222,11 +2222,9 @@ const handleBack = () => {
   }
 }
 
-// 处理 Edit 按钮点击，跳转到编辑页面
+// 处理 Edit 按钮点击，跳转到编辑页面（仅普通用户）
 const handleEdit = () => {
   if (!clientId.value) return
-  // 普通用户在 /user/client/:id 下查看时，跳转到 /user/client/:id/edit
-  // admin 没有编辑功能，所以只处理普通用户的情况
   if (route.path.startsWith('/user/client/')) {
     router.push(`/user/client/${clientId.value}/edit`)
   }

@@ -52,6 +52,16 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: 'client/:id/edit',
+        name: 'AdminClientEdit',
+        component: () => import('@/views/user/ClientDetail.vue'),
+        meta: { 
+          requiresAuth: true,
+          title: '客户编辑',
+          roles: ['admin']
+        }
+      },
+      {
         path: 'introducer',
         name: 'Introducer',
         component: () => import('@/views/admin/Introducer.vue'),
