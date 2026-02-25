@@ -4,8 +4,14 @@
     <div class="top-header">
       <div class="header-left">
         <el-button :icon="ArrowLeft" circle @click="handleBack" />
-        <!-- View 模式下隐藏保存按钮 -->
-        <template v-if="!isViewMode">
+        <!-- View 模式下显示 Edit 按钮（仅普通用户，admin 没有编辑功能） -->
+        <template v-if="isViewMode && route.path.startsWith('/user/client/')">
+          <el-button type="primary" @click="handleEdit">
+            Edit
+          </el-button>
+        </template>
+        <!-- Edit/New 模式下显示保存按钮 -->
+        <template v-else>
           <el-button type="primary" @click="() => handleSave(false)" :loading="saving">
             Save
           </el-button>
@@ -1114,6 +1120,7 @@ const clientId = computed(() => {
 })
 const isEditMode = computed(() => clientId.value !== null && clientId.value !== undefined)
 // View 模式：路径包含 /view 或者是 admin 的 view 路由（/client/:id 且不是 /client/:id/edit）
+// 或者是普通用户的 view 路由（UserClientView，即 /user/client/:id 且不是 /user/client/:id/edit）
 const isViewMode = computed(() => {
   const path = route.path
   const routeName = route.name
@@ -1121,8 +1128,12 @@ const isViewMode = computed(() => {
   if (routeName === 'AdminClientView' || path.includes('/view')) {
     return true
   }
-  // 如果是 /client/:id 且不是 /client/:id/edit，也是 view 模式
+  // 如果是 /client/:id 且不是 /client/:id/edit，也是 view 模式（admin）
   if (path.startsWith('/client/') && !path.includes('/edit') && !path.includes('/new')) {
+    return true
+  }
+  // 如果是普通用户的 view 路由（UserClientView），即 /user/client/:id 且不是 /user/client/:id/edit
+  if (routeName === 'UserClientView' || (path.startsWith('/user/client/') && !path.includes('/edit') && !path.includes('/new') && path !== '/user/client')) {
     return true
   }
   return false
@@ -1760,6 +1771,16 @@ const handleBack = () => {
     router.push('/client')
   } else {
     router.push('/user/client')
+  }
+}
+
+// 处理 Edit 按钮点击，跳转到编辑页面
+const handleEdit = () => {
+  if (!clientId.value) return
+  // 普通用户在 /user/client/:id 下查看时，跳转到 /user/client/:id/edit
+  // admin 没有编辑功能，所以只处理普通用户的情况
+  if (route.path.startsWith('/user/client/')) {
+    router.push(`/user/client/${clientId.value}/edit`)
   }
 }
 
