@@ -97,8 +97,9 @@ export const userClientApi = {
   },
 
   // 获取客户详情
-  getClientById(id: number) {
-    return request.get(`/user/clients/${id}`)
+  getClientById(id: number, clientType?: 'Individual' | 'Corporate') {
+    const params = clientType ? { clientType } : {}
+    return request.get(`/user/clients/${id}`, { params })
   },
 
   // 创建客户

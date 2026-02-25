@@ -180,12 +180,16 @@ const loadClients = async () => {
       // 后端已经返回 rmActive，直接使用；没有时再退回账户表
       const rmActiveFromServer = item.rmActive
 
+      // 确定 clientType：使用后端返回的 clientType，或根据 type 判断
+      const clientType = item.clientType || (type === 'corporate' ? 'Corporate' : 'Individual')
+      
       return {
         id: id,
         clientId: item.clientBusinessId || item.clientId || item.client_id,
         client: clientName,
         rm: rmName,
         rmUserId: numericRmUserId,
+        contactNature: clientType, // 保存 clientType 用于跳转时传递
         // 优先使用服务端 rmActive；当 rmActive 为 false 时，一定标红
         rmDisabled:
           rmActiveFromServer === false
@@ -270,7 +274,12 @@ const handleView = (row: AdminClient) => {
     return
   }
   // 跳转到管理员路由下的客户详情页，保持 Admin 菜单和布局
-  router.push(`/client/${row.id}`)
+  // 传递 clientType 作为查询参数，确保后端能正确识别客户类型
+  const clientType = (row as any).contactNature || 'Individual'
+  router.push({
+    path: `/client/${row.id}`,
+    query: { clientType }
+  })
 }
 
 // 新建客户（跳转到用户端的新建客户页面）

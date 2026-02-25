@@ -124,8 +124,16 @@
                   </el-form-item>
                 </div>
 
-                <!-- 第3行: Introducer, Client Id -->
+                <!-- 第3行: Client Id, Introducer -->
                 <div class="form-row">
+                  <el-form-item label="Client Id">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientId) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" :disabled="isViewMode" />
+                    </template>
+                  </el-form-item>
                   <el-form-item label="Introducer">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ getIntroducerName((clientForm.general as any).introducerId) }}</span>
@@ -138,6 +146,7 @@
                         :disabled="isViewMode || introducerLoading"
                         :loading="introducerLoading"
                         filterable
+                        clearable
                         @focus="!isViewMode && loadIntroducersIfNeeded()"
                       >
                         <el-option
@@ -147,14 +156,6 @@
                           :value="intro.id"
                         />
                       </el-select>
-                    </template>
-                  </el-form-item>
-                  <el-form-item label="Client Id">
-                    <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientId) }}</span>
-                    </template>
-                    <template v-else>
-                      <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" :disabled="isViewMode" />
                     </template>
                   </el-form-item>
                 </div>
@@ -464,8 +465,16 @@
                   </el-form-item>
                 </div>
 
-                <!-- 第3行: Introducer, Client Id -->
+                <!-- 第3行: Client Id, Introducer -->
                 <div class="form-row">
+                  <el-form-item label="Client Id">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientId) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" :disabled="isViewMode" />
+                    </template>
+                  </el-form-item>
                   <el-form-item label="Introducer">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ getIntroducerName((clientForm.general as any).introducerId) }}</span>
@@ -478,6 +487,7 @@
                         :disabled="isViewMode || introducerLoading"
                         :loading="introducerLoading"
                         filterable
+                        clearable
                         @focus="!isViewMode && loadIntroducersIfNeeded()"
                       >
                         <el-option
@@ -487,14 +497,6 @@
                           :value="intro.id"
                         />
                       </el-select>
-                    </template>
-                  </el-form-item>
-                  <el-form-item label="Client Id">
-                    <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientId) }}</span>
-                    </template>
-                    <template v-else>
-                      <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" :disabled="isViewMode" />
                     </template>
                   </el-form-item>
                 </div>
@@ -1838,22 +1840,33 @@ const loadClient = async () => {
 
   pageLoading.value = true
   try {
-    const response = await userClientApi.getClientById(clientId.value)
+    // 从路由查询参数中获取 clientType，确保后端能正确识别客户类型
+    const clientTypeFromQuery = route.query.clientType as 'Individual' | 'Corporate' | undefined
+    const response = await userClientApi.getClientById(clientId.value, clientTypeFromQuery)
     const data = response.data || response
 
     // 填充表单数据
-    clientForm.contactNature = data.contactNature || data.contact_nature || 'Individual'
+    // 优先使用后端返回的 contactNature，如果没有则使用 general.contactNature，最后才默认 Individual
+    const backendContactNature = data.contactNature || data.contact_nature
+    const generalContactNature = data.general?.contactNature
+    // 确保 contactNature 正确设置，优先使用后端返回的值
+    const finalContactNature = backendContactNature || generalContactNature || 'Individual'
+    clientForm.contactNature = finalContactNature
     
     // 处理 General 信息
     if (data.general) {
       const general = data.general
-      // 确保general对象有contactNature
-      if (!general.contactNature) {
-        general.contactNature = clientForm.contactNature
+      // 确保general对象有contactNature，优先使用外层的 contactNature（更可靠）
+      if (!general.contactNature || general.contactNature !== finalContactNature) {
+        general.contactNature = finalContactNature
       }
       // 确保general对象有contactType
       if (!general.contactType) {
         general.contactType = 'Client'
+      }
+      // 确保 introducerId 为 0 时转换为 undefined（空值）
+      if (general.introducerId === 0 || general.introducerId === '0') {
+        general.introducerId = undefined
       }
       clientForm.general = general as any
     } else {
@@ -1865,7 +1878,8 @@ const loadClient = async () => {
           firstName: '',
           lastName: '',
           rm: '',
-          arm: ''
+          arm: '',
+          introducerId: undefined
         } as IndividualGeneralInfo
       } else {
         clientForm.general = {
@@ -1873,7 +1887,8 @@ const loadClient = async () => {
           contactNature: 'Corporate',
           companyName: '',
           rm: '',
-          arm: ''
+          arm: '',
+          introducerId: undefined
         } as CorporateGeneralInfo
       }
     }
@@ -2240,6 +2255,9 @@ const handleEdit = () => {
 }
 
 const handleContactNatureChange = () => {
+  // 根据 general.contactNature 同步外层 contactNature，确保后端能正确区分 Individual / Corporate
+  clientForm.contactNature = clientForm.general.contactNature as 'Individual' | 'Corporate'
+
   // 切换 Contact Nature 时重置 General 信息
   if (clientForm.general.contactNature === 'Individual') {
     clientForm.general = {
@@ -2248,7 +2266,8 @@ const handleContactNatureChange = () => {
       firstName: '',
       lastName: '',
       rm: clientForm.general.rm || '',
-      arm: (clientForm.general as any).arm || ''
+      arm: (clientForm.general as any).arm || '',
+      introducerId: undefined
     } as IndividualGeneralInfo
   } else {
     clientForm.general = {
@@ -2256,7 +2275,8 @@ const handleContactNatureChange = () => {
       contactNature: 'Corporate',
       companyName: '',
       rm: clientForm.general.rm || '',
-      arm: (clientForm.general as any).arm || ''
+      arm: (clientForm.general as any).arm || '',
+      introducerId: undefined
     } as CorporateGeneralInfo
   }
 }
@@ -2369,8 +2389,18 @@ const handleSave = async (closeAfter: boolean = false) => {
         } else {
           // 创建新 Client
           let response
-          // 如果是个人客户，调用 /client-individuals 接口
-          if (clientForm.general.contactNature === 'Individual') {
+          // 使用外层的 contactNature 来判断客户类型，确保与 general.contactNature 一致
+          // 如果 general.contactNature 与外层不一致，使用外层的值
+          const contactNature = clientForm.contactNature || (clientForm.general as any).contactNature
+          if (contactNature === 'Individual') {
+            // 确保 general.contactNature 与外层一致，如果类型不匹配则重新创建对象
+            if ((clientForm.general as any).contactNature !== 'Individual') {
+              const oldGeneral = clientForm.general as any
+              clientForm.general = {
+                ...oldGeneral,
+                contactNature: 'Individual'
+              } as IndividualGeneralInfo
+            }
             const general = clientForm.general as any
             const now = new Date()
 
@@ -2434,7 +2464,15 @@ const handleSave = async (closeAfter: boolean = false) => {
 
             response = await individualClientApi.createIndividualClient(payload)
           } else {
-            // 其他类型仍然走原来的 /user/clients 接口
+            // Corporate 类型：确保 general.contactNature 与外层一致，如果类型不匹配则重新创建对象
+            if ((clientForm.general as any).contactNature !== 'Corporate') {
+              const oldGeneral = clientForm.general as any
+              clientForm.general = {
+                ...oldGeneral,
+                contactNature: 'Corporate'
+              } as CorporateGeneralInfo
+            }
+            // 使用统一的 /user/clients 接口
             response = await userClientApi.createClient(clientForm)
           }
 
@@ -2452,6 +2490,27 @@ const handleSave = async (closeAfter: boolean = false) => {
           }
           
           currentClientId = newId
+          
+          // 如果返回的数据包含完整的客户信息，直接使用返回的数据更新表单
+          // 这样可以确保 contactNature 等字段正确设置
+          if (responseData.contactNature || responseData.general) {
+            const data = responseData
+            // 优先使用后端返回的 contactNature
+            const backendContactNature = data.contactNature || data.contact_nature
+            const generalContactNature = data.general?.contactNature
+            clientForm.contactNature = backendContactNature || generalContactNature || clientForm.contactNature || 'Individual'
+            
+            // 更新 general 信息
+            if (data.general) {
+              const general = data.general
+              if (!general.contactNature || general.contactNature !== clientForm.contactNature) {
+                general.contactNature = clientForm.contactNature
+              }
+              // 合并返回的 general 数据到表单
+              Object.assign(clientForm.general, general)
+            }
+          }
+          
           ElMessage.success('Client created successfully')
           
           // 如果有未保存的 Portfolio，现在保存它们

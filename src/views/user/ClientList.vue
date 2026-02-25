@@ -165,12 +165,20 @@ const handleNewClient = async () => {
 
 // 查看详情
 const handleView = (row: Client) => {
-  router.push(`/user/client/${row.id}`)
+  // 传递 clientType 作为查询参数，确保后端能正确识别客户类型
+  router.push({
+    path: `/user/client/${row.id}`,
+    query: { clientType: row.contactNature }
+  })
 }
 
 // 编辑客户
 const handleEdit = (row: Client) => {
-  router.push(`/user/client/${row.id}/edit`)
+  // 传递 clientType 作为查询参数，确保后端能正确识别客户类型
+  router.push({
+    path: `/user/client/${row.id}/edit`,
+    query: { clientType: row.contactNature }
+  })
 }
 
 // 删除客户

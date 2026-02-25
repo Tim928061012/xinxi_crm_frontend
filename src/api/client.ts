@@ -12,6 +12,7 @@ export interface AdminClient {
   operation: boolean // 运营状态
   createdTime: string
   type?: 'individual' | 'corporate' // 客户类型：个人或企业
+  contactNature?: 'Individual' | 'Corporate' // 客户类型（用于 API 调用）
 }
 
 export interface UpdateComplianceOperationParams {
