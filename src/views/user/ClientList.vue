@@ -255,6 +255,17 @@ onMounted(() => {
       font-size: 14px;
       padding: 0;
       margin: 0;
+
+      :deep(.el-icon) {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: #d9dde3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #5a6473;
+      }
     }
   }
 

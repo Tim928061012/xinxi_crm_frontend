@@ -193,9 +193,9 @@ const loadAccounts = async () => {
         account: item.username || item.account || '', // 后端返回 username，映射到前端的 account
         firstName: firstName,
         lastName: lastName,
-        // Admin 账号 Name 固定为 "admin"，不可编辑
+        // Admin 账号 Name 固定为 "System Administrator"，不可编辑
         // 其他账号：两个都有 -> "firstName, lastName"，只有一个 -> 只显示该字段，避免多余逗号
-        name: isAdmin ? 'admin' : (firstName && lastName ? `${firstName}, ${lastName}` : (firstName || lastName || '')),
+        name: isAdmin ? 'System Administrator' : (firstName && lastName ? `${firstName}, ${lastName}` : (firstName || lastName || '')),
         role: item.role || item.userRole || '', // 后端返回的角色，用于判断是否为 admin
         isActive: isActive, // 后端返回的 isActive 字段
         status: isActive ? 'enabled' : 'disabled', // 前端显示用的状态
@@ -393,6 +393,17 @@ onMounted(() => {
       font-size: 14px;
       padding: 0;
       margin: 0;
+
+      :deep(.el-icon) {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: #d9dde3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #5a6473;
+      }
     }
   }
 
