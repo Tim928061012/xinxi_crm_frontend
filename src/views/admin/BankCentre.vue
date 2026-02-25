@@ -86,8 +86,8 @@
         <el-form-item prop="bookingCentres" required class="booking-centre-form-item">
           <template #label>
             <span class="booking-centre-label">
-              Booking Centre
-              <span style="color: #909399; font-size: 12px; margin-left: 4px;">
+              <span>Booking Centre</span>
+              <span style="color: #909399; font-size: 12px; display: block; margin-top: 2px;">
                 (At least 1 required)
               </span>
             </span>
@@ -150,8 +150,8 @@
         <el-form-item prop="bookingCentres" required class="booking-centre-form-item">
           <template #label>
             <span class="booking-centre-label">
-              Booking Centre
-              <span style="color: #909399; font-size: 12px; margin-left: 4px;">
+              <span>Booking Centre</span>
+              <span style="color: #909399; font-size: 12px; display: block; margin-top: 2px;">
                 (At least 1 required)
               </span>
             </span>
@@ -770,21 +770,7 @@ onMounted(() => {
     }
   }
   
-  // 针对 Booking Centre 字段，缩小星号和文字间距以匹配 Bank 标签
-  .booking-centre-form-item.is-required {
-    .el-form-item__label {
-      &::before {
-        margin-right: 4px !important;
-      }
-      
-      .booking-centre-label {
-        margin-left: 0 !important;
-        padding-left: 0 !important;
-        display: inline !important;
-        vertical-align: baseline;
-      }
-    }
-  }
+  // Booking Centre 字段的星号间距在外部定义，确保优先级
 
   .el-form-item {
     margin-bottom: 20px;
@@ -811,6 +797,21 @@ onMounted(() => {
       border-radius: 4px;
     }
   }
+}
+
+// 在 :deep(.el-dialog) 外部定义，确保样式优先级足够高
+// 针对 Booking Centre 字段，彻底解决星号间距问题
+// 方法1: 缩小 ::before 的 margin-right
+:deep(.el-dialog .booking-centre-form-item.is-required .el-form-item__label::before) {
+  margin-right: 0px !important; // 完全移除间距
+}
+
+// 方法2: 使用负 margin 来进一步缩小间距（如果方法1不够）
+:deep(.el-dialog .booking-centre-form-item.is-required .el-form-item__label .booking-centre-label) {
+  margin-left: -3px !important; // 使用负 margin 抵消剩余的间距
+  padding-left: 0 !important;
+  display: inline !important;
+  vertical-align: baseline;
 }
 </style>
 
