@@ -160,19 +160,8 @@
                   </el-form-item>
                 </div>
 
-                <!-- 第4行: Gender, Client Relationship Status -->
+                <!-- 第4行: Client Relationship Status, Gender -->
                 <div class="form-row">
-                  <el-form-item label="Gender">
-                    <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).gender) }}</span>
-                    </template>
-                    <template v-else>
-                      <el-radio-group v-model="(clientForm.general as any).gender" :disabled="isViewMode">
-                        <el-radio label="Male">Male</el-radio>
-                        <el-radio label="Female">Female</el-radio>
-                      </el-radio-group>
-                    </template>
-                  </el-form-item>
                   <el-form-item label="Client Relationship Status">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientRelationshipStatus) }}</span>
@@ -189,23 +178,21 @@
                       </el-select>
                     </template>
                   </el-form-item>
-                </div>
-
-                <!-- 第5行: Marital Status, Title -->
-                <div class="form-row">
-                  <el-form-item label="Marital Status">
+                  <el-form-item label="Gender">
                     <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).maritalStatus) }}</span>
+                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).gender) }}</span>
                     </template>
                     <template v-else>
-                      <el-select v-model="(clientForm.general as any).maritalStatus" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
-                        <el-option label="Single" value="Single" />
-                        <el-option label="Married" value="Married" />
-                        <el-option label="Divorced" value="Divorced" />
-                        <el-option label="Widowed" value="Widowed" />
-                      </el-select>
+                      <el-radio-group v-model="(clientForm.general as any).gender" :disabled="isViewMode">
+                        <el-radio label="Male">Male</el-radio>
+                        <el-radio label="Female">Female</el-radio>
+                      </el-radio-group>
                     </template>
                   </el-form-item>
+                </div>
+
+                <!-- 第5行: Title, Marital Status -->
+                <div class="form-row">
                   <el-form-item label="Title" prop="general.title">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).title) }}</span>
@@ -219,10 +206,31 @@
                       </el-select>
                     </template>
                   </el-form-item>
+                  <el-form-item label="Marital Status">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).maritalStatus) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-select v-model="(clientForm.general as any).maritalStatus" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
+                        <el-option label="Single" value="Single" />
+                        <el-option label="Married" value="Married" />
+                        <el-option label="Divorced" value="Divorced" />
+                        <el-option label="Widowed" value="Widowed" />
+                      </el-select>
+                    </template>
+                  </el-form-item>
                 </div>
 
-                <!-- 第6行: Education Level, First Name -->
+                <!-- 第6行: First Name, Education Level -->
                 <div class="form-row">
+                  <el-form-item label="First Name" prop="general.firstName">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).firstName) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-input v-model="(clientForm.general as any).firstName" placeholder="Please enter first name" :disabled="isViewMode" />
+                    </template>
+                  </el-form-item>
                   <el-form-item label="Education Level">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).educationLevel) }}</span>
@@ -236,18 +244,18 @@
                       </el-select>
                     </template>
                   </el-form-item>
-                  <el-form-item label="First Name" prop="general.firstName">
-                    <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).firstName) }}</span>
-                    </template>
-                    <template v-else>
-                      <el-input v-model="(clientForm.general as any).firstName" placeholder="Please enter first name" :disabled="isViewMode" />
-                    </template>
-                  </el-form-item>
                 </div>
 
-                <!-- 第7行: Birthday(dd/mm/yyyy), Last Name -->
+                <!-- 第7行: Last Name, Birthday(dd/mm/yyyy) -->
                 <div class="form-row">
+                  <el-form-item label="Last Name" prop="general.lastName">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).lastName) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-input v-model="(clientForm.general as any).lastName" placeholder="Please enter last name" :disabled="isViewMode" />
+                    </template>
+                  </el-form-item>
                   <el-form-item label="Birthday (dd/mm/yyyy)">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).birthday) }}</span>
@@ -264,18 +272,18 @@
                       />
                     </template>
                   </el-form-item>
-                  <el-form-item label="Last Name" prop="general.lastName">
-                    <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).lastName) }}</span>
-                    </template>
-                    <template v-else>
-                      <el-input v-model="(clientForm.general as any).lastName" placeholder="Please enter last name" :disabled="isViewMode" />
-                    </template>
-                  </el-form-item>
                 </div>
 
-                <!-- 第8行: Country/Region of Birth, Chinese Name -->
+                <!-- 第8行: Chinese Name, Country/Region of Birth -->
                 <div class="form-row">
+                  <el-form-item label="Chinese Name">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).chineseName) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" :disabled="isViewMode" />
+                    </template>
+                  </el-form-item>
                   <el-form-item label="Country/Region of Birth">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).countryOfBirth) }}</span>
@@ -297,18 +305,22 @@
                       </el-select>
                     </template>
                   </el-form-item>
-                  <el-form-item label="Chinese Name">
-                    <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).chineseName) }}</span>
-                    </template>
-                    <template v-else>
-                      <el-input v-model="(clientForm.general as any).chineseName" placeholder="Please enter Chinese name" :disabled="isViewMode" />
-                    </template>
-                  </el-form-item>
                 </div>
 
-                <!-- 第9行: Dual Citizenship, Id Type -->
+                <!-- 第9行: Id Type, Dual Citizenship -->
                 <div class="form-row">
+                  <el-form-item label="Id Type">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).idType) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
+                        <el-option label="Passport" value="Passport" />
+                        <el-option label="ID Card" value="ID Card" />
+                        <el-option label="Driver License" value="Driver License" />
+                      </el-select>
+                    </template>
+                  </el-form-item>
                   <el-form-item label="Dual Citizenship">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).dualCitizenship) }}</span>
@@ -323,22 +335,18 @@
                       <span style="margin-left: 8px;">{{ (clientForm.general as any).dualCitizenship ? 'Yes' : 'No' }}</span>
                     </template>
                   </el-form-item>
-                  <el-form-item label="Id Type">
-                    <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).idType) }}</span>
-                    </template>
-                    <template v-else>
-                      <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
-                        <el-option label="Passport" value="Passport" />
-                        <el-option label="ID Card" value="ID Card" />
-                        <el-option label="Driver License" value="Driver License" />
-                      </el-select>
-                    </template>
-                  </el-form-item>
                 </div>
 
-                <!-- 第10行: Nationality, Id No. -->
+                <!-- 第10行: Id No., Nationality -->
                 <div class="form-row">
+                  <el-form-item label="Id No.">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).idNo) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" :disabled="isViewMode" />
+                    </template>
+                  </el-form-item>
                   <el-form-item label="Nationality">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).nationality) }}</span>
@@ -358,14 +366,6 @@
                           :value="country"
                         />
                       </el-select>
-                    </template>
-                  </el-form-item>
-                  <el-form-item label="Id No.">
-                    <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).idNo) }}</span>
-                    </template>
-                    <template v-else>
-                      <el-input v-model="(clientForm.general as any).idNo" placeholder="Please enter ID number" :disabled="isViewMode" />
                     </template>
                   </el-form-item>
                 </div>
