@@ -1478,6 +1478,7 @@ import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled, Loading 
 import { useAuthStore } from '@/stores/auth'
 import { userClientApi, type Client, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
 import { individualClientApi, type CreateIndividualClientRequest } from '@/api/clientIndividual'
+import { corporateClientApi, type CreateCorporateClientRequest } from '@/api/clientCorporate'
 import { portfolioApi, type Portfolio, type CreatePortfolioParams } from '@/api/user/portfolio'
 import { accountApi, type Account } from '@/api/account'
 import { introducerApi, type Introducer } from '@/api/introducer'
@@ -2260,22 +2261,28 @@ const handleContactNatureChange = () => {
 
   // 切换 Contact Nature 时重置 General 信息
   if (clientForm.general.contactNature === 'Individual') {
+    const prev = clientForm.general as any
     clientForm.general = {
       contactType: 'Client',
       contactNature: 'Individual',
       firstName: '',
       lastName: '',
-      rm: clientForm.general.rm || '',
-      arm: (clientForm.general as any).arm || '',
+      rm: prev.rm || '',
+      rmUserId: prev.rmUserId, // 保留已选择的 RM ID
+      arm: prev.arm || '',
+      armUserId: prev.armUserId, // 保留已选择的 ARM ID
       introducerId: undefined
     } as IndividualGeneralInfo
   } else {
+    const prev = clientForm.general as any
     clientForm.general = {
       contactType: 'Client',
       contactNature: 'Corporate',
       companyName: '',
-      rm: clientForm.general.rm || '',
-      arm: (clientForm.general as any).arm || '',
+      rm: prev.rm || '',
+      rmUserId: prev.rmUserId, // 保留已选择的 RM ID
+      arm: prev.arm || '',
+      armUserId: prev.armUserId, // 保留已选择的 ARM ID
       introducerId: undefined
     } as CorporateGeneralInfo
   }
@@ -2390,8 +2397,31 @@ const handleSave = async (closeAfter: boolean = false) => {
           // 创建新 Client
           let response
           // 使用外层的 contactNature 来判断客户类型，确保与 general.contactNature 一致
-          // 如果 general.contactNature 与外层不一致，使用外层的值
           const contactNature = clientForm.contactNature || (clientForm.general as any).contactNature
+
+          // 工具函数：统一日期转换
+          const formatToIsoString = (date: Date | string | null | undefined): string => {
+            if (!date) return ''
+            const d = typeof date === 'string' ? new Date(date) : date
+            if (isNaN(d.getTime())) return ''
+            return d.toISOString()
+          }
+
+          const parseDdMmYyyyToDate = (value: string | null | undefined): string | null => {
+            if (!value) return null
+            const parts = value.split('/')
+            if (parts.length !== 3) return null
+            const [day, month, year] = parts
+            const d = new Date(Number(year), Number(month) - 1, Number(day))
+            if (isNaN(d.getTime())) return null
+            return formatToIsoString(d)
+          }
+
+          const authUser = authStore.user
+          const creatorId = authUser ? Number((authUser as any).id) || 0 : 0
+          const creatorName = authUser?.name || authUser?.username || ''
+          const now = new Date()
+
           if (contactNature === 'Individual') {
             // 确保 general.contactNature 与外层一致，如果类型不匹配则重新创建对象
             if ((clientForm.general as any).contactNature !== 'Individual') {
@@ -2402,30 +2432,8 @@ const handleSave = async (closeAfter: boolean = false) => {
               } as IndividualGeneralInfo
             }
             const general = clientForm.general as any
-            const now = new Date()
-
-            // 使用 ISO8601 格式，匹配后端默认期望的 `yyyy-MM-dd'T'HH:mm:ss.SSSX`
-            const formatToIsoString = (date: Date | string | null | undefined): string => {
-              if (!date) return ''
-              const d = typeof date === 'string' ? new Date(date) : date
-              if (isNaN(d.getTime())) return ''
-              return d.toISOString()
-            }
-
-            const parseDdMmYyyyToDate = (value: string | null | undefined): string | null => {
-              if (!value) return null
-              const parts = value.split('/')
-              if (parts.length !== 3) return null
-              const [day, month, year] = parts
-              const d = new Date(Number(year), Number(month) - 1, Number(day))
-              if (isNaN(d.getTime())) return null
-              return formatToIsoString(d)
-            }
 
             const genderValue = general.gender === 'Male' ? 1 : general.gender === 'Female' ? 2 : 0
-            const authUser = authStore.user
-            const creatorId = authUser ? Number((authUser as any).id) || 0 : 0
-            const creatorName = authUser?.name || authUser?.username || ''
 
             const payload: CreateIndividualClientRequest = {
               id: 0,
@@ -2462,6 +2470,7 @@ const handleSave = async (closeAfter: boolean = false) => {
               isDeleted: false
             }
 
+            // 调用个人客户创建接口
             response = await individualClientApi.createIndividualClient(payload)
           } else {
             // Corporate 类型：确保 general.contactNature 与外层一致，如果类型不匹配则重新创建对象
@@ -2472,16 +2481,49 @@ const handleSave = async (closeAfter: boolean = false) => {
                 contactNature: 'Corporate'
               } as CorporateGeneralInfo
             }
-            // 使用统一的 /user/clients 接口
-            response = await userClientApi.createClient(clientForm)
+            const general = clientForm.general as any
+
+            const corporatePayload: CreateCorporateClientRequest = {
+              contactType: general.contactType || 'Client',
+              contactNature: general.contactNature || 'Corporate',
+              rmUserId: general.rmUserId || 0,
+              armUserId: (general as any).armUserId || 0,
+              introducerId: general.introducerId || 0,
+              clientBusinessId: general.clientId || '',
+              relationshipStatus: general.clientRelationshipStatus || '',
+              companyName: general.companyName || '',
+              chineseCompanyName: general.chineseName || '',
+              corporateType: general.corporateType || '',
+              industry: general.industry || '',
+              isStateOwned: !!general.stateOwned,
+              idType: general.idType || '',
+              idNumber: general.idNo || '',
+              registrationDate: parseDdMmYyyyToDate(general.dateOfCompanySearch) || null,
+              registrationCountry: general.countryOfRegistration || '',
+              compliance: false,
+              operation: false,
+              previousRelationshipStatus: '',
+              creatorId,
+              creatorName,
+              updatorId: creatorId,
+              updatorName: creatorName,
+              createdAt: formatToIsoString(now),
+              updatedAt: formatToIsoString(now),
+              isDeleted: false
+            }
+
+            // 调用企业客户创建接口
+            response = await corporateClientApi.createCorporateClient(corporatePayload)
           }
 
           const responseData = response.data || response
-          // 尝试多种可能的字段名获取 ID
-          const newId = responseData.id || 
-                       responseData.clientId || 
-                       responseData.data?.id || 
+          // 尝试多种可能的字段名获取 ID（兼容 Individual 和 Corporate 创建接口）
+          const newId = responseData.id ||
+                       responseData.clientId ||
+                       responseData.corporateId ||
+                       responseData.data?.id ||
                        responseData.data?.clientId ||
+                       responseData.data?.corporateId ||
                        (typeof responseData === 'number' ? responseData : null)
           
           if (!newId) {
