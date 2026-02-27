@@ -3036,13 +3036,14 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
 
+  /* 顶部返回 + 保存区域，贴合示例图的浅灰背景与内边距 */
   .top-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
-    background-color: #fff;
-    border-bottom: 1px solid #e4e7ed;
+    padding: 16px 32px;
+    background-color: #f5f5f5;
+    border-bottom: none;
 
     .header-left {
       display: flex;
@@ -3076,12 +3077,14 @@ onMounted(async () => {
     }
   }
 
+  /* 顶部 Tab 与内容区域作为一个白色卡片，和菜单栏之间留出统一间距 */
   .client-tabs {
     flex: 1;
     background-color: #fff;
-    margin: 20px;
+    margin: 8px 32px 24px;
     border-radius: 4px;
     padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
     :deep(.el-tabs__header) {
       margin-bottom: 20px;
