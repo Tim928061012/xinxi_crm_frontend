@@ -4,7 +4,6 @@
     <aside class="sidebar">
       <div class="logo">
         <img :src="logoImage" alt="Logo" class="logo-icon" />
-        <span class="logo-text">XinXi CRM</span>
       </div>
       
       <nav class="sidebar-nav">
@@ -134,28 +133,22 @@ const handleLogout = async () => {
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
   
   .logo {
-    height: 60px;
+    /* 顶部 Logo 区域：增高一倍，给 Logo 更大展示空间 */
+    height: 160px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 0 20px;
+    padding: 0 16px;
     // 下边界改为更柔和的浅色线，弱化“灰线”存在感
     border-bottom: 1px solid #f0f0f5;
     
     .logo-icon {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      /* 自适应放大，保持宽高比，并在侧边栏中居中显示 */
+      max-width: 180px;
+      max-height: 120px;
+      width: 100%;
+      height: auto;
       object-fit: contain;
-    }
-    
-    .logo-text {
-      font-size: 16px;
-      font-weight: 700;
-      color: #025189;
     }
   }
   

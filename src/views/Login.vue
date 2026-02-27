@@ -194,7 +194,8 @@ const handleLogin = async () => {
   align-items: center;
 
   .logo-image {
-    max-width: 300px;
+    /* 登录页 Logo 再稍微缩小一些，突出表单内容 */
+    max-width: 180px;
     height: auto;
     display: block;
   }
