@@ -101,7 +101,6 @@ const handleLogout = async () => {
     align-items: center;
     justify-content: center;
     padding: 0 16px;
-    border-bottom: 1px solid #f0f0f5;
     
     .logo-icon {
       max-width: 180px;

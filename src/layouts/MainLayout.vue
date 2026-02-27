@@ -139,8 +139,6 @@ const handleLogout = async () => {
     align-items: center;
     justify-content: center;
     padding: 0 16px;
-    // 下边界改为更柔和的浅色线，弱化“灰线”存在感
-    border-bottom: 1px solid #f0f0f5;
     
     .logo-icon {
       /* 自适应放大，保持宽高比，并在侧边栏中居中显示 */
