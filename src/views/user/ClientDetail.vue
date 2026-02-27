@@ -49,6 +49,7 @@
           >
             <!-- Client Information Section -->
             <div class="form-section">
+              <h3 class="section-title">Basic</h3>
 
               <!-- Individual 字段 -->
               <template v-if="clientForm.general.contactNature === 'Individual'">
@@ -814,8 +815,9 @@
       <el-tab-pane label="Investment Risk Profile" name="risk">
         <div class="tab-content" v-loading="tabLoading.risk" element-loading-text="Loading risk profile data...">
           <el-form :model="riskProfileData" label-width="250px" class="risk-profile-form">
-            <!-- Investment Risk Rating Section -->
+            <!-- Overview Section -->
             <div class="form-section">
+              <h3 class="section-title">Overview</h3>
               <div class="form-row">
                 <el-form-item label="Investment Risk Rating">
                   <template v-if="isViewMode">
