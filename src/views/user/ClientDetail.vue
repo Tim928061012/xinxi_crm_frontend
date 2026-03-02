@@ -1459,8 +1459,8 @@
       </el-upload>
       <template #footer>
         <el-button @click="documentUploadDialogVisible = false">Cancel</el-button>
-        <el-button type="primary" @click="handleSubmitDocumentUpload" :loading="uploading">
-          {{ uploading ? 'Uploading...' : 'Upload' }}
+        <el-button type="primary" @click="handleSubmitDocumentUpload" :disabled="uploading">
+          Upload
         </el-button>
       </template>
     </el-dialog>
@@ -2775,7 +2775,14 @@ const handleUploadKYCDocument = () => {
 }
 
 const handleOpenKYCDocument = async (document: KYCDocument) => {
-  if (!clientId.value || !document.id) return
+  if (!clientId.value) {
+    ElMessage.warning('Client ID is missing')
+    return
+  }
+  if (!document.id) {
+    ElMessage.warning('Document ID is missing. Please refresh the page and try again.')
+    return
+  }
   try {
     const response = await kycApi.getKYCDocument(clientId.value, document.id)
     const blobData = (response as any).data || response
@@ -2789,7 +2796,14 @@ const handleOpenKYCDocument = async (document: KYCDocument) => {
 }
 
 const handleDeleteKYCDocument = async (document: KYCDocument) => {
-  if (!clientId.value || !document.id) return
+  if (!clientId.value) {
+    ElMessage.warning('Client ID is missing')
+    return
+  }
+  if (!document.id) {
+    ElMessage.warning('Document ID is missing. Please refresh the page and try again.')
+    return
+  }
   try {
     await ElMessageBox.confirm(
       'This action cannot be undone. Are you sure you want to delete this?',
@@ -2831,7 +2845,14 @@ const handleUploadDocument = (type: DocumentType) => {
 }
 
 const handleOpenDocument = async (document: Document) => {
-  if (!clientId.value || !document.id) return
+  if (!clientId.value) {
+    ElMessage.warning('Client ID is missing')
+    return
+  }
+  if (!document.id) {
+    ElMessage.warning('Document ID is missing. Please refresh the page and try again.')
+    return
+  }
   try {
     const response = await documentsApi.getDocument(clientId.value, document.id)
     const blobData = (response as any).data || response
@@ -2845,7 +2866,14 @@ const handleOpenDocument = async (document: Document) => {
 }
 
 const handleDeleteDocument = async (document: Document) => {
-  if (!clientId.value || !document.id) return
+  if (!clientId.value) {
+    ElMessage.warning('Client ID is missing')
+    return
+  }
+  if (!document.id) {
+    ElMessage.warning('Document ID is missing. Please refresh the page and try again.')
+    return
+  }
   try {
     await ElMessageBox.confirm(
       'This action cannot be undone. Are you sure you want to delete this?',
@@ -2936,22 +2964,34 @@ const handleSubmitDocumentUpload = async () => {
     if (documentUploadType.value === 'kyc') {
       const response = await kycApi.uploadKYCDocument(clientId.value, clientForm.contactNature as any, currentUploadFile.value)
       const data = response.data || response
+      // 后端可能返回 documentId 或 id，优先使用 documentId
+      const docId = data.documentId || data.id
+      if (!docId) {
+        ElMessage.error('Failed to get document ID from server response')
+        return
+      }
       const newDoc: KYCDocument = {
-        id: data.id,
-        document: data.document || currentUploadFile.value.name,
+        id: docId,
+        document: data.originalFilename || data.document || currentUploadFile.value.name,
         size: formatFileSize(currentUploadFile.value.size),
-        uploadTime: data.uploadTime || new Date().toISOString()
+        uploadTime: data.uploadTime || data.createdAt || new Date().toISOString()
       }
       kycData.documents.push(newDoc)
       ElMessage.success('Document uploaded successfully')
     } else {
       const response = await documentsApi.uploadDocument(clientId.value, clientForm.contactNature as any, documentUploadType.value, currentUploadFile.value)
       const data = response.data || response
+      // 后端可能返回 documentId 或 id，优先使用 documentId
+      const docId = data.documentId || data.id
+      if (!docId) {
+        ElMessage.error('Failed to get document ID from server response')
+        return
+      }
       const newDoc: Document = {
-        id: data.id,
-        document: data.document || currentUploadFile.value.name,
+        id: docId,
+        document: data.originalFilename || data.document || currentUploadFile.value.name,
         size: formatFileSize(currentUploadFile.value.size),
-        uploadTime: data.uploadTime || new Date().toISOString(),
+        uploadTime: data.uploadTime || data.createdAt || new Date().toISOString(),
         type: documentUploadType.value
       }
       documentsData[documentUploadType.value].push(newDoc)

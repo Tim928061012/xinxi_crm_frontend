@@ -60,7 +60,7 @@
             />
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="handleChangePassword" :loading="submitting">
+            <el-button type="primary" @click="handleChangePassword" :disabled="submitting">
               Submit
             </el-button>
           </el-form-item>
