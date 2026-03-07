@@ -19,6 +19,8 @@ export interface CreateCorporateClientRequest {
   idNumber?: string
   registrationDate?: string | null
   registrationCountry?: string
+  businessDomicile?: string
+  companyRegistrationDate?: string | null
   compliance?: boolean
   operation?: boolean
   previousRelationshipStatus?: string

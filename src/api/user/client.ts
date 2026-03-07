@@ -58,10 +58,19 @@ export interface CorporateGeneralInfo {
   idNo?: string
   dateOfCompanySearch?: string
   countryOfRegistration?: string
+  businessDomicile?: string
+  registrationDate?: string
 }
 
-// Contact 信息（公共）
+// Contact 信息（公共；公司类型时含左侧 7 个联系人字段）
 export interface ContactInfo {
+  title?: string
+  firstName?: string
+  lastName?: string
+  chineseName?: string
+  idType?: string
+  idNo?: string
+  idExpiry?: string
   mobilePhone?: string
   homePhone?: string
   primaryEmail?: string
