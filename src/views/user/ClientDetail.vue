@@ -1078,10 +1078,72 @@
 
       <el-tab-pane label="KYC" name="kyc">
         <div class="tab-content" v-loading="tabLoading.kyc" element-loading-text="Loading KYC data...">
+          <!-- Information：白卡片，左列 KYC Date / Next Review Date，右列 KYC Status，与图一致 -->
+          <div class="kyc-information-card">
+            <h3 class="kyc-information-title">Information</h3>
+            <el-form label-width="200px" class="kyc-information-form">
+              <div class="kyc-info-rows">
+                <div class="kyc-info-row">
+                  <el-form-item label="KYC Date (dd/mm/yyyy)">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue(kycData.kycDate) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-date-picker
+                        v-model="kycData.kycDate"
+                        type="date"
+                        placeholder="Select date"
+                        format="DD/MM/YYYY"
+                        value-format="DD/MM/YYYY"
+                        class="kyc-info-input"
+                        :disabled="isViewMode"
+                      />
+                    </template>
+                  </el-form-item>
+                  <el-form-item label="KYC Status">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue(kycData.kycStatus) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-select
+                        v-model="kycData.kycStatus"
+                        placeholder="Please select"
+                        class="kyc-info-input"
+                        :disabled="isViewMode"
+                        clearable
+                      >
+                        <el-option label="completed" value="completed" />
+                        <el-option label="incompleted" value="incompleted" />
+                      </el-select>
+                    </template>
+                  </el-form-item>
+                </div>
+                <div class="kyc-info-row">
+                  <el-form-item label="Next Review Date (dd/mm/yyyy)">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue(kycData.nextReviewDate) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-date-picker
+                        v-model="kycData.nextReviewDate"
+                        type="date"
+                        placeholder="Select date"
+                        format="DD/MM/YYYY"
+                        value-format="DD/MM/YYYY"
+                        class="kyc-info-input"
+                        :disabled="isViewMode"
+                      />
+                    </template>
+                  </el-form-item>
+                  <el-form-item label=" "></el-form-item>
+                </div>
+              </div>
+            </el-form>
+          </div>
           <div class="kyc-section">
             <div class="kyc-upload-header">
               <h3 class="kyc-upload-title">Upload Supporting Documents</h3>
-              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument">
+              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')">
                 Upload
               </el-button>
             </div>
@@ -1098,14 +1160,46 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <!-- 仅在可编辑模式下展示操作列，且去掉列头文案 -->
               <el-table-column v-if="!isViewMode" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenKYCDocument(row)" :underline="false">
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link type="primary" @click="handleDeleteKYCDocument(row)" :underline="false">
+                  <el-link type="primary" @click="handleDeleteKYCDocument(row, 'documents')" :underline="false">
+                    Delete
+                  </el-link>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+          <div class="kyc-section">
+            <div class="kyc-upload-header">
+              <h3 class="kyc-upload-title">Upload Name Screening Documents</h3>
+              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('NAME_SCREENING')">
+                Upload
+              </el-button>
+            </div>
+            <el-table
+              v-if="kycData.nameScreeningDocuments && kycData.nameScreeningDocuments.length > 0"
+              :data="kycData.nameScreeningDocuments"
+              stripe
+              style="width: 100%"
+            >
+              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="size" label="Size" width="150" />
+              <el-table-column label="Upload Time" width="200">
+                <template #default="{ row }">
+                  {{ formatDateTime(row.uploadTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column v-if="!isViewMode" width="200">
+                <template #default="{ row }">
+                  <el-link type="primary" @click="handleOpenKYCDocument(row)" :underline="false">
+                    Open
+                  </el-link>
+                  <el-divider direction="vertical" />
+                  <el-link type="primary" @click="handleDeleteKYCDocument(row, 'nameScreeningDocuments')" :underline="false">
                     Delete
                   </el-link>
                 </template>
@@ -2029,7 +2123,11 @@ const portfolioForm = reactive<CreatePortfolioParams>({
 
 // KYC 数据
 const kycData = reactive<KYCData>({
-  documents: []
+  kycDate: '',
+  kycStatus: '',
+  nextReviewDate: '',
+  documents: [],
+  nameScreeningDocuments: []
 })
 
 // Documents 数据
@@ -2096,9 +2194,10 @@ const feeScheduleData = reactive<FeeSchedule>({
 // 文档上传
 const documentUploadDialogVisible = ref(false)
 const documentUploadType = ref<DocumentType | 'kyc'>('identity')
+const kycUploadDocumentType = ref<'SUPPORTING_DOCUMENT' | 'NAME_SCREENING'>('SUPPORTING_DOCUMENT')
 const documentUploadTitle = computed(() => {
   if (documentUploadType.value === 'kyc') {
-    return 'Upload Supporting Documents'
+    return kycUploadDocumentType.value === 'NAME_SCREENING' ? 'Upload Name Screening Documents' : 'Upload Supporting Documents'
   }
   const titles: Record<DocumentType, string> = {
     identity: 'Upload Identity Proof',
@@ -2332,7 +2431,11 @@ const loadClient = async () => {
     tabLoading.kyc = true
     try {
       const kyc = await kycApi.getKYC(clientId.value, clientForm.contactNature as any)
+      kycData.kycDate = kyc.kycDate ?? ''
+      kycData.kycStatus = kyc.kycStatus ?? ''
+      kycData.nextReviewDate = kyc.nextReviewDate ?? ''
       kycData.documents = kyc.documents || []
+      kycData.nameScreeningDocuments = kyc.nameScreeningDocuments || []
 
       // KYC Tab 的 Last saved：取最新的文档上传时间
       const kycTimes = kycData.documents
@@ -2683,7 +2786,7 @@ const handleSave = async (closeAfter: boolean = false) => {
 
           // 保存 KYC
           try {
-            await kycApi.updateKYC(currentClientId, kycData)
+            await kycApi.updateKYC(currentClientId, clientForm.contactNature as 'Individual' | 'Corporate', kycData)
           } catch (error) {
             console.warn('Failed to save KYC:', error)
           }
@@ -2914,7 +3017,7 @@ const handleSave = async (closeAfter: boolean = false) => {
 
           // 保存其他 Tab 的数据
           try {
-            await kycApi.updateKYC(currentClientId, kycData)
+            await kycApi.updateKYC(currentClientId, clientForm.contactNature as 'Individual' | 'Corporate', kycData)
           } catch (error) {
             console.warn('Failed to save KYC:', error)
           }
@@ -3100,13 +3203,14 @@ const handleSubmitPortfolio = async () => {
   })
 }
 
-// KYC 文档处理
-const handleUploadKYCDocument = () => {
+// KYC 文档处理（type: Supporting 或 Name Screening）
+const handleUploadKYCDocument = (type: 'SUPPORTING_DOCUMENT' | 'NAME_SCREENING' = 'SUPPORTING_DOCUMENT') => {
   if (!clientId.value) {
     ElMessage.warning('Please save the client first')
     return
   }
   documentUploadType.value = 'kyc'
+  kycUploadDocumentType.value = type
   fileList.value = []
   currentUploadFile.value = null
   documentUploadDialogVisible.value = true
@@ -3133,7 +3237,7 @@ const handleOpenKYCDocument = async (document: KYCDocument) => {
   }
 }
 
-const handleDeleteKYCDocument = async (document: KYCDocument) => {
+const handleDeleteKYCDocument = async (document: KYCDocument, listKey: 'documents' | 'nameScreeningDocuments' = 'documents') => {
   if (!clientId.value) {
     ElMessage.warning('Client ID is missing')
     return
@@ -3157,9 +3261,10 @@ const handleDeleteKYCDocument = async (document: KYCDocument) => {
       }
     )
     await kycApi.deleteKYCDocument(clientId.value, document.id)
-    const index = kycData.documents.findIndex(d => d.id === document.id)
+    const list = kycData[listKey]
+    const index = list.findIndex((d: KYCDocument) => d.id === document.id)
     if (index > -1) {
-      kycData.documents.splice(index, 1)
+      list.splice(index, 1)
     }
     ElMessage.success('Document deleted successfully')
   } catch (error: any) {
@@ -3300,9 +3405,9 @@ const handleSubmitDocumentUpload = async () => {
   uploading.value = true
   try {
     if (documentUploadType.value === 'kyc') {
-      const response = await kycApi.uploadKYCDocument(clientId.value, clientForm.contactNature as any, currentUploadFile.value)
+      const docType = kycUploadDocumentType.value
+      const response = await kycApi.uploadKYCDocument(clientId.value, clientForm.contactNature as any, currentUploadFile.value, docType)
       const data = response.data || response
-      // 后端可能返回 documentId 或 id，优先使用 documentId
       const docId = data.documentId || data.id
       if (!docId) {
         ElMessage.error('Failed to get document ID from server response')
@@ -3314,7 +3419,11 @@ const handleSubmitDocumentUpload = async () => {
         size: formatFileSize(currentUploadFile.value.size),
         uploadTime: data.uploadTime || data.createdAt || new Date().toISOString()
       }
-      kycData.documents.push(newDoc)
+      if (docType === 'NAME_SCREENING') {
+        kycData.nameScreeningDocuments.push(newDoc)
+      } else {
+        kycData.documents.push(newDoc)
+      }
       ElMessage.success('Document uploaded successfully')
     } else {
       const response = await documentsApi.uploadDocument(clientId.value, clientForm.contactNature as any, documentUploadType.value, currentUploadFile.value)
@@ -3414,12 +3523,12 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
 
-  /* 顶部返回 + 保存区域，贴合示例图的浅灰背景与内边距 */
+  /* 顶部返回 + 保存区域，紧凑内边距 */
   .top-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 32px;
+    padding: 12px 20px;
     background-color: #f5f5f5;
     border-bottom: none;
 
@@ -3455,29 +3564,52 @@ onMounted(async () => {
     }
   }
 
-  /* 顶部 Tab 与内容区域作为一个白色卡片，和菜单栏之间留出统一间距 */
+  /* 顶部 Tab 与内容区域：无内边距，左右与侧边栏/视口间隔扩大一倍 */
   .client-tabs {
     flex: 1;
-    background-color: #fff;
-    margin: 8px 32px 24px;
-    border-radius: 4px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    background-color: #f5f5f5;
+    margin: 4px 24px 12px;
+    border-radius: 6px;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 
     :deep(.el-tabs__header) {
-      margin-bottom: 20px;
+      margin-bottom: 0 !important;
+      background-color: #fff;
+      padding: 12px 16px 14px;
+      border-radius: 6px 6px 0 0;
+      border: none;
+      border-bottom: none !important;
+      box-shadow: none;
+    }
+
+    :deep(.el-tabs__nav-wrap) {
+      &::after {
+        display: none !important;
+      }
+    }
+
+    :deep(.el-tabs__content) {
+      padding-top: 12px;
+      background-color: #f5f5f5;
+      border: none;
+      border-top: none !important;
     }
 
     :deep(.el-tabs__item) {
-      font-size: 16px;
-      padding: 0 20px;
+      font-size: 15px;
+      padding: 0 18px;
     }
   }
 
+  /* 与 tab 标头同宽；上下间距收紧，小模块自适应 */
   .tab-content {
-    min-height: 400px;
+    min-height: 280px;
     overflow: visible !important;
     position: relative;
+    background-color: #f5f5f5;
+    padding: 12px 0;
+    border-radius: 0 0 4px 4px;
   }
 
   // Loading 图标旋转动画
@@ -3494,47 +3626,54 @@ onMounted(async () => {
     }
   }
 
+  /* 与 KYC 统一：白底卡片、无边框、紧凑间距 */
   .client-form {
     .form-section {
-      // 每个模块上方增加分栏间隔 + 分割线，实现内容分块
-      margin-top: 32px;
-      margin-bottom: 32px;
-      padding-top: 16px;
-      padding-bottom: 16px;
-      border-top: 1px solid #e4e7ed;
+      margin-top: 0;
+      margin-bottom: 16px;
+      padding: 16px 20px;
+      background-color: #fff;
+      border: none;
+      border-radius: 4px;
+      box-sizing: border-box;
+
+      &:first-child {
+        margin-top: 0;
+      }
 
       .section-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
       }
 
       .section-title {
         font-size: 18px;
         font-weight: 600;
         color: #303133;
-        margin-bottom: 20px;
-        margin-left: 15px;
-        padding-left: 0;
+        margin: 0 0 16px 0;
+        padding: 0;
       }
-      
-      .section-header {
-        .section-title {
-          margin-left: 15px;
-        }
+
+      .section-header .section-title {
+        margin-bottom: 0;
       }
 
       .form-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-bottom: 20px;
+        gap: 16px;
+        margin-bottom: 16px;
         align-items: start;
-        
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
         .el-form-item {
           margin-bottom: 0;
-          
+
           :deep(.el-form-item__label) {
             line-height: 1.5;
             white-space: normal;
@@ -3544,8 +3683,8 @@ onMounted(async () => {
             min-height: 32px;
             display: flex;
             align-items: center;
-            pointer-events: none; // 禁用 label 的点击聚焦行为
-            cursor: default; // 将鼠标指针改为默认样式
+            pointer-events: none;
+            cursor: default;
           }
         }
       }
@@ -3580,15 +3719,11 @@ onMounted(async () => {
         }
       }
 
-      // Portfolio section 特殊样式：去掉底部灰线
       &.portfolio-section {
-        // Portfolio 区域沿用统一的分栏间隔规则，只在内部微调
-        margin-bottom: 24px;
-
-        // 让表格左边与「Portfolio」标题对齐
+        margin-bottom: 16px;
         .portfolio-table {
-          margin-left: 15px;
-          width: calc(100% - 15px);
+          margin-left: 0;
+          width: 100%;
         }
       }
 
@@ -3625,7 +3760,7 @@ onMounted(async () => {
 
     .empty-portfolio {
       text-align: center;
-      padding: 40px;
+      padding: 24px;
       color: #909399;
     }
   }
@@ -3643,18 +3778,98 @@ onMounted(async () => {
   }
 }
 
-// KYC Section
+// KYC Information 卡片（小模块白底，与 tab 标头左右对齐）
+.kyc-information-card {
+  margin-bottom: 16px;
+  padding: 16px 20px;
+  background-color: #fff;
+  border: none;
+  border-radius: 4px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.kyc-information-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0 0 20px 0;
+  padding: 0;
+}
+
+.kyc-information-form {
+  :deep(.el-form-item) {
+    margin-bottom: 20px;
+    min-width: 0;
+  }
+  :deep(.el-form-item__label) {
+    color: #606266;
+    line-height: 1.4;
+    white-space: normal;
+    word-break: break-word;
+    height: auto;
+    padding-right: 12px;
+  }
+  :deep(.el-form-item__content) {
+    line-height: 32px;
+    min-width: 0;
+  }
+  .view-mode-text {
+    display: block;
+    min-height: 32px;
+    line-height: 32px;
+    color: #303133;
+    font-size: 14px;
+  }
+}
+
+.kyc-info-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.kyc-info-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(180px, 1fr);
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 20px;
+  min-width: 0;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .el-form-item {
+    margin-bottom: 0;
+    min-width: 0;
+  }
+}
+
+.kyc-info-input {
+  width: 100%;
+  :deep(.el-input__wrapper) {
+    min-height: 32px;
+    background-color: #f5f7fa;
+  }
+}
+.kyc-information-form .el-date-editor.kyc-info-input {
+  width: 100%;
+}
+
+// KYC Section（Upload Supporting / Name Screening：小模块白底，与 tab 标头左右对齐）
 .kyc-section {
   .kyc-upload-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 16px 20px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
     background-color: #fff;
-    border: 1px solid #e4e7ed;
+    border: none;
     border-radius: 4px;
-    margin-left: 20px; // 略微靠右
   }
 
   .kyc-upload-title {
@@ -3665,59 +3880,60 @@ onMounted(async () => {
   }
 }
 
-// Document Section
+// Document Section（与 KYC Upload 统一：白底标题条 + 紧凑间距）
 .document-section {
-  margin-bottom: 40px;
-  padding-bottom: 30px;
-  border-bottom: 1px solid #e4e7ed;
-
-  &:last-child {
-    border-bottom: none;
-  }
+  margin-bottom: 16px;
 
   .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
+    background-color: #fff;
+    border: none;
+    border-radius: 4px;
   }
 
   .section-title {
     font-size: 18px;
-    font-weight: 400;
-    color: #606266;
-    margin-left: 25px;
+    font-weight: 600;
+    color: #303133;
+    margin: 0;
+    padding: 0;
   }
 }
 
-// Risk Profile Form
+// Risk Profile Form（与 KYC 统一：白底卡片、无边框、紧凑间距）
 .risk-profile-form {
   position: relative;
-  
-  .form-section {
-    margin-bottom: 40px;
-    padding-bottom: 30px;
-    border-bottom: 1px solid #e4e7ed;
 
-    &:last-child {
-      border-bottom: none;
-    }
+  .form-section {
+    margin-bottom: 16px;
+    padding: 16px 20px;
+    background-color: #fff;
+    border: none;
+    border-radius: 4px;
+    box-sizing: border-box;
 
     .section-title {
       font-size: 18px;
       font-weight: 600;
       color: #303133;
-      margin-bottom: 20px;
+      margin: 0 0 16px 0;
     }
 
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 20px;
+      gap: 16px;
+      margin-bottom: 16px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
     }
 
-    // 禁用 label 的点击聚焦行为
     :deep(.el-form-item__label) {
       pointer-events: none;
       cursor: default;
@@ -3726,14 +3942,14 @@ onMounted(async () => {
     .vulnerable-assessment-container {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: 16px;
       align-items: start;
     }
 
     .vulnerable-questions {
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
     }
 
     .vulnerable-question-item {
@@ -3759,7 +3975,7 @@ onMounted(async () => {
     .vulnerable-client-info {
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
       
       .vulnerable-question-item {
         display: flex;
@@ -3857,16 +4073,16 @@ onMounted(async () => {
   }
 }
 
-// Fee Schedule Form
+// Fee Schedule Form（与 KYC 统一：白底卡片、无边框、紧凑间距）
 .fee-schedule-form {
-  margin-left: 30px;
-
   .form-section {
-    margin-bottom: 0;
-    padding-bottom: 0;
-    border-bottom: none;
+    margin-bottom: 16px;
+    padding: 16px 20px;
+    background-color: #fff;
+    border: none;
+    border-radius: 4px;
+    box-sizing: border-box;
 
-    // 禁用 label 的点击聚焦行为
     :deep(.el-form-item__label) {
       pointer-events: none;
       cursor: default;
@@ -3876,14 +4092,14 @@ onMounted(async () => {
   .vulnerable-assessment-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 16px;
     align-items: start;
   }
 
   .vulnerable-questions {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
   }
 
   .vulnerable-question-item {
@@ -3941,8 +4157,8 @@ onMounted(async () => {
   .vulnerable-client-info {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    
+    gap: 16px;
+
     .vulnerable-question-item {
       display: flex;
       flex-direction: column;
