@@ -35,6 +35,11 @@ export const adminClientApi = {
   // 修改企业客户的 compliance 和 operation
   updateCorporateComplianceOperation(id: number, data: UpdateComplianceOperationParams) {
     return request.put(`/client-corporates/${id}/compliance-operation`, data)
+  },
+
+  // 删除客户（管理员与普通用户共用同一接口，后端按角色做权限校验）
+  deleteClient(id: number) {
+    return request.delete(`/user/clients/${id}`)
   }
 }
 

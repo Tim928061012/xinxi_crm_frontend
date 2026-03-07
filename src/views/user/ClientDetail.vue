@@ -4,14 +4,14 @@
     <div class="top-header">
       <div class="header-left">
         <el-button :icon="ArrowLeft" circle @click="handleBack" />
-        <!-- View 模式下仅普通用户显示 Edit 按钮；admin view 不显示 Edit / Save -->
-        <template v-if="isViewMode && route.path.startsWith('/user/client/')">
+        <!-- View 模式：普通用户与管理员均显示 Edit -->
+        <template v-if="isViewMode">
           <el-button type="primary" @click="handleEdit">
             Edit
           </el-button>
         </template>
-        <!-- Edit/New 模式下，仅普通用户显示保存按钮；admin 不显示 -->
-        <template v-else-if="!isViewMode && route.path.startsWith('/user/client')">
+        <!-- Edit/New 模式：显示保存按钮（管理员可编辑不可新建，故 admin 下仅 edit 会进入此处） -->
+        <template v-else-if="!isViewMode">
           <el-button
             type="primary"
             @click="() => handleSave(false)"
@@ -1160,13 +1160,13 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column v-if="!isViewMode" width="200">
+              <el-table-column label="Actions" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenKYCDocument(row)" :underline="false">
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link type="primary" @click="handleDeleteKYCDocument(row, 'documents')" :underline="false">
+                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteKYCDocument(row, 'documents')" :underline="false">
                     Delete
                   </el-link>
                 </template>
@@ -1193,13 +1193,13 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column v-if="!isViewMode" width="200">
+              <el-table-column label="Actions" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenKYCDocument(row)" :underline="false">
                     Open
                   </el-link>
                   <el-divider direction="vertical" />
-                  <el-link type="primary" @click="handleDeleteKYCDocument(row, 'nameScreeningDocuments')" :underline="false">
+                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteKYCDocument(row, 'nameScreeningDocuments')" :underline="false">
                     Delete
                   </el-link>
                 </template>
@@ -1544,6 +1544,41 @@
             <el-table
               v-if="documentsData.statements && documentsData.statements.length > 0"
               :data="documentsData.statements"
+              stripe
+              style="width: 100%"
+            >
+              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="size" label="Size" width="150" />
+              <el-table-column label="Upload Time" width="200">
+                <template #default="{ row }">
+                  {{ formatDateTime(row.uploadTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="Actions" width="200">
+                <template #default="{ row }">
+                  <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
+                    Open
+                  </el-link>
+                  <el-divider direction="vertical" />
+                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                    Delete
+                  </el-link>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <!-- Upload Others Documents -->
+          <div class="document-section">
+            <div class="section-header">
+              <h3 class="section-title">Upload Others Documents</h3>
+              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('others')">
+                Upload
+              </el-button>
+            </div>
+            <el-table
+              v-if="documentsData.others && documentsData.others.length > 0"
+              :data="documentsData.others"
               stripe
               style="width: 100%"
             >
@@ -2135,7 +2170,8 @@ const documentsData = reactive<DocumentsData>({
   identity: [],
   address: [],
   forms: [],
-  statements: []
+  statements: [],
+  others: []
 })
 
 // Investment Risk Profile 数据
@@ -2203,7 +2239,8 @@ const documentUploadTitle = computed(() => {
     identity: 'Upload Identity Proof',
     address: 'Upload Address Proof',
     forms: 'Upload Forms',
-    statements: 'Upload XinXi Statements'
+    statements: 'Upload XinXi Statements',
+    others: 'Upload Others Documents'
   }
   return titles[documentUploadType.value]
 })
@@ -2462,13 +2499,15 @@ const loadClient = async () => {
       documentsData.address = documents.address || []
       documentsData.forms = documents.forms || []
       documentsData.statements = documents.statements || []
+      documentsData.others = documents.others || []
 
       // Documents Tab 的 Last saved：取所有文档中最新的上传时间
       const allDocs = [
         ...documentsData.identity,
         ...documentsData.address,
         ...documentsData.forms,
-        ...documentsData.statements
+        ...documentsData.statements,
+        ...documentsData.others
       ]
       const docTimes = allDocs
         .map(d => d.uploadTime)
@@ -2685,8 +2724,11 @@ const handleBack = () => {
 // 处理 Edit 按钮点击，跳转到编辑页面（仅普通用户）
 const handleEdit = () => {
   if (!clientId.value) return
+  const clientType = route.query.clientType || clientForm.contactNature || 'Individual'
   if (route.path.startsWith('/user/client/')) {
-    router.push(`/user/client/${clientId.value}/edit`)
+    router.push({ path: `/user/client/${clientId.value}/edit`, query: { clientType } })
+  } else if (route.path.startsWith('/client/')) {
+    router.push({ path: `/client/${clientId.value}/edit`, query: { clientType } })
   }
 }
 
@@ -3501,6 +3543,12 @@ watch(isViewMode, (newVal) => {
 
 onMounted(async () => {
   try {
+    // 管理员不能新建客户，若访问新建页则重定向到 admin 客户列表
+    const role = authStore.user?.role ?? ''
+    if ((role === 'admin' || role === 'Admin') && (route.path === '/user/client/new' || route.path.includes('/new'))) {
+      router.replace('/client')
+      return
+    }
     // 新建模式下，完全不加载任何数据，页面立即渲染
     // 编辑模式下，只加载必要的 client 数据
     if (isEditMode.value) {
@@ -3801,6 +3849,7 @@ onMounted(async () => {
   :deep(.el-form-item) {
     margin-bottom: 20px;
     min-width: 0;
+    align-items: flex-start; /* view 下多行 label 时 value 与首行顶部对齐 */
   }
   :deep(.el-form-item__label) {
     color: #606266;
@@ -3809,10 +3858,13 @@ onMounted(async () => {
     word-break: break-word;
     height: auto;
     padding-right: 12px;
+    width: 200px !important; /* 固定 label 宽度，保证所有 value 起始位置一致 */
+    flex-shrink: 0;
   }
   :deep(.el-form-item__content) {
     line-height: 32px;
     min-width: 0;
+    flex: 1;
   }
   .view-mode-text {
     display: block;
@@ -3820,6 +3872,7 @@ onMounted(async () => {
     line-height: 32px;
     color: #303133;
     font-size: 14px;
+    vertical-align: top;
   }
 }
 

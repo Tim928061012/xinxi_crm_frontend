@@ -70,10 +70,18 @@
             {{ formatDateTime(row.createdTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="Actions" width="100">
+        <el-table-column label="Actions" width="220">
           <template #default="{ row }">
             <el-link type="primary" @click="handleView(row)" :underline="false">
               View
+            </el-link>
+            <el-divider direction="vertical" />
+            <el-link type="primary" @click="handleEdit(row)" :underline="false">
+              Edit
+            </el-link>
+            <el-divider direction="vertical" />
+            <el-link type="primary" @click="handleDelete(row)" :underline="false">
+              Delete
             </el-link>
           </template>
         </el-table-column>
@@ -90,7 +98,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, onActivated } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { accountApi } from '@/api/account'
@@ -267,14 +275,12 @@ const handleOperationChange = async (row: AdminClient) => {
   }
 }
 
-// 查看客户详情（在管理员布局下跳转到客户详情页，只读查看）
+// 查看客户详情（管理员布局下跳转，可查看/编辑/删除，不可新建）
 const handleView = (row: AdminClient) => {
   if (!row.id) {
     ElMessage.error('Client ID is missing, cannot open detail page')
     return
   }
-  // 跳转到管理员路由下的客户详情页，保持 Admin 菜单和布局
-  // 传递 clientType 作为查询参数，确保后端能正确识别客户类型
   const clientType = (row as any).contactNature || 'Individual'
   router.push({
     path: `/client/${row.id}`,
@@ -282,9 +288,46 @@ const handleView = (row: AdminClient) => {
   })
 }
 
-// 新建客户（跳转到用户端的新建客户页面）
-const handleNewClient = () => {
-  router.push('/user/client/new')
+// 编辑客户（管理员可编辑，跳转到 admin 下的 edit 路由）
+const handleEdit = (row: AdminClient) => {
+  if (!row.id) {
+    ElMessage.error('Client ID is missing')
+    return
+  }
+  const clientType = (row as any).contactNature || 'Individual'
+  router.push({
+    path: `/client/${row.id}/edit`,
+    query: { clientType }
+  })
+}
+
+// 删除客户（管理员可删除，调用与 user 相同的删除接口，后端按角色放行）
+const handleDelete = async (row: AdminClient) => {
+  if (!row.id) {
+    ElMessage.error('Client ID is missing')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      'This action cannot be undone. Are you sure you want to delete this client?',
+      'Confirm Delete',
+      {
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        type: 'warning',
+        center: true
+      }
+    )
+    await adminClientApi.deleteClient(row.id)
+    ElMessage.success('Client deleted successfully')
+    await loadClients()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('Failed to delete client:', error)
+      const msg = error?.response?.data?.message || error?.message || 'Failed to delete client'
+      ElMessage.error(msg)
+    }
+  }
 }
 
 // 监听路由变化，当路由切换到当前页面时刷新数据

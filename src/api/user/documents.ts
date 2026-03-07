@@ -1,7 +1,7 @@
 import request from '../request'
 
 // 文档类型
-export type DocumentType = 'identity' | 'address' | 'forms' | 'statements'
+export type DocumentType = 'identity' | 'address' | 'forms' | 'statements' | 'others'
 
 // 文档
 export interface Document {
@@ -18,6 +18,7 @@ export interface DocumentsData {
   address: Document[]
   forms: Document[]
   statements: Document[]
+  others: Document[]
 }
 
 export const documentsApi = {
@@ -34,7 +35,8 @@ export const documentsApi = {
       identity: [],
       address: [],
       forms: [],
-      statements: []
+      statements: [],
+      others: []
     }
 
     const mapOne = (item: any): Document => ({
@@ -42,7 +44,7 @@ export const documentsApi = {
       document: item.originalFilename || item.document || '',
       size: `${Math.round(((item.fileSizeBytes || 0) / 1024) * 100) / 100}KB`,
       uploadTime: item.uploadTime || item.createdAt || item.created_at || '',
-      type: 'identity' // 默认值，下面按 documentType 重写
+      type: 'identity'
     })
 
     ;(list as any[]).forEach((item) => {
@@ -60,6 +62,9 @@ export const documentsApi = {
       } else if (docType === 'XINXI_STATEMENTS') {
         base.type = 'statements'
         docs.statements.push(base)
+      } else if (docType === 'OTHER_DOCUMENTS') {
+        base.type = 'others'
+        docs.others.push(base)
       }
     })
 
@@ -83,6 +88,7 @@ export const documentsApi = {
     else if (type === 'address') documentType = 'ADDRESS_PROOF'
     else if (type === 'forms') documentType = 'FORMS'
     else if (type === 'statements') documentType = 'XINXI_STATEMENTS'
+    else if (type === 'others') documentType = 'OTHER_DOCUMENTS'
 
     formData.append('documentType', documentType)
 
