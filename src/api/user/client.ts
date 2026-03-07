@@ -76,6 +76,7 @@ export interface Client {
   contactNature: 'Individual' | 'Corporate'
   general: IndividualGeneralInfo | CorporateGeneralInfo
   contact: ContactInfo
+  secondaryContact?: ContactInfo
   portfolios: Portfolio[]
   createdTime: string
   updatedTime?: string
@@ -86,6 +87,7 @@ export interface CreateClientParams {
   contactNature: 'Individual' | 'Corporate'
   general: IndividualGeneralInfo | CorporateGeneralInfo
   contact: ContactInfo
+  secondaryContact?: ContactInfo
 }
 
 export interface UpdateClientParams extends CreateClientParams {}

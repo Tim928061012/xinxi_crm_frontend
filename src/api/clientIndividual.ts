@@ -21,6 +21,7 @@ export interface CreateIndividualClientRequest {
   birthCountry: string
   hasDualCitizenship: boolean
   nationality: string
+  secondaryNationality?: string
   idType: string
   idNumber: string
   idExpiryDate: string | null

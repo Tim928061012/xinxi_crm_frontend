@@ -125,14 +125,16 @@
                   </el-form-item>
                 </div>
 
-                <!-- 第3行: Client Id, Introducer -->
+                <!-- 第3行: Client Id, Introducer（Client Id 自动编号，未保存时占位提示，保存后只读） -->
                 <div class="form-row">
                   <el-form-item label="Client Id">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientId) }}</span>
                     </template>
                     <template v-else>
-                      <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" :disabled="isViewMode" />
+                      <span :class="['view-mode-text', { 'client-id-placeholder': !clientForm.general.clientId }]">
+                        {{ clientForm.general.clientId || 'This field will be auto-generated after saving' }}
+                      </span>
                     </template>
                   </el-form-item>
                   <el-form-item label="Introducer">
@@ -359,7 +361,12 @@
                         style="width: 100%"
                         :disabled="isViewMode"
                         filterable
+                        clearable
+                        class="nationality-select"
                       >
+                        <template #prefix>
+                          <el-icon class="nationality-prefix-icon"><Place /></el-icon>
+                        </template>
                         <el-option
                           v-for="country in nationalityList"
                           :key="country"
@@ -371,8 +378,8 @@
                   </el-form-item>
                 </div>
 
-                <!-- 第11行: Id Expiry(dd/mm/yyyy) - 单独一行，靠左 -->
-                <div class="form-row form-row-single">
+                <!-- 一行：Id Expiry（左列固定）+ Secondary Nationality（右列，仅 Dual Citizenship 打开时显示），Id No. 与 Id Expiry 之间无空行，Id Expiry 位置不变 -->
+                <div class="form-row">
                   <el-form-item label="Id Expiry (dd/mm/yyyy)">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).idExpiry) }}</span>
@@ -389,6 +396,33 @@
                       />
                     </template>
                   </el-form-item>
+                  <el-form-item v-if="(clientForm.general as any).dualCitizenship" label="Secondary Nationality">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).secondaryNationality) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-select
+                        v-model="(clientForm.general as any).secondaryNationality"
+                        placeholder="Please select secondary nationality"
+                        style="width: 100%"
+                        :disabled="isViewMode"
+                        filterable
+                        clearable
+                        class="nationality-select"
+                      >
+                        <template #prefix>
+                          <el-icon class="nationality-prefix-icon"><Place /></el-icon>
+                        </template>
+                        <el-option
+                          v-for="country in nationalityList"
+                          :key="country"
+                          :label="country"
+                          :value="country"
+                        />
+                      </el-select>
+                    </template>
+                  </el-form-item>
+                  <el-form-item v-else label=" "></el-form-item>
                 </div>
               </template>
 
@@ -446,14 +480,16 @@
                   </el-form-item>
                 </div>
 
-                <!-- 第3行: Client Id, Id No. -->
+                <!-- 第3行: Client Id, Id No.（Client Id 自动编号，未保存时占位提示，保存后只读） -->
                 <div class="form-row">
                   <el-form-item label="Client Id">
                     <template v-if="isViewMode">
                       <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientId) }}</span>
                     </template>
                     <template v-else>
-                      <el-input v-model="clientForm.general.clientId" placeholder="Please enter client ID" :disabled="isViewMode" />
+                      <span :class="['view-mode-text', { 'client-id-placeholder': !clientForm.general.clientId }]">
+                        {{ clientForm.general.clientId || 'This field will be auto-generated after saving' }}
+                      </span>
                     </template>
                   </el-form-item>
                   <el-form-item label="Id No.">
@@ -723,6 +759,84 @@
                       :disabled="isViewMode"
                     />
                     <span style="margin-left: 8px;">{{ clientForm.contact.jurisdictionDiffers ? 'Yes' : 'No' }}</span>
+                  </template>
+                </el-form-item>
+                <el-form-item></el-form-item>
+              </div>
+            </div>
+
+            <!-- Secondary Contact Section（字段与 Contact 相同，全部非必填） -->
+            <div class="form-section">
+              <h3 class="section-title">Secondary Contact</h3>
+              <div class="form-row">
+                <el-form-item label="Mobile Phone">
+                  <template v-if="isViewMode">
+                    <span class="view-mode-text">{{ formatDisplayValue(clientForm.secondaryContact.mobilePhone) }}</span>
+                  </template>
+                  <template v-else>
+                    <el-input v-model="clientForm.secondaryContact.mobilePhone" placeholder="Please enter mobile phone" :disabled="isViewMode">
+                      <template #suffix>
+                        <el-icon><Phone /></el-icon>
+                      </template>
+                    </el-input>
+                  </template>
+                </el-form-item>
+                <el-form-item label="Primary Email">
+                  <template v-if="isViewMode">
+                    <span class="view-mode-text">{{ formatDisplayValue(clientForm.secondaryContact.primaryEmail) }}</span>
+                  </template>
+                  <template v-else>
+                    <el-input v-model="clientForm.secondaryContact.primaryEmail" placeholder="Please enter email" :disabled="isViewMode">
+                      <template #suffix>
+                        <el-icon><Message /></el-icon>
+                      </template>
+                    </el-input>
+                  </template>
+                </el-form-item>
+              </div>
+
+              <div class="form-row" style="margin-bottom: 10px;">
+                <el-form-item label="Home Phone" style="align-self: flex-start;">
+                  <template v-if="isViewMode">
+                    <span class="view-mode-text">{{ formatDisplayValue(clientForm.secondaryContact.homePhone) }}</span>
+                  </template>
+                  <template v-else>
+                    <el-input v-model="clientForm.secondaryContact.homePhone" placeholder="Please enter home phone" :disabled="isViewMode">
+                      <template #suffix>
+                        <el-icon><Phone /></el-icon>
+                      </template>
+                    </el-input>
+                  </template>
+                </el-form-item>
+                <el-form-item label="Address" style="width: 100%;">
+                  <template v-if="isViewMode">
+                    <span class="view-mode-text" style="white-space: pre-wrap;">{{ formatDisplayValue(clientForm.secondaryContact.address) }}</span>
+                  </template>
+                  <template v-else>
+                    <el-input
+                      v-model="clientForm.secondaryContact.address"
+                      type="textarea"
+                      :rows="3"
+                      placeholder="Please enter address"
+                      :disabled="isViewMode"
+                    />
+                  </template>
+                </el-form-item>
+              </div>
+
+              <div class="form-row" style="margin-top: 0; margin-bottom: 20px;">
+                <el-form-item label="Jurisdiction of Contact No. and Address Differs">
+                  <template v-if="isViewMode">
+                    <span class="view-mode-text">{{ formatDisplayValue(clientForm.secondaryContact.jurisdictionDiffers) }}</span>
+                  </template>
+                  <template v-else>
+                    <el-switch
+                      v-model="clientForm.secondaryContact.jurisdictionDiffers"
+                      :active-value="true"
+                      :inactive-value="false"
+                      :disabled="isViewMode"
+                    />
+                    <span style="margin-left: 8px;">{{ clientForm.secondaryContact.jurisdictionDiffers ? 'Yes' : 'No' }}</span>
                   </template>
                 </el-form-item>
                 <el-form-item></el-form-item>
@@ -1471,9 +1585,9 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
-import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled, Loading } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled, Loading, Place } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import { userClientApi, type Client, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
+import { userClientApi, type Client, type ContactInfo, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
 import { individualClientApi, type CreateIndividualClientRequest } from '@/api/clientIndividual'
 import { corporateClientApi, type CreateCorporateClientRequest } from '@/api/clientCorporate'
 import { portfolioApi, type Portfolio, type CreatePortfolioParams } from '@/api/user/portfolio'
@@ -1632,8 +1746,8 @@ const nationalityList = [
   'Zimbabwe'
 ].sort((a, b) => a.localeCompare(b, 'en'))
 
-// 表单数据
-const clientForm = reactive<CreateClientParams & { portfolios: Portfolio[] }>({
+// 表单数据（secondaryContact 在表单中始终存在，便于模板绑定）
+const clientForm = reactive<Omit<CreateClientParams, 'secondaryContact'> & { secondaryContact: ContactInfo; portfolios: Portfolio[] }>({
   contactNature: 'Individual',
   general: {
     contactType: 'Client',
@@ -1644,6 +1758,13 @@ const clientForm = reactive<CreateClientParams & { portfolios: Portfolio[] }>({
     arm: ''
   } as IndividualGeneralInfo,
   contact: {
+    mobilePhone: '',
+    homePhone: '',
+    primaryEmail: '',
+    address: '',
+    jurisdictionDiffers: false
+  },
+  secondaryContact: {
     mobilePhone: '',
     homePhone: '',
     primaryEmail: '',
@@ -1913,6 +2034,14 @@ const loadClient = async () => {
 
     // 处理 Contact 信息
     clientForm.contact = data.contact || {
+      mobilePhone: '',
+      homePhone: '',
+      primaryEmail: '',
+      address: '',
+      jurisdictionDiffers: false
+    }
+    // 处理 Secondary Contact 信息（全部非必填）
+    clientForm.secondaryContact = data.secondaryContact || {
       mobilePhone: '',
       homePhone: '',
       primaryEmail: '',
@@ -2452,6 +2581,7 @@ const handleSave = async (closeAfter: boolean = false) => {
               birthCountry: general.countryOfBirth || '',
               hasDualCitizenship: !!general.dualCitizenship,
               nationality: general.nationality || '',
+              secondaryNationality: (general as any).secondaryNationality || '',
               idType: general.idType || '',
               idNumber: general.idNo || '',
               idExpiryDate: parseDdMmYyyyToDate(general.idExpiry) || null,
@@ -3219,6 +3349,18 @@ onMounted(async () => {
         font-size: 14px;
         line-height: 32px;
         min-height: 32px;
+      }
+
+      // Client Id 未保存时的占位文案样式（浅灰、略淡）
+      .client-id-placeholder {
+        color: #909399;
+        font-style: italic;
+      }
+
+      .nationality-prefix-icon {
+        color: #909399;
+        font-size: 14px;
+        margin-right: 4px;
       }
 
       .form-row-single {
