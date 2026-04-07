@@ -75,6 +75,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { authApi, type UserInfo, type ChangePasswordParams } from '@/api/auth'
+import { roleDisplayName } from '@/utils/roles'
 
 const authStore = useAuthStore()
 const passwordFormRef = ref<FormInstance>()
@@ -83,7 +84,7 @@ const userInfo = ref<UserInfo>({
   id: '',
   username: '',
   name: '',
-  role: 'user',
+  role: 'RM_ARM',
   email: '',
   account: '',
   firstName: '',
@@ -130,6 +131,7 @@ const loadUserInfo = async () => {
       username: data.username || data.account || '',
       name: data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim() || '',
       role: data.role || 'user',
+      roleDisplayName: data.roleDisplayName || roleDisplayName(data.role),
       email: data.email || '',
       avatar: data.avatar,
       account: data.account || data.username || '',
@@ -153,6 +155,7 @@ const loadUserInfo = async () => {
         username: authStore.user.username,
         name: authStore.user.name,
         role: authStore.user.role,
+        roleDisplayName: authStore.user.roleDisplayName || roleDisplayName(authStore.user.role),
         email: authStore.user.email,
         avatar: authStore.user.avatar,
         account: authStore.user.username,
@@ -200,19 +203,20 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .profile-page {
-  padding: 20px;
-  background-color: #f5f5f5;
-  min-height: calc(100vh - 60px);
+  padding: 20px 28px 28px;
+  background-color: var(--crm-surface-page);
+  min-height: 100%;
   box-sizing: border-box;
   width: 100%;
 
   .profile-container {
     max-width: 1200px;
     margin: 0 auto;
-    background-color: #fff;
-    border-radius: 4px;
+    background-color: var(--crm-surface-card);
+    border-radius: var(--crm-radius-lg);
     padding: 30px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--crm-shadow-card);
+    border: 1px solid rgba(226, 232, 240, 0.9);
 
     .page-title {
       font-size: 24px;

@@ -1,188 +1,266 @@
 <template>
   <div class="client-list-page">
-    <!-- 顶部操作栏（始终显示当前账号信息） -->
-    <div class="page-header">
+    <div class="page-toolbar-row">
+      <p class="page-lead">
+        Browse clients, filter by RM or progress, and open the workflow dialog for approvals.
+      </p>
       <el-button type="primary" @click="handleNewClient">
         <el-icon><Plus /></el-icon>
         New Client
       </el-button>
-      <div class="user-info">
-        <el-icon><User /></el-icon>
-        <span>{{ authStore.user?.username || authStore.user?.account || 'User' }}</span>
-      </div>
     </div>
 
-    <!-- Loading 状态 -->
-    <div v-loading="loading" class="table-wrapper" v-if="loading">
-      <div style="min-height: 400px;"></div>
+    <div class="toolbar-card">
+      <el-select
+        v-model="filters.contactNature"
+        multiple
+        collapse-tags
+        collapse-tags-tooltip
+        clearable
+        placeholder="Contact Nature"
+        style="width: 200px"
+      >
+        <el-option label="Individual" value="Individual" />
+        <el-option label="Corporate" value="Corporate" />
+      </el-select>
+      <el-select
+        v-model="filters.rm"
+        multiple
+        collapse-tags
+        collapse-tags-tooltip
+        clearable
+        placeholder="RM"
+        style="width: 220px"
+      >
+        <el-option v-for="rm in rmOptions" :key="rm" :label="rm" :value="rm" />
+      </el-select>
+      <el-select
+        v-model="filters.progress"
+        multiple
+        collapse-tags
+        collapse-tags-tooltip
+        clearable
+        placeholder="Progress"
+        style="width: 240px"
+      >
+        <el-option v-for="progress in progressOptions" :key="progress" :label="progress" :value="progress" />
+      </el-select>
+      <el-select v-model="sortBy" placeholder="Sort By" style="width: 220px">
+        <el-option label="Created Time (Newest)" value="created-desc" />
+        <el-option label="Created Time (Oldest)" value="created-asc" />
+        <el-option label="RM" value="rm" />
+        <el-option label="Progress" value="progress" />
+      </el-select>
+      <el-button text @click="resetFilters">Reset</el-button>
     </div>
 
-    <!-- 有数据时显示表格 -->
-    <template v-else-if="clientList.length > 0">
-      <div class="table-wrapper">
-        <el-table
-          :data="clientList"
-          stripe
-          class="client-table"
-          style="width: 100%"
-        >
-          <el-table-column prop="client" label="Client" width="200" />
+    <div v-loading="loading" class="table-wrapper">
+      <template v-if="displayList.length">
+        <el-table :data="displayList" stripe class="client-table" style="width: 100%">
+          <el-table-column prop="client" label="Client" min-width="220" />
           <el-table-column prop="contactNature" label="Contact Nature" width="150" />
-          <el-table-column prop="rm" label="RM" width="200" />
+          <el-table-column prop="rm" label="RM" min-width="180" />
+          <el-table-column label="Progress" min-width="220">
+            <template #default="{ row }">
+              <div class="progress-cell">
+                <el-tag :type="getProgressTagType(row.progressStatus, row.inactive)">
+                  {{ row.progressLabel }}
+                </el-tag>
+                <span v-if="row.progressOwnerRoleLabel" class="progress-owner">{{ row.progressOwnerRoleLabel }}</span>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column label="Created Time" width="200">
             <template #default="{ row }">
               {{ formatDateTime(row.createdTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="Actions" width="220">
+          <el-table-column label="Actions" width="260" fixed="right">
             <template #default="{ row }">
-              <el-link type="primary" @click="handleView(row)" :underline="false">
-                View
-              </el-link>
+              <el-link type="primary" :underline="false" @click="handleView(row)">View</el-link>
               <el-divider direction="vertical" />
-              <el-link type="primary" @click="handleEdit(row)" :underline="false">
+              <el-link
+                v-if="canEditClient(row)"
+                type="primary"
+                :underline="false"
+                @click="handleEdit(row)"
+              >
                 Edit
               </el-link>
+              <template v-if="canEditClient(row)">
+                <el-divider direction="vertical" />
+              </template>
+              <el-link type="primary" :underline="false" @click="openProgress(row)">Progress</el-link>
               <el-divider direction="vertical" />
-              <el-link type="primary" @click="handleDelete(row)" :underline="false">
-                Delete
-              </el-link>
+              <el-link type="danger" :underline="false" @click="handleDelete(row)">Delete</el-link>
             </template>
           </el-table-column>
         </el-table>
-      </div>
-    </template>
+      </template>
 
-    <!-- 无数据时显示中间的按钮 -->
-    <div v-else class="empty-state">
-      <el-button type="primary" size="large" @click="handleNewClient">
-        <el-icon><Plus /></el-icon>
-        New Client
-      </el-button>
+      <div v-else class="empty-state">
+        <el-empty :description="clientList.length ? 'No matching clients' : 'No clients yet'">
+          <el-button v-if="!clientList.length" type="primary" size="large" @click="handleNewClient">
+            <el-icon><Plus /></el-icon>
+            New Client
+          </el-button>
+        </el-empty>
+      </div>
     </div>
+
+    <ClientProgressDialog
+      v-model="progressDialogVisible"
+      :client-id="selectedProgressClient?.id || null"
+      :client-type="selectedProgressClient?.contactNature || null"
+      @updated="handleProgressUpdated"
+      @review="handleProgressReview"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onActivated } from 'vue'
+import { computed, onActivated, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, User } from '@element-plus/icons-vue'
-import { useAuthStore } from '@/stores/auth'
-import { userClientApi, type Client } from '@/api/user/client'
+import { Plus } from '@element-plus/icons-vue'
+import { userClientApi } from '@/api/user/client'
+import type { ClientProgressData, ClientType } from '@/api/user/workflow'
+import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import { formatDateTime } from '@/utils/date'
+import { getProgressLabel, getProgressSortWeight, getProgressTagType, isClientEditable } from '@/utils/client-progress'
+
+interface ClientListRow {
+  id: number
+  clientId?: number | string
+  client: string
+  contactNature: ClientType
+  rm: string
+  createdTime: string
+  progressStatus?: string
+  progressLabel: string
+  progressOwnerRoleLabel?: string
+  inactive?: boolean
+}
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore()
-const clientList = ref<Client[]>([])
+const clientList = ref<ClientListRow[]>([])
 const loading = ref(false)
+const progressDialogVisible = ref(false)
+const selectedProgressClient = ref<ClientListRow | null>(null)
+const sortBy = ref<'created-desc' | 'created-asc' | 'rm' | 'progress'>('created-desc')
+const filters = reactive({
+  contactNature: [] as ClientType[],
+  rm: [] as string[],
+  progress: [] as string[]
+})
 
-// 加载客户列表
+const rmOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.rm).filter(Boolean))).sort())
+const progressOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.progressLabel).filter(Boolean))))
+
+const displayList = computed(() => {
+  const list = clientList.value.filter(item => {
+    if (filters.contactNature.length && !filters.contactNature.includes(item.contactNature)) return false
+    if (filters.rm.length && !filters.rm.includes(item.rm)) return false
+    if (filters.progress.length && !filters.progress.includes(item.progressLabel)) return false
+    return true
+  })
+
+  return [...list].sort((left, right) => {
+    switch (sortBy.value) {
+      case 'created-asc':
+        return new Date(left.createdTime || 0).getTime() - new Date(right.createdTime || 0).getTime()
+      case 'rm':
+        return (left.rm || '').localeCompare(right.rm || '')
+      case 'progress':
+        return getProgressSortWeight(left.progressStatus, left.inactive) - getProgressSortWeight(right.progressStatus, right.inactive)
+      case 'created-desc':
+      default:
+        return new Date(right.createdTime || 0).getTime() - new Date(left.createdTime || 0).getTime()
+    }
+  })
+})
+
+const normalizeClient = (item: any): ClientListRow => {
+  const contactNature = (item.clientType || item.contactNature || item.contact_nature || 'Individual') as ClientType
+
+  let clientName = item.clientName || item.client_name || ''
+  if (!clientName) {
+    if (contactNature === 'Corporate') {
+      clientName = item.chineseCompanyName || item.chinese_company_name || item.companyName || item.company_name || ''
+    } else {
+      const firstName = item.firstName || item.first_name || ''
+      const lastName = item.lastName || item.last_name || ''
+      clientName = lastName && firstName ? `${lastName}, ${firstName}` : (lastName || firstName || '')
+    }
+  }
+
+  const rmFirstName = item.rmFirstName || item.rm_first_name || ''
+  const rmLastName = item.rmLastName || item.rm_last_name || ''
+  const rmName =
+    item.rmName ||
+    item.rm_name ||
+    (rmLastName && rmFirstName ? `${rmLastName}, ${rmFirstName}` : (rmLastName || rmFirstName || ''))
+
+  const inactive = item.inactive === true || item.isInactive === true || item.is_inactive === true
+  const progressStatus = item.progressStatus || item.progress_status || ''
+
+  return {
+    id: Number(item.id),
+    clientId: item.clientBusinessId || item.clientId || item.client_id,
+    client: clientName,
+    contactNature,
+    rm: rmName,
+    createdTime: item.createdAt || item.created_at || item.createdTime || item.created_time || '',
+    progressStatus,
+    progressLabel: item.progressLabel || getProgressLabel(progressStatus, inactive),
+    progressOwnerRoleLabel: item.progressOwnerRoleLabel || item.ownerRoleLabel || item.progressOwnerRole || '',
+    inactive
+  }
+}
+
 const loadClients = async () => {
   loading.value = true
   try {
     const response = await userClientApi.getClients()
     const data = response.data || response || []
-    clientList.value = data.map((item: any) => {
-      const id = item.id
-      // 后端返回的clientType对应contactNature
-      const contactNature = item.clientType || item.contactNature || item.contact_nature || 'Individual'
-      
-      // 根据类型生成显示名称：Individual 类型显示为 "Last Name, First Name"，不使用 Chinese Name
-      let clientName = ''
-      if (contactNature === 'Individual' || item.clientType === 'Individual') {
-        // 个人客户：显示为 "Last Name, First Name"（不使用 Chinese Name）
-        const firstName = item.firstName || item.first_name || ''
-        const lastName = item.lastName || item.last_name || ''
-        if (lastName && firstName) {
-          clientName = `${lastName}, ${firstName}`
-        } else if (lastName) {
-          clientName = lastName
-        } else if (firstName) {
-          clientName = firstName
-        }
-      } else {
-        // 企业客户：优先显示中文公司名，否则显示英文公司名
-        if (item.chineseCompanyName && item.chineseCompanyName.trim()) {
-          clientName = item.chineseCompanyName
-        } else {
-          clientName = item.companyName || item.company_name || ''
-        }
-      }
-      
-      // RM 显示名称（后端ClientListDTO的逻辑：lastName + ", " + firstName）
-      let rm = ''
-      if (item.rmLastName && item.rmFirstName) {
-        rm = `${item.rmLastName}, ${item.rmFirstName}`
-      } else if (item.rmLastName) {
-        rm = item.rmLastName
-      } else if (item.rmFirstName) {
-        rm = item.rmFirstName
-      }
-      
-      return {
-        id: id,
-        clientId: item.clientBusinessId || id,
-        contactNature: contactNature,
-        client: clientName,
-        rm: rm,
-        general: item.general || {},
-        contact: item.contact || {},
-        portfolios: item.portfolios || [],
-        createdTime: item.createdAt || item.created_at || item.createdTime || ''
-      }
-    })
+    clientList.value = data.map(normalizeClient)
   } catch (error: any) {
     console.error('Failed to load client list:', error)
-    // 不显示错误消息，避免干扰用户体验
-    // 如果 API 调用失败，保持空列表
     clientList.value = []
   } finally {
-    // 添加最小延迟，避免闪烁
-    await new Promise(resolve => setTimeout(resolve, 300))
     loading.value = false
   }
 }
 
-// 新建客户
-const handleNewClient = async () => {
-  try {
-    console.log('handleNewClient called, navigating to /user/client/new')
-    // 直接使用路径跳转，更可靠
-    await router.push('/user/client/new')
-  } catch (error: any) {
-    console.error('Navigation error:', error)
-    // 如果命名路由失败，尝试路径路由
-    try {
-      await router.push({ path: '/user/client/new' })
-    } catch (err) {
-      console.error('Navigation with path also failed:', err)
-      ElMessage.error('Failed to navigate to new client page')
-    }
-  }
+const resetFilters = () => {
+  filters.contactNature = []
+  filters.rm = []
+  filters.progress = []
+  sortBy.value = 'created-desc'
 }
 
-// 查看详情
-const handleView = (row: Client) => {
-  // 传递 clientType 作为查询参数，确保后端能正确识别客户类型
+const handleNewClient = async () => {
+  await router.push('/user/client/new')
+}
+
+const handleView = (row: ClientListRow) => {
   router.push({
     path: `/user/client/${row.id}`,
     query: { clientType: row.contactNature }
   })
 }
 
-// 编辑客户
-const handleEdit = (row: Client) => {
-  // 传递 clientType 作为查询参数，确保后端能正确识别客户类型
+const handleEdit = (row: ClientListRow) => {
   router.push({
     path: `/user/client/${row.id}/edit`,
     query: { clientType: row.contactNature }
   })
 }
 
-// 删除客户
-const handleDelete = async (row: Client) => {
+const canEditClient = (row: ClientListRow) => isClientEditable(row.progressStatus, row.inactive)
+
+const handleDelete = async (row: ClientListRow) => {
   try {
     await ElMessageBox.confirm(
       'This action cannot be undone. Are you sure you want to delete this?',
@@ -197,183 +275,128 @@ const handleDelete = async (row: Client) => {
         showClose: false
       }
     )
-    
     await userClientApi.deleteClient(row.id)
     ElMessage.success('Client deleted successfully')
-    loadClients()
+    await loadClients()
   } catch (error: any) {
     if (error !== 'cancel') {
-      console.error('Failed to delete client:', error)
-      const errorMessage = error.message || error.response?.data?.message || 'Failed to delete client'
-      ElMessage.error(errorMessage)
+      ElMessage.error(error.message || error.response?.data?.message || 'Failed to delete client')
     }
   }
 }
 
-// 监听路由变化，当路由切换到当前页面时刷新数据
+const openProgress = (row: ClientListRow) => {
+  selectedProgressClient.value = row
+  progressDialogVisible.value = true
+}
+
+const handleProgressUpdated = (progress: ClientProgressData) => {
+  const target = clientList.value.find(item => item.id === progress.clientId && item.contactNature === progress.clientType)
+  if (!target) return
+  target.progressStatus = progress.progressStatus
+  target.progressLabel = progress.progressLabel || getProgressLabel(progress.progressStatus, progress.inactive)
+  target.progressOwnerRoleLabel = progress.ownerRoleLabel || ''
+  target.inactive = progress.inactive
+}
+
+const handleProgressReview = () => {
+  if (!selectedProgressClient.value) return
+  router.push({
+    path: `/user/client/${selectedProgressClient.value.id}/edit`,
+    query: {
+      clientType: selectedProgressClient.value.contactNature,
+      mode: 'review'
+    }
+  })
+}
+
 watch(
   () => route.path,
-  (newPath, oldPath) => {
-    if (newPath === '/user/client' && newPath !== oldPath) {
+  newPath => {
+    if (newPath === '/user/client') {
       loadClients()
     }
-  },
-  { immediate: false }
+  }
 )
 
-// 当组件被激活时（从其他路由切换回来时）刷新数据
 onActivated(() => {
   if (route.path === '/user/client') {
     loadClients()
   }
 })
 
-onMounted(() => {
-  // 确保在组件挂载时加载数据
-  loadClients()
-})
+onMounted(loadClients)
 </script>
 
 <style lang="scss" scoped>
 .client-list-page {
-  padding: 20px;
-  background-color: #f5f5f5;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  padding: 20px 28px 28px;
+  background-color: var(--crm-surface-page);
+  min-height: 100%;
   box-sizing: border-box;
-  width: 100%;
-  margin: 0;
-  position: relative;
 
-  .page-header {
+  .page-toolbar-row {
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .page-lead {
+    margin: 0;
+    max-width: 520px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--crm-text-secondary);
+  }
+
+  .toolbar-card {
+    display: flex;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 0;
-    width: 100%;
-    box-sizing: border-box;
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #606266;
-      font-size: 14px;
-      padding: 0;
-      margin: 0;
-
-      :deep(.el-icon) {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: #d9dde3;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #5a6473;
-      }
-    }
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    padding: 16px 18px;
+    background: var(--crm-surface-card);
+    border-radius: var(--crm-radius-lg);
+    box-shadow: var(--crm-shadow-card);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    justify-content: flex-start;
   }
 
   .table-wrapper {
-    width: 100%;
-    flex: 1;
-    padding: 0;
-    margin: 0;
-    box-sizing: border-box;
-    position: relative;
+    min-height: 420px;
   }
 
   .client-table {
-    background-color: #fff;
-    border-radius: 4px;
+    background: var(--crm-surface-card);
+    border-radius: var(--crm-radius-lg);
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    box-shadow: var(--crm-shadow-card);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+  }
 
-    :deep(.el-table) {
-      width: 100% !important;
-      box-sizing: border-box;
-    }
+  .progress-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
 
-    :deep(.el-table__inner-wrapper) {
-      width: 100% !important;
-      box-sizing: border-box;
-    }
-
-    :deep(.el-table__header-wrapper) {
-      width: 100% !important;
-      box-sizing: border-box;
-      
-      .el-table__header {
-        width: 100% !important;
-        background-color: #025189;
-        color: #fff;
-        box-sizing: border-box;
-
-        th {
-          background-color: #025189 !important;
-          color: #fff !important;
-          border: none;
-          font-weight: 500;
-          padding: 12px 0;
-          box-sizing: border-box;
-        }
-      }
-    }
-
-    :deep(.el-table__body-wrapper) {
-      width: 100% !important;
-      box-sizing: border-box;
-      
-      .el-table__body {
-        width: 100% !important;
-        box-sizing: border-box;
-        
-        tr {
-          background-color: #fff;
-          width: 100% !important;
-          box-sizing: border-box;
-          
-          &:hover {
-            background-color: #f5f7fa;
-          }
-          
-          td {
-            padding: 12px 0;
-            border-bottom: 1px solid #ebeef5;
-            box-sizing: border-box;
-          }
-        }
-      }
-    }
-
-    :deep(.el-table__row--striped) {
-      background-color: #fafafa;
-    }
-
-    :deep(.el-link) {
-      font-size: 14px;
-      margin-right: 8px;
-    }
-
-    :deep(.el-divider--vertical) {
-      margin: 0 8px;
-      height: 14px;
-    }
+  .progress-owner {
+    font-size: 12px;
+    color: #909399;
   }
 
   .empty-state {
-    width: 100%;
+    min-height: 420px;
     display: flex;
-    justify-content: center;
     align-items: center;
-    min-height: calc(100vh - 100px);
+    justify-content: center;
+    background: var(--crm-surface-card);
+    border-radius: var(--crm-radius-lg);
+    box-shadow: var(--crm-shadow-card);
+    border: 1px solid rgba(226, 232, 240, 0.9);
   }
 }
 </style>

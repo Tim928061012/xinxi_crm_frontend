@@ -332,6 +332,7 @@ import { useAuthStore } from '@/stores/auth'
 import { introducerApi, type Introducer, type CreateIntroducerParams, type UpdateIntroducerParams } from '@/api/introducer'
 import { accountApi, type Account } from '@/api/account'
 import { formatDateTime } from '@/utils/date'
+import { isAdminRole } from '@/utils/roles'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -693,8 +694,7 @@ const loadAccountsForRM = async () => {
     // 仅保留非 admin 且启用的用户，用于 RM 选择
     accountList.value = data
       .filter((item: any) => {
-        const role = (item.role || '').toLowerCase()
-        const isAdmin = role === 'admin'
+        const isAdmin = isAdminRole(item.role)
         const isActive = item.isActive === true || item.isActive === 'true' || item.active === true
         return !isAdmin && isActive
       })
@@ -1025,4 +1025,3 @@ onMounted(() => {
   }
 }
 </style>
-

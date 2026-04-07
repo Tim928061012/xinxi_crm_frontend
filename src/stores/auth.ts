@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User, LoginForm } from '@/types/auth'
 import { authApi } from '@/api/auth'
+import { isAdminRole, isEmployeeRole, normalizeRole, roleDisplayName } from '@/utils/roles'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -9,8 +10,8 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('token') || sessionStorage.getItem('token'))
 
   const isAuthenticated = computed(() => !!token.value && !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'admin')
-  const isUser = computed(() => user.value?.role === 'user')
+  const isAdmin = computed(() => isAdminRole(user.value?.role))
+  const isUser = computed(() => isEmployeeRole(user.value?.role))
 
   // 登录（根据角色调用不同接口）
   async function login(loginForm: LoginForm, role: 'user' | 'admin' = 'user') {
@@ -39,13 +40,24 @@ export const useAuthStore = defineStore('auth', () => {
       
       // 获取用户信息
       const responseData = response.data || response
-      const userData: User = responseData.user || responseData.data?.user || {
+      const rawUserData: User = responseData.user || responseData.data?.user || {
         id: responseData.id || '',
         username: loginForm.username,
         name: responseData.name || loginForm.username,
         role: role,
         email: responseData.email || '',
         avatar: responseData.avatar || ''
+      }
+      const userData: User = {
+        ...rawUserData,
+        id: String((rawUserData as any).id || (rawUserData as any).userId || ''),
+        account: rawUserData.account || rawUserData.username,
+        role: normalizeRole(rawUserData.role || role),
+        roleDisplayName: (rawUserData as any).roleDisplayName || roleDisplayName(rawUserData.role || role),
+        name:
+          rawUserData.name ||
+          [rawUserData.lastName, rawUserData.firstName].filter(Boolean).join(', ') ||
+          rawUserData.username
       }
 
       if (!authToken) {
@@ -76,7 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     try {
       // 根据当前用户角色调用不同的登出接口
-      if (user.value?.role === 'admin') {
+      if (isAdminRole(user.value?.role)) {
         await authApi.adminLogout()
       } else {
         await authApi.userLogout()
@@ -97,17 +109,21 @@ export const useAuthStore = defineStore('auth', () => {
   // 获取用户信息
   async function fetchUserInfo() {
     try {
-      // TODO: 调用获取用户信息接口
-      const response = await authApi.getUserInfo()
-      
-      // 模拟响应数据
-      // user.value = response.data
-      
-      // 临时从localStorage获取，后续替换为实际接口
-      const storedUser = localStorage.getItem('user')
-      if (storedUser) {
-        user.value = JSON.parse(storedUser)
+      const response = await authApi.getMe()
+      const data = response.data || response
+      user.value = {
+        id: String(data.userId || data.id || ''),
+        username: data.username || data.account || '',
+        account: data.account || data.username || '',
+        firstName: data.firstName || '',
+        lastName: data.lastName || '',
+        name: [data.lastName, data.firstName].filter(Boolean).join(', ') || data.username || '',
+        role: normalizeRole(data.role),
+        roleDisplayName: data.roleDisplayName || roleDisplayName(data.role),
+        email: data.email || '',
+        avatar: data.avatar || ''
       }
+      localStorage.setItem('user', JSON.stringify(user.value))
     } catch (error) {
       console.error('Fetch user info error:', error)
       // 如果获取用户信息失败，清除登录状态
@@ -122,7 +138,12 @@ export const useAuthStore = defineStore('auth', () => {
     
     if (storedToken && storedUser) {
       token.value = storedToken
-      user.value = JSON.parse(storedUser)
+      const parsed = JSON.parse(storedUser)
+      user.value = {
+        ...parsed,
+        role: normalizeRole(parsed.role),
+        roleDisplayName: parsed.roleDisplayName || roleDisplayName(parsed.role)
+      }
       // 验证token有效性（可选）
       // fetchUserInfo()
     }

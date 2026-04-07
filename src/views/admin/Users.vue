@@ -37,18 +37,18 @@
         <el-table-column prop="email" label="邮箱" width="200" />
         <el-table-column prop="role" label="角色" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.role === 'admin' ? 'danger' : ''">
-              {{ row.role === 'admin' ? '超级管理员' : '普通用户' }}
+            <el-tag :type="isAdminRole(row.role) ? 'danger' : ''">
+              {{ roleDisplayName(row.role) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag
-              :type="row.role === 'admin' ? 'info' : (row.status === 'active' ? 'success' : 'danger')"
+              :type="isAdminRole(row.role) ? 'info' : (row.status === 'active' ? 'success' : 'danger')"
             >
               <!-- admin 永远显示启用，置灰 -->
-              <span v-if="row.role === 'admin'">启用</span>
+              <span v-if="isAdminRole(row.role)">启用</span>
               <span v-else>{{ row.status === 'active' ? '启用' : '禁用' }}</span>
             </el-tag>
           </template>
@@ -65,7 +65,7 @@
               编辑
             </el-button>
             <el-button
-              v-if="row.role !== 'admin'"
+              v-if="!isAdminRole(row.role)"
               :type="row.status === 'active' ? 'warning' : 'success'"
               link
               size="small"
@@ -157,6 +157,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Search, Refresh } from '@element-plus/icons-vue'
+import { isAdminRole, roleDisplayName } from '@/utils/roles'
 
 const loading = ref(false)
 const dialogVisible = ref(false)

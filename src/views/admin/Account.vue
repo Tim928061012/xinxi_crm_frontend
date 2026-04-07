@@ -22,6 +22,7 @@
       >
       <el-table-column prop="account" label="Account" width="180" />
       <el-table-column prop="name" label="Name" width="200" />
+      <el-table-column prop="roleDisplayName" label="Role" width="140" />
       <el-table-column label="Created Time" width="200">
         <template #default="{ row }">
           {{ formatDateTime(row.createdTime) }}
@@ -35,13 +36,13 @@
               v-model="row.isActive"
               :active-value="true"
               :inactive-value="false"
-              :disabled="row.account === 'admin' || row.role === 'Admin' || row.role === 'admin'"
+              :disabled="isSystemAdmin(row)"
               @change="handleStatusChange(row)"
             />
             <span
               :style="{
                 color:
-                  row.account === 'admin' || row.role === 'Admin' || row.role === 'admin'
+                  isSystemAdmin(row)
                     ? '#909399'
                     : row.isActive
                       ? '#67c23a'
@@ -56,7 +57,7 @@
       <el-table-column label="Actions" width="220">
         <template #default="{ row }">
           <!-- Admin 账号不允许 Edit，只允许 Reset Password -->
-          <template v-if="row.account !== 'admin' && row.role !== 'Admin' && row.role !== 'admin'">
+          <template v-if="!isSystemAdmin(row)">
             <el-link type="primary" @click="handleEdit(row)" :underline="false">
               Edit
             </el-link>
@@ -92,6 +93,14 @@
         <el-form-item label="Last Name" prop="lastName" required>
           <el-input v-model="newAccountForm.lastName" placeholder="Please enter last name" />
         </el-form-item>
+        <el-form-item label="Role" prop="role" required>
+          <el-select v-model="newAccountForm.role" placeholder="Please select role" style="width: 100%">
+            <el-option label="RM/ARM" value="RM_ARM" />
+            <el-option label="Operation" value="OPERATION" />
+            <el-option label="Compliance" value="COMPLIANCE" />
+            <el-option label="RO" value="RO" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="newAccountDialogVisible = false">Cancel</el-button>
@@ -121,6 +130,9 @@
         <el-form-item label="Last Name" prop="lastName" required>
           <el-input v-model="editAccountForm.lastName" placeholder="Please enter last name" />
         </el-form-item>
+        <el-form-item label="Role">
+          <el-input v-model="editAccountForm.roleDisplayName" disabled />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editAccountDialogVisible = false">Cancel</el-button>
@@ -138,6 +150,7 @@ import { Plus, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { accountApi, type Account, type CreateAccountParams, type UpdateAccountParams } from '@/api/account'
 import { formatDateTime } from '@/utils/date'
+import { isAdminRole, roleDisplayName } from '@/utils/roles'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -151,13 +164,15 @@ const editAccountFormRef = ref<FormInstance>()
 const newAccountForm = reactive<CreateAccountParams>({
   account: '',
   firstName: '',
-  lastName: ''
+  lastName: '',
+  role: 'RM_ARM'
 })
 
-const editAccountForm = reactive<UpdateAccountParams & { account: string; id?: number }>({
+const editAccountForm = reactive<UpdateAccountParams & { account: string; id?: number; roleDisplayName?: string }>({
   account: '',
   firstName: '',
-  lastName: ''
+  lastName: '',
+  roleDisplayName: ''
 })
 
 const accountFormRules: FormRules = {
@@ -169,8 +184,14 @@ const accountFormRules: FormRules = {
   ],
   lastName: [
     { required: true, message: 'Please enter last name', trigger: 'blur' }
+  ],
+  role: [
+    { required: true, message: 'Please select role', trigger: 'change' }
   ]
 }
+
+const isSystemAdmin = (row: Pick<Account, 'account' | 'role'> | any) =>
+  (row.account || '') === 'admin' || isAdminRole(row.role)
 
 // 加载账户列表
 const loadAccounts = async () => {
@@ -185,7 +206,7 @@ const loadAccounts = async () => {
       const isActive = item.isActive === true || item.isActive === 'true' || item.active === true || item.active === 'true'
       // 使用 userId 字段，如果没有则使用 id
       const userId = item.userId || item.user_id || item.id
-      const isAdmin = (item.username || item.account || '') === 'admin' || item.role === 'Admin' || item.role === 'admin'
+      const isAdmin = (item.username || item.account || '') === 'admin' || isAdminRole(item.role)
       
       return {
         id: userId, // 使用 userId 作为 id
@@ -197,6 +218,7 @@ const loadAccounts = async () => {
         // 其他账号：两个都有 -> "firstName, lastName"，只有一个 -> 只显示该字段，避免多余逗号
         name: isAdmin ? 'System Administrator' : (firstName && lastName ? `${firstName}, ${lastName}` : (firstName || lastName || '')),
         role: item.role || item.userRole || '', // 后端返回的角色，用于判断是否为 admin
+        roleDisplayName: item.roleDisplayName || roleDisplayName(item.role || item.userRole || ''),
         isActive: isActive, // 后端返回的 isActive 字段
         status: isActive ? 'enabled' : 'disabled', // 前端显示用的状态
         createdTime: item.createdAt || item.created_at || item.createdTime || item.created_time || item.createTime || ''
@@ -217,6 +239,7 @@ const handleNewAccount = () => {
   newAccountForm.account = ''
   newAccountForm.firstName = ''
   newAccountForm.lastName = ''
+  newAccountForm.role = 'RM_ARM'
   newAccountDialogVisible.value = true
 }
 
@@ -249,6 +272,8 @@ const handleEdit = (row: Account) => {
   editAccountForm.account = row.account
   editAccountForm.firstName = row.firstName
   editAccountForm.lastName = row.lastName
+  editAccountForm.role = row.role
+  editAccountForm.roleDisplayName = row.roleDisplayName || roleDisplayName(row.role)
   editAccountDialogVisible.value = true
 }
 
@@ -279,7 +304,7 @@ const handleSubmitEditAccount = async () => {
 // 状态切换
 const handleStatusChange = async (row: Account) => {
   // 超级管理员账号状态不允许修改，直接还原并提示
-  if (row.account === 'admin' || (row as any).role === 'Admin' || (row as any).role === 'admin') {
+  if (isSystemAdmin(row)) {
     row.isActive = true
     row.status = 'enabled'
     ElMessage.warning('超级管理员的状态不允许修改为不可用')
@@ -551,4 +576,3 @@ onMounted(() => {
   }
 }
 </style>
-

@@ -8,6 +8,7 @@ export interface Account {
   lastName: string
   name: string // 显示用的全名，格式：firstName, lastName
   role?: string // 用户角色，用于判断是否为 admin
+  roleDisplayName?: string
   isActive: boolean // 后端返回的 isActive 字段
   status: 'enabled' | 'disabled' // 前端显示用的状态
   createdTime: string
@@ -17,6 +18,7 @@ export interface CreateAccountParams {
   account: string // UI 上使用的字段名
   firstName: string
   lastName: string
+  role: string
 }
 
 // 后端接口需要的参数格式
@@ -24,11 +26,13 @@ export interface CreateAccountRequest {
   username: string // 后端接口使用的字段名
   firstName: string
   lastName: string
+  role: string
 }
 
 export interface UpdateAccountParams {
   firstName: string
   lastName: string
+  role?: string
 }
 
 export const accountApi = {
@@ -53,7 +57,8 @@ export const accountApi = {
     const requestData: CreateAccountRequest = {
       username: data.account,
       firstName: data.firstName,
-      lastName: data.lastName
+      lastName: data.lastName,
+      role: data.role
     }
     return request.post('/system-users', requestData)
   },
@@ -78,4 +83,3 @@ export const accountApi = {
     return request.post(`/system-users/${id}/reset-password`)
   }
 }
-

@@ -9,12 +9,13 @@ export interface UserInfo {
   id: string
   username: string
   name: string
-  role: 'user' | 'admin'
+  role: string
   email: string
   avatar?: string
   firstName?: string
   lastName?: string
   account?: string
+  roleDisplayName?: string
 }
 
 export interface ChangePasswordParams {
@@ -46,7 +47,7 @@ export const authApi = {
 
   // 获取用户信息
   getUserInfo() {
-    return request.get('/auth/userinfo')
+    return request.get('/auth/me')
   },
 
   // 获取当前用户信息

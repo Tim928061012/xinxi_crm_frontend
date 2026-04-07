@@ -1,6 +1,5 @@
 <template>
   <div class="client-page">
-    <!-- 顶部标题栏 -->
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title">All Clients</h1>
@@ -11,302 +10,247 @@
       </div>
     </div>
 
-    <!-- Loading 状态 -->
-    <div v-loading="loading" class="table-wrapper" v-if="loading">
-      <div style="min-height: 400px;"></div>
-    </div>
-
-    <!-- 客户表格 -->
-    <div class="table-wrapper" v-else-if="clientList.length > 0">
-      <el-table
-        :data="clientList"
-        stripe
-        class="client-table"
-        style="width: 100%"
+    <div class="toolbar-card">
+      <el-select
+        v-model="filters.contactNature"
+        multiple
+        collapse-tags
+        collapse-tags-tooltip
+        clearable
+        placeholder="Contact Nature"
+        style="width: 200px"
       >
-        <el-table-column prop="client" label="Client" width="200" />
-        <el-table-column label="RM" width="200">
-          <template #default="{ row }">
-            <span>{{ row.rm }}</span>
-            <!-- 仅当 RM 被禁用时显示红点 -->
-            <span
-              v-if="row.rmDisabled"
-              class="rm-disabled-dot"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column label="Compliance" width="150">
-          <template #default="{ row }">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <el-switch
-                v-model="row.compliance"
-                :active-value="true"
-                :inactive-value="false"
-                @change="handleComplianceChange(row)"
-              />
-              <span :style="{ color: row.compliance ? '#67c23a' : '#909399' }">
-                {{ row.compliance ? 'Yes' : 'No' }}
-              </span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="Operation" width="150">
-          <template #default="{ row }">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <el-switch
-                v-model="row.operation"
-                :active-value="true"
-                :inactive-value="false"
-                @change="handleOperationChange(row)"
-              />
-              <span :style="{ color: row.operation ? '#67c23a' : '#909399' }">
-                {{ row.operation ? 'Yes' : 'No' }}
-              </span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="Created Time" width="200">
-          <template #default="{ row }">
-            {{ formatDateTime(row.createdTime) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="Actions" width="220">
-          <template #default="{ row }">
-            <el-link type="primary" @click="handleView(row)" :underline="false">
-              View
-            </el-link>
-            <el-divider direction="vertical" />
-            <el-link type="primary" @click="handleEdit(row)" :underline="false">
-              Edit
-            </el-link>
-            <el-divider direction="vertical" />
-            <el-link type="primary" @click="handleDelete(row)" :underline="false">
-              Delete
-            </el-link>
-          </template>
-        </el-table-column>
-      </el-table>
+        <el-option label="Individual" value="Individual" />
+        <el-option label="Corporate" value="Corporate" />
+      </el-select>
+      <el-select
+        v-model="filters.rm"
+        multiple
+        collapse-tags
+        collapse-tags-tooltip
+        clearable
+        placeholder="RM"
+        style="width: 220px"
+      >
+        <el-option v-for="rm in rmOptions" :key="rm" :label="rm" :value="rm" />
+      </el-select>
+      <el-select
+        v-model="filters.progress"
+        multiple
+        collapse-tags
+        collapse-tags-tooltip
+        clearable
+        placeholder="Progress"
+        style="width: 240px"
+      >
+        <el-option v-for="progress in progressOptions" :key="progress" :label="progress" :value="progress" />
+      </el-select>
+      <el-select v-model="sortBy" placeholder="Sort By" style="width: 220px">
+        <el-option label="Created Time (Newest)" value="created-desc" />
+        <el-option label="Created Time (Oldest)" value="created-asc" />
+        <el-option label="RM" value="rm" />
+        <el-option label="Progress" value="progress" />
+      </el-select>
+      <el-button text @click="resetFilters">Reset</el-button>
     </div>
 
-    <!-- 空状态 -->
-    <div class="empty-state" v-else>
-      <p>No Results Found</p>
+    <div v-loading="loading" class="table-wrapper">
+      <template v-if="displayList.length">
+        <el-table :data="displayList" stripe class="client-table" style="width: 100%">
+          <el-table-column prop="client" label="Client" min-width="220" />
+          <el-table-column prop="contactNature" label="Contact Nature" width="150" />
+          <el-table-column label="RM" min-width="200">
+            <template #default="{ row }">
+              <span>{{ row.rm }}</span>
+              <span v-if="row.rmDisabled" class="rm-disabled-dot" />
+            </template>
+          </el-table-column>
+          <el-table-column label="Progress" min-width="220">
+            <template #default="{ row }">
+              <div class="progress-cell">
+                <el-tag :type="getProgressTagType(row.progressStatus, row.inactive)">
+                  {{ row.progressLabel }}
+                </el-tag>
+                <span v-if="row.progressOwnerRoleLabel" class="progress-owner">{{ row.progressOwnerRoleLabel }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="Created Time" width="200">
+            <template #default="{ row }">
+              {{ formatDateTime(row.createdTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="Actions" width="300" fixed="right">
+            <template #default="{ row }">
+              <el-link type="primary" :underline="false" @click="handleView(row)">View</el-link>
+              <el-divider direction="vertical" />
+              <el-link type="primary" :underline="false" @click="handleEdit(row)">Edit</el-link>
+              <el-divider direction="vertical" />
+              <el-link type="primary" :underline="false" @click="openProgress(row)">Progress</el-link>
+              <el-divider direction="vertical" />
+              <el-link type="danger" :underline="false" @click="handleDelete(row)">Delete</el-link>
+            </template>
+          </el-table-column>
+        </el-table>
+      </template>
+
+      <div v-else class="empty-state">
+        <el-empty :description="clientList.length ? 'No matching clients' : 'No Results Found'" />
+      </div>
     </div>
+
+    <ClientProgressDialog
+      v-model="progressDialogVisible"
+      :client-id="selectedProgressClient?.id || null"
+      :client-type="selectedProgressClient?.contactNature || null"
+      @updated="handleProgressUpdated"
+      @review="handleProgressReview"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onActivated } from 'vue'
+import { computed, onActivated, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import { accountApi } from '@/api/account'
-import { adminClientApi, type AdminClient, type UpdateComplianceOperationParams } from '@/api/client'
+import { adminClientApi } from '@/api/client'
+import type { ClientProgressData, ClientType } from '@/api/user/workflow'
+import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import { formatDateTime } from '@/utils/date'
+import { getProgressLabel, getProgressSortWeight, getProgressTagType } from '@/utils/client-progress'
+
+interface AdminClientRow {
+  id: number
+  client: string
+  rm: string
+  rmDisabled?: boolean
+  contactNature: ClientType
+  createdTime: string
+  progressStatus?: string
+  progressLabel: string
+  progressOwnerRoleLabel?: string
+  inactive?: boolean
+}
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const clientList = ref<AdminClient[]>([])
+
+const clientList = ref<AdminClientRow[]>([])
 const loading = ref(false)
+const progressDialogVisible = ref(false)
+const selectedProgressClient = ref<AdminClientRow | null>(null)
+const sortBy = ref<'created-desc' | 'created-asc' | 'rm' | 'progress'>('created-desc')
+const filters = reactive({
+  contactNature: [] as ClientType[],
+  rm: [] as string[],
+  progress: [] as string[]
+})
 
-// RM 启用状态映射：key 为 rmUserId，value 为是否启用
-const rmActiveMap = ref<Map<number, boolean>>(new Map())
+const rmOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.rm).filter(Boolean))).sort())
+const progressOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.progressLabel).filter(Boolean))))
 
-// 加载 RM 账户状态（用于在列表中标记禁用 RM）
-const loadRmStatus = async () => {
-  try {
-    const response = await accountApi.getAccounts()
-    const data = response.data || response || []
-    const map = new Map<number, boolean>()
-    data.forEach((item: any) => {
-      const userId = item.userId || item.user_id || item.id
-      if (!userId) return
-      const isActive = item.isActive === true || item.isActive === 'true' || item.active === true
-      map.set(Number(userId), !!isActive)
-    })
-    rmActiveMap.value = map
-  } catch (error) {
-    console.warn('Failed to load RM status:', error)
-    rmActiveMap.value = new Map()
+const displayList = computed(() => {
+  const list = clientList.value.filter(item => {
+    if (filters.contactNature.length && !filters.contactNature.includes(item.contactNature)) return false
+    if (filters.rm.length && !filters.rm.includes(item.rm)) return false
+    if (filters.progress.length && !filters.progress.includes(item.progressLabel)) return false
+    return true
+  })
+
+  return [...list].sort((left, right) => {
+    switch (sortBy.value) {
+      case 'created-asc':
+        return new Date(left.createdTime || 0).getTime() - new Date(right.createdTime || 0).getTime()
+      case 'rm':
+        return (left.rm || '').localeCompare(right.rm || '')
+      case 'progress':
+        return getProgressSortWeight(left.progressStatus, left.inactive) - getProgressSortWeight(right.progressStatus, right.inactive)
+      case 'created-desc':
+      default:
+        return new Date(right.createdTime || 0).getTime() - new Date(left.createdTime || 0).getTime()
+    }
+  })
+})
+
+const normalizeClient = (item: any): AdminClientRow => {
+  const contactNature = (item.clientType || item.contactNature || item.contact_nature || 'Individual') as ClientType
+  let clientName = item.clientName || item.client_name || ''
+  if (!clientName) {
+    if (contactNature === 'Corporate') {
+      clientName = item.chineseCompanyName || item.chinese_company_name || item.companyName || item.company_name || ''
+    } else {
+      const firstName = item.firstName || item.first_name || ''
+      const lastName = item.lastName || item.last_name || ''
+      clientName = lastName && firstName ? `${lastName}, ${firstName}` : (lastName || firstName || '')
+    }
+  }
+
+  const rmFirstName = item.rmFirstName || item.rm_first_name || ''
+  const rmLastName = item.rmLastName || item.rm_last_name || ''
+  const rmName =
+    item.rmName ||
+    item.rm_name ||
+    (rmLastName && rmFirstName ? `${rmLastName}, ${rmFirstName}` : (rmLastName || rmFirstName || ''))
+
+  const inactive = item.inactive === true || item.isInactive === true || item.is_inactive === true
+  const progressStatus = item.progressStatus || item.progress_status || ''
+
+  return {
+    id: Number(item.id),
+    client: clientName,
+    rm: rmName,
+    rmDisabled: item.rmActive === false,
+    contactNature,
+    createdTime: item.createdAt || item.created_at || item.createdTime || item.created_time || '',
+    progressStatus,
+    progressLabel: item.progressLabel || getProgressLabel(progressStatus, inactive),
+    progressOwnerRoleLabel: item.progressOwnerRoleLabel || item.ownerRoleLabel || item.progressOwnerRole || '',
+    inactive
   }
 }
 
-// 加载客户列表
 const loadClients = async () => {
   loading.value = true
   try {
     const response = await adminClientApi.getClients()
     const data = response.data || response || []
-    // 转换数据格式
-    clientList.value = data.map((item: any) => {
-      // 判断客户类型：根据接口返回的数据结构判断
-      let type: 'individual' | 'corporate' = 'individual' // 默认为个人客户
-      if (item.clientType) {
-        type = item.clientType === 'Corporate' ? 'corporate' : 'individual'
-      } else if (item.type) {
-        type = item.type === 'corporate' || item.type === 'Corporate' ? 'corporate' : 'individual'
-      } else if (item.corporateId || item.corporate_id) {
-        type = 'corporate'
-      }
-      
-      // 获取客户ID：个人客户使用 id / clientId，企业客户使用 corporateId
-      const id =
-        item.id ||
-        (type === 'individual'
-          ? (item.clientId || item.client_id)
-          : (item.corporateId || item.corporate_id))
-
-      const rmUserId = item.rmUserId || item.rm_user_id
-
-      // Client 显示名称：Individual 类型显示为 "Last Name, First Name"，不使用 Chinese Name
-      let clientName = item.clientName || item.client_name || ''
-      if (!clientName) {
-        if (type === 'individual') {
-          // Individual 类型：显示为 "Last Name, First Name"
-          const firstName = item.firstName || item.first_name || ''
-          const lastName = item.lastName || item.last_name || ''
-          clientName = lastName && firstName ? `${lastName}, ${firstName}` : (lastName || firstName || '')
-        } else {
-          // Corporate 类型：使用公司名称
-          clientName = item.companyName || item.company_name || item.chineseCompanyName || item.chinese_company_name || ''
-        }
-      }
-
-      // RM 显示名称：与 Account 页保持一致（firstName, lastName）
-      const rmFirstName = item.rmFirstName || item.rm_first_name || ''
-      const rmLastName = item.rmLastName || item.rm_last_name || ''
-      let rmName = ''
-      if (rmFirstName || rmLastName) {
-        rmName = rmFirstName && rmLastName ? `${rmFirstName}, ${rmLastName}` : (rmFirstName || rmLastName)
-      } else {
-        rmName = item.rmName || item.rm_name || item.rm || item.relationshipManager || item.relationship_manager || ''
-      }
-      
-      const numericRmUserId = rmUserId ? Number(rmUserId) : undefined
-      // 后端已经返回 rmActive，直接使用；没有时再退回账户表
-      const rmActiveFromServer = item.rmActive
-
-      // 确定 clientType：使用后端返回的 clientType，或根据 type 判断
-      const clientType = item.clientType || (type === 'corporate' ? 'Corporate' : 'Individual')
-      
-      return {
-        id: id,
-        clientId: item.clientBusinessId || item.clientId || item.client_id,
-        client: clientName,
-        rm: rmName,
-        rmUserId: numericRmUserId,
-        contactNature: clientType, // 保存 clientType 用于跳转时传递
-        // 优先使用服务端 rmActive；当 rmActive 为 false 时，一定标红
-        rmDisabled:
-          rmActiveFromServer === false
-            ? true
-            : (rmActiveFromServer === true
-                ? false
-                : (numericRmUserId ? rmActiveMap.value.get(numericRmUserId) === false : false)),
-        compliance: item.compliance === true || item.compliance === 'true' || item.compliance === 'Yes' || item.compliance === 'yes',
-        operation: item.operation === true || item.operation === 'true' || item.operation === 'Yes' || item.operation === 'yes',
-        createdTime: item.createdAt || item.created_at || item.createdTime || item.created_time || item.createTime || '',
-        type: type
-      }
-    })
-  } catch (error) {
+    clientList.value = data.map(normalizeClient)
+  } catch (error: any) {
     console.error('Failed to load client list:', error)
-    // 登录态失效（401）时，全局拦截器已经提示并跳转，这里不再额外提示
-    if (!(error as any)?.isAuthError && (error as any)?.response?.status !== 401) {
-      ElMessage.error('Failed to load client list')
+    if (!(error as any)?.isAuthError && error?.response?.status !== 401) {
+      ElMessage.error(error.message || 'Failed to load client list')
     }
     clientList.value = []
   } finally {
-    // 添加最小延迟，避免闪烁
-    await new Promise(resolve => setTimeout(resolve, 300))
     loading.value = false
   }
 }
 
-// Compliance 切换
-const handleComplianceChange = async (row: AdminClient) => {
-  const originalCompliance = row.compliance
-  try {
-    const params: UpdateComplianceOperationParams = {
-      compliance: row.compliance,
-      operation: row.operation
-    }
-    
-    if (row.type === 'individual') {
-      await adminClientApi.updateIndividualComplianceOperation(row.id, params)
-    } else {
-      await adminClientApi.updateCorporateComplianceOperation(row.id, params)
-    }
-    
-    ElMessage.success(`Compliance ${row.compliance ? 'enabled' : 'disabled'}`)
-  } catch (error: any) {
-    console.error('Failed to update compliance:', error)
-    const errorMessage = error.message || error.response?.data?.message || 'Failed to update compliance'
-    ElMessage.error(errorMessage)
-    // 恢复原状态
-    row.compliance = originalCompliance
-  }
+const resetFilters = () => {
+  filters.contactNature = []
+  filters.rm = []
+  filters.progress = []
+  sortBy.value = 'created-desc'
 }
 
-// Operation 切换
-const handleOperationChange = async (row: AdminClient) => {
-  const originalOperation = row.operation
-  try {
-    const params: UpdateComplianceOperationParams = {
-      compliance: row.compliance,
-      operation: row.operation
-    }
-    
-    if (row.type === 'individual') {
-      await adminClientApi.updateIndividualComplianceOperation(row.id, params)
-    } else {
-      await adminClientApi.updateCorporateComplianceOperation(row.id, params)
-    }
-    
-    ElMessage.success(`Operation ${row.operation ? 'enabled' : 'disabled'}`)
-  } catch (error: any) {
-    console.error('Failed to update operation:', error)
-    const errorMessage = error.message || error.response?.data?.message || 'Failed to update operation'
-    ElMessage.error(errorMessage)
-    // 恢复原状态
-    row.operation = originalOperation
-  }
-}
-
-// 查看客户详情（管理员布局下跳转，可查看/编辑/删除，不可新建）
-const handleView = (row: AdminClient) => {
-  if (!row.id) {
-    ElMessage.error('Client ID is missing, cannot open detail page')
-    return
-  }
-  const clientType = (row as any).contactNature || 'Individual'
+const handleView = (row: AdminClientRow) => {
   router.push({
     path: `/client/${row.id}`,
-    query: { clientType }
+    query: { clientType: row.contactNature }
   })
 }
 
-// 编辑客户（管理员可编辑，跳转到 admin 下的 edit 路由）
-const handleEdit = (row: AdminClient) => {
-  if (!row.id) {
-    ElMessage.error('Client ID is missing')
-    return
-  }
-  const clientType = (row as any).contactNature || 'Individual'
+const handleEdit = (row: AdminClientRow) => {
   router.push({
     path: `/client/${row.id}/edit`,
-    query: { clientType }
+    query: { clientType: row.contactNature }
   })
 }
 
-// 删除客户（管理员可删除，调用与 user 相同的删除接口，后端按角色放行）
-const handleDelete = async (row: AdminClient) => {
-  if (!row.id) {
-    ElMessage.error('Client ID is missing')
-    return
-  }
+const handleDelete = async (row: AdminClientRow) => {
   try {
     await ElMessageBox.confirm(
       'This action cannot be undone. Are you sure you want to delete this client?',
@@ -323,35 +267,52 @@ const handleDelete = async (row: AdminClient) => {
     await loadClients()
   } catch (error: any) {
     if (error !== 'cancel') {
-      console.error('Failed to delete client:', error)
-      const msg = error?.response?.data?.message || error?.message || 'Failed to delete client'
-      ElMessage.error(msg)
+      ElMessage.error(error?.response?.data?.message || error?.message || 'Failed to delete client')
     }
   }
 }
 
-// 监听路由变化，当路由切换到当前页面时刷新数据
+const openProgress = (row: AdminClientRow) => {
+  selectedProgressClient.value = row
+  progressDialogVisible.value = true
+}
+
+const handleProgressUpdated = (progress: ClientProgressData) => {
+  const target = clientList.value.find(item => item.id === progress.clientId && item.contactNature === progress.clientType)
+  if (!target) return
+  target.progressStatus = progress.progressStatus
+  target.progressLabel = progress.progressLabel || getProgressLabel(progress.progressStatus, progress.inactive)
+  target.progressOwnerRoleLabel = progress.ownerRoleLabel || ''
+  target.inactive = progress.inactive
+}
+
+const handleProgressReview = () => {
+  if (!selectedProgressClient.value) return
+  router.push({
+    path: `/client/${selectedProgressClient.value.id}/edit`,
+    query: {
+      clientType: selectedProgressClient.value.contactNature,
+      mode: 'review'
+    }
+  })
+}
+
 watch(
   () => route.path,
-  async (newPath) => {
+  newPath => {
     if (newPath === '/client') {
-      await loadRmStatus()
-      await loadClients()
+      loadClients()
     }
-  },
-  { immediate: false }
+  }
 )
 
-// 当组件被激活时（从其他路由切换回来时）刷新数据
-onActivated(async () => {
-  await loadRmStatus()
-  await loadClients()
+onActivated(() => {
+  if (route.path === '/client') {
+    loadClients()
+  }
 })
 
-onMounted(async () => {
-  await loadRmStatus()
-  await loadClients()
-})
+onMounted(loadClients)
 </script>
 
 <style lang="scss" scoped>
@@ -359,156 +320,89 @@ onMounted(async () => {
   padding: 20px;
   background-color: #f5f5f5;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0;
-  position: relative;
 
-  .page-header {
+  .page-header,
+  .toolbar-card {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 0;
-    width: 100%;
-    box-sizing: border-box;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
 
-    .page-title {
-      font-size: 24px;
-      font-weight: 600;
-      color: #025189;
-      margin: 0;
-    }
+  .page-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #025189;
+  }
 
-    .user-info {
+  .toolbar-card {
+    flex-wrap: wrap;
+    padding: 16px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    justify-content: flex-start;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #606266;
+    font-size: 14px;
+
+    :deep(.el-icon) {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: #d9dde3;
       display: flex;
       align-items: center;
-      gap: 8px;
-      color: #606266;
-      font-size: 14px;
-      padding: 0;
-      margin: 0;
-
-      :deep(.el-icon) {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: #d9dde3;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #5a6473;
-      }
+      justify-content: center;
+      color: #5a6473;
     }
   }
 
   .table-wrapper {
-    width: 100%;
-    flex: 1;
-    padding: 0;
-    margin: 0;
-    box-sizing: border-box;
-    position: relative;
+    min-height: 420px;
   }
 
   .client-table {
-    background-color: #fff;
-    border-radius: 4px;
+    background: #fff;
+    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  }
 
-    :deep(.el-table) {
-      width: 100% !important;
-      box-sizing: border-box;
-    }
+  .progress-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
 
-    :deep(.el-table__inner-wrapper) {
-      width: 100% !important;
-      box-sizing: border-box;
-    }
-
-    :deep(.el-table__header-wrapper) {
-      width: 100% !important;
-      box-sizing: border-box;
-      
-      .el-table__header {
-        width: 100% !important;
-        background-color: #025189;
-        color: #fff;
-        box-sizing: border-box;
-
-        th {
-          background-color: #025189 !important;
-          color: #fff !important;
-          border: none;
-          font-weight: 500;
-          padding: 12px 0;
-          box-sizing: border-box;
-        }
-      }
-    }
-
-    :deep(.el-table__body-wrapper) {
-      width: 100% !important;
-      box-sizing: border-box;
-      
-      .el-table__body {
-        width: 100% !important;
-        box-sizing: border-box;
-        
-        tr {
-          background-color: #fff;
-          width: 100% !important;
-          box-sizing: border-box;
-          
-          &:hover {
-            background-color: #f5f7fa;
-          }
-          
-          td {
-            padding: 12px 0;
-            border-bottom: 1px solid #ebeef5;
-            box-sizing: border-box;
-          }
-        }
-      }
-    }
-
-    :deep(.el-table__row--striped) {
-      background-color: #fafafa;
-    }
-
-    :deep(.el-link) {
-      font-size: 14px;
-      margin-right: 8px;
-    }
+  .progress-owner {
+    font-size: 12px;
+    color: #909399;
   }
 
   .empty-state {
-    width: 100%;
+    min-height: 420px;
     display: flex;
-    justify-content: center;
     align-items: center;
-    min-height: 400px;
-    color: #909399;
-    font-size: 16px;
+    justify-content: center;
+    background: #fff;
+    border-radius: 8px;
   }
 }
 
-/* RM 禁用红点样式：放在根作用域，避免被 header/body 选择器影响 */
 .rm-disabled-dot {
   display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #ff0000;
+  background-color: #ff4d4f;
   margin-left: 6px;
 }
 </style>
-

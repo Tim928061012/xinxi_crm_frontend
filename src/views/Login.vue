@@ -125,8 +125,8 @@ const handleLogin = async () => {
 
       try {
         // 根据选中的标签页确定角色
-        const role = activeTab.value === 'administrator' ? 'admin' : 'user'
-        const result = await authStore.login(loginForm, role)
+        const requestedRole = activeTab.value === 'administrator' ? 'admin' : 'user'
+        const result = await authStore.login(loginForm, requestedRole)
 
         if (result.success) {
           ElMessage.success('Login successful')
@@ -137,8 +137,7 @@ const handleLogin = async () => {
             router.push(redirect)
           } else {
             // 根据角色重定向到不同页面
-            const role = activeTab.value === 'administrator' ? 'admin' : 'user'
-            if (role === 'admin') {
+            if (requestedRole === 'admin') {
               router.push('/account')
             } else {
               router.push('/user/client')

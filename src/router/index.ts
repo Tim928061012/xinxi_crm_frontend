@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { isAdminRole, matchesRouteRole } from '@/utils/roles'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 
@@ -234,7 +235,7 @@ router.beforeEach((to, from, next) => {
 
   // 如果已登录用户访问登录页，重定向到对应页面
   if (to.name === 'Login' && isAuthenticated) {
-    if (userRole === 'admin') {
+    if (isAdminRole(userRole)) {
       next({ name: 'Account' })
     } else {
       next({ name: 'UserClient' })
@@ -253,7 +254,7 @@ router.beforeEach((to, from, next) => {
     }
 
     // admin 超级管理员不允许访问 /user 下的任何页面，强制回到 admin 首页
-    if (userRole === 'admin') {
+    if (isAdminRole(userRole)) {
       next({ name: 'Account' })
       NProgress.done()
       return
@@ -266,7 +267,7 @@ router.beforeEach((to, from, next) => {
 
   // 如果普通用户已登录，检查是否访问管理员路由，如果是则立即重定向
   // 这必须在所有其他检查之前，避免加载 MainLayout
-  if (isAuthenticated && userRole === 'user') {
+  if (isAuthenticated && !isAdminRole(userRole)) {
     // 管理员专用路由路径（只检查根路径，不包括 /user 下的路径）
     const adminPaths = ['/account', '/introducer', '/bank-centre', '/admin']
     // 检查是否是管理员路径（排除 /user 开头的路径）
@@ -283,7 +284,7 @@ router.beforeEach((to, from, next) => {
   }
 
   // 如果访问根路径，根据角色重定向（普通用户已经在上面处理了）
-  if (to.path === '/' && isAuthenticated && userRole === 'admin') {
+  if (to.path === '/' && isAuthenticated && isAdminRole(userRole)) {
     next({ name: 'Account' })
     NProgress.done()
     return
@@ -296,14 +297,14 @@ router.beforeEach((to, from, next) => {
     const allowedRoles = to.meta.roles as string[]
     
     // 如果用户有权限，直接通过，允许自由跳转
-    if (userRole && allowedRoles.includes(userRole)) {
+    if (userRole && allowedRoles.some(role => matchesRouteRole(userRole, role))) {
       next()
       return
     }
     
     // 没有权限，根据角色重定向
     // 但要避免循环重定向：如果目标路由就是重定向目标，直接允许通过
-    if (userRole === 'admin') {
+    if (isAdminRole(userRole)) {
       // 如果目标已经是 Account，避免循环
       if (to.name === 'Account' || to.path === '/account') {
         next()

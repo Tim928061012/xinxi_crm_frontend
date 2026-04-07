@@ -6,8 +6,36 @@
         <el-button :icon="ArrowLeft" circle @click="handleBack" />
         <!-- View 模式：普通用户与管理员均显示 Edit -->
         <template v-if="isViewMode">
-          <el-button type="primary" @click="handleEdit">
+          <el-button v-if="canShowEditButton" type="primary" @click="handleEdit">
             Edit
+          </el-button>
+          <el-button v-if="clientId" @click="openProgressDialog">
+            Progress
+          </el-button>
+          <el-button v-if="canReviewAction" type="success" @click="enterReviewMode">
+            Review
+          </el-button>
+        </template>
+        <template v-else-if="isReviewMode">
+          <el-button
+            type="success"
+            @click="handleReviewDecision(true)"
+            :loading="workflowLoading"
+            :disabled="saving"
+          >
+            Approve
+          </el-button>
+          <el-button
+            type="danger"
+            plain
+            @click="handleReviewDecision(false)"
+            :loading="workflowLoading"
+            :disabled="saving"
+          >
+            Reject
+          </el-button>
+          <el-button v-if="clientId" @click="openProgressDialog">
+            Progress
           </el-button>
         </template>
         <!-- Edit/New 模式：显示保存按钮（管理员可编辑不可新建，故 admin 下仅 edit 会进入此处） -->
@@ -25,14 +53,20 @@
           >
             Save & Close
           </el-button>
+          <el-button v-if="clientId" @click="openProgressDialog">
+            Progress
+          </el-button>
         </template>
+        <el-tag
+          v-if="progressData"
+          :type="getProgressTagType(progressData.progressStatus, progressData.inactive)"
+          effect="light"
+        >
+          {{ progressData.progressLabel || getProgressLabel(progressData.progressStatus, progressData.inactive) }}
+        </el-tag>
         <span v-if="currentTabLastSaved" class="last-saved">
           {{ currentTabLastSaved }}
         </span>
-      </div>
-      <div class="user-info">
-        <el-icon><User /></el-icon>
-        <span>{{ authStore.user?.username || authStore.user?.account || 'User' }}</span>
       </div>
     </div>
 
@@ -1759,7 +1793,28 @@
           </el-form>
         </div>
       </el-tab-pane>
+
+      <el-tab-pane label="Comments" name="comments">
+        <div class="tab-content">
+          <ClientCommentsPanel
+            v-if="clientId"
+            :client-id="clientId"
+            :client-type="currentClientType"
+            :current-user-id="authStore.user?.id"
+            :default-module="currentCommentModule"
+          />
+          <el-empty v-else description="Save the client first to manage comments" />
+        </div>
+      </el-tab-pane>
     </el-tabs>
+
+    <ClientProgressDialog
+      v-model="progressDialogVisible"
+      :client-id="clientId"
+      :client-type="clientId ? currentClientType : null"
+      @updated="handleProgressUpdated"
+      @review="enterReviewMode"
+    />
 
     <!-- RM 选择对话框 -->
     <el-dialog
@@ -1906,8 +1961,6 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type Upload
 import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled, Loading, Place } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { userClientApi, type Client, type ContactInfo, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
-import { individualClientApi, type CreateIndividualClientRequest } from '@/api/clientIndividual'
-import { corporateClientApi, type CreateCorporateClientRequest } from '@/api/clientCorporate'
 import { portfolioApi, type Portfolio, type CreatePortfolioParams } from '@/api/user/portfolio'
 import { accountApi, type Account } from '@/api/account'
 import { introducerApi, type Introducer } from '@/api/introducer'
@@ -1916,7 +1969,12 @@ import { kycApi, type KYCData, type KYCDocument } from '@/api/user/kyc'
 import { documentsApi, type DocumentsData, type Document, type DocumentType } from '@/api/user/documents'
 import { riskProfileApi, type InvestmentRiskProfile, type InvestmentType } from '@/api/user/risk-profile'
 import { feeScheduleApi, type FeeSchedule } from '@/api/user/fee-schedule'
+import { workflowApi, type ClientProgressData, type ClientType } from '@/api/user/workflow'
+import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
+import ClientCommentsPanel from '@/components/client/ClientCommentsPanel.vue'
 import { formatDateTime } from '@/utils/date'
+import { getProgressLabel, getProgressTagType, isClientEditable, mapTabToCommentModule } from '@/utils/client-progress'
+import { isAdminRole } from '@/utils/roles'
 
 const route = useRoute()
 const router = useRouter()
@@ -1961,6 +2019,9 @@ const saving = ref(false)
 const pageLoading = ref(false)
 const rmLoading = ref(false)
 const introducerLoading = ref(false)
+const progressDialogVisible = ref(false)
+const workflowLoading = ref(false)
+const progressData = ref<ClientProgressData | null>(null)
 const tabLoading: Record<string, boolean> = reactive({
   kyc: false,
   risk: false,
@@ -1976,6 +2037,16 @@ const tabLastSaved: Record<string, string> = reactive({
   fee: ''
 })
 const currentTabLastSaved = computed(() => tabLastSaved[activeTab.value] || '')
+const currentClientType = computed(() => ((route.query.clientType as ClientType) || (clientForm.contactNature as ClientType) || 'Individual'))
+const isReviewMode = computed(() => route.query.mode === 'review' && !isViewMode.value)
+const canReviewAction = computed(() => progressData.value?.availableActions?.includes('REVIEW') ?? false)
+const canShowEditButton = computed(() => {
+  if (!clientId.value || !isViewMode.value) return false
+  if (isAdminRole(authStore.user?.role)) return true
+  if (canReviewAction.value) return true
+  return isClientEditable(progressData.value?.progressStatus, progressData.value?.inactive)
+})
+const currentCommentModule = computed(() => mapTabToCommentModule(activeTab.value))
 const clientFormRef = ref<FormInstance>()
 const portfolioFormRef = ref<FormInstance>()
 
@@ -2575,6 +2646,8 @@ const loadClient = async () => {
         portfolioFormRef.value?.clearValidate()
       })
     }
+
+    await loadProgress()
   } catch (error: any) {
     console.error('Failed to load client:', error)
     // 登录态失效（401）时，全局拦截器已经提示并跳转，这里不再额外提示
@@ -2585,6 +2658,21 @@ const loadClient = async () => {
     // 添加最小延迟，避免闪烁
     await new Promise(resolve => setTimeout(resolve, 300))
     pageLoading.value = false
+  }
+}
+
+const loadProgress = async () => {
+  if (!clientId.value) {
+    progressData.value = null
+    return
+  }
+
+  try {
+    const response = await workflowApi.getProgress(clientId.value, currentClientType.value)
+    progressData.value = response.data || response
+  } catch (error) {
+    console.warn('Failed to load workflow progress:', error)
+    progressData.value = null
   }
 }
 
@@ -2620,11 +2708,7 @@ const loadAccounts = async () => {
       const data = response.data || response || []
       accountList.value = data
         // 仍然过滤掉 admin 账号，但保留启用和禁用的 RM
-        .filter((item: any) => {
-          const role = (item.role || '').toLowerCase()
-          const isAdmin = role === 'admin'
-          return !isAdmin
-        })
+        .filter((item: any) => !isAdminRole(item.role))
         .map((item: any) => {
           const firstName = item.firstName || item.first_name || ''
           const lastName = item.lastName || item.last_name || ''
@@ -2721,6 +2805,14 @@ const handleBack = () => {
   }
 }
 
+const openProgressDialog = () => {
+  if (!clientId.value) {
+    ElMessage.warning('Please save the client first')
+    return
+  }
+  progressDialogVisible.value = true
+}
+
 // 处理 Edit 按钮点击，跳转到编辑页面（仅普通用户）
 const handleEdit = () => {
   if (!clientId.value) return
@@ -2730,6 +2822,18 @@ const handleEdit = () => {
   } else if (route.path.startsWith('/client/')) {
     router.push({ path: `/client/${clientId.value}/edit`, query: { clientType } })
   }
+}
+
+const enterReviewMode = () => {
+  if (!clientId.value) return
+  const basePath = route.path.startsWith('/client/') ? '/client' : '/user/client'
+  router.push({
+    path: `${basePath}/${clientId.value}/edit`,
+    query: {
+      clientType: currentClientType.value,
+      mode: 'review'
+    }
+  })
 }
 
 const handleContactNatureChange = () => {
@@ -2873,128 +2977,31 @@ const handleSave = async (closeAfter: boolean = false) => {
         } else {
           // 创建新 Client
           let response
-          // 使用外层的 contactNature 来判断客户类型，确保与 general.contactNature 一致
           const contactNature = clientForm.contactNature || (clientForm.general as any).contactNature
 
-          // 工具函数：统一日期转换
-          const formatToIsoString = (date: Date | string | null | undefined): string => {
-            if (!date) return ''
-            const d = typeof date === 'string' ? new Date(date) : date
-            if (isNaN(d.getTime())) return ''
-            return d.toISOString()
+          if ((clientForm.general as any).contactNature !== contactNature) {
+            clientForm.general = {
+              ...(clientForm.general as any),
+              contactNature
+            } as IndividualGeneralInfo | CorporateGeneralInfo
           }
 
-          const parseDdMmYyyyToDate = (value: string | null | undefined): string | null => {
-            if (!value) return null
-            const parts = value.split('/')
-            if (parts.length !== 3) return null
-            const [day, month, year] = parts
-            const d = new Date(Number(year), Number(month) - 1, Number(day))
-            if (isNaN(d.getTime())) return null
-            return formatToIsoString(d)
+          const normalizedGeneral = {
+            ...(clientForm.general as any),
+            contactType: (clientForm.general as any).contactType || 'Client',
+            contactNature,
+            armUserId: (clientForm.general as any).armUserId || undefined,
+            introducerId: (clientForm.general as any).introducerId || undefined
           }
 
-          const authUser = authStore.user
-          const creatorId = authUser ? Number((authUser as any).id) || 0 : 0
-          const creatorName = authUser?.name || authUser?.username || ''
-          const now = new Date()
-
-          if (contactNature === 'Individual') {
-            // 确保 general.contactNature 与外层一致，如果类型不匹配则重新创建对象
-            if ((clientForm.general as any).contactNature !== 'Individual') {
-              const oldGeneral = clientForm.general as any
-              clientForm.general = {
-                ...oldGeneral,
-                contactNature: 'Individual'
-              } as IndividualGeneralInfo
-            }
-            const general = clientForm.general as any
-
-            const genderValue = general.gender === 'Male' ? 1 : general.gender === 'Female' ? 2 : 0
-
-            const payload: CreateIndividualClientRequest = {
-              id: 0,
-              contactType: general.contactType || 'Client',
-              contactNature: general.contactNature || 'Individual',
-              rmUserId: general.rmUserId || 0,
-              armUserId: (general as any).armUserId || 0,
-              introducerId: general.introducerId || 0,
-              clientBusinessId: general.clientId || '',
-              relationshipStatus: general.clientRelationshipStatus || '',
-              gender: genderValue,
-              maritalStatus: general.maritalStatus || '',
-              title: general.title || '',
-              firstName: general.firstName || '',
-              lastName: general.lastName || '',
-              chineseName: general.chineseName || '',
-              educationLevel: general.educationLevel || '',
-              birthday: parseDdMmYyyyToDate(general.birthday) || null,
-              birthCountry: general.countryOfBirth || '',
-              hasDualCitizenship: !!general.dualCitizenship,
-              nationality: general.nationality || '',
-              secondaryNationality: (general as any).secondaryNationality || '',
-              idType: general.idType || '',
-              idNumber: general.idNo || '',
-              idExpiryDate: parseDdMmYyyyToDate(general.idExpiry) || null,
-              compliance: false,
-              operation: false,
-              previousRelationshipStatus: '',
-              creatorId,
-              creatorName,
-              updatorId: creatorId,
-              updatorName: creatorName,
-              createdAt: formatToIsoString(now),
-              updatedAt: formatToIsoString(now),
-              isDeleted: false
-            }
-
-            // 调用个人客户创建接口
-            response = await individualClientApi.createIndividualClient(payload)
-          } else {
-            // Corporate 类型：确保 general.contactNature 与外层一致，如果类型不匹配则重新创建对象
-            if ((clientForm.general as any).contactNature !== 'Corporate') {
-              const oldGeneral = clientForm.general as any
-              clientForm.general = {
-                ...oldGeneral,
-                contactNature: 'Corporate'
-              } as CorporateGeneralInfo
-            }
-            const general = clientForm.general as any
-
-            const corporatePayload: CreateCorporateClientRequest = {
-              contactType: general.contactType || 'Client',
-              contactNature: general.contactNature || 'Corporate',
-              rmUserId: general.rmUserId || 0,
-              armUserId: (general as any).armUserId || 0,
-              introducerId: general.introducerId || 0,
-              clientBusinessId: general.clientId || '',
-              relationshipStatus: general.clientRelationshipStatus || '',
-              companyName: general.companyName || '',
-              chineseCompanyName: general.chineseName || '',
-              corporateType: general.corporateType || '',
-              industry: general.industry || '',
-              isStateOwned: !!general.stateOwned,
-              idType: general.idType || '',
-              idNumber: general.idNo || '',
-              registrationDate: parseDdMmYyyyToDate(general.dateOfCompanySearch) || null,
-              registrationCountry: general.countryOfRegistration || '',
-              businessDomicile: general.businessDomicile || '',
-              companyRegistrationDate: parseDdMmYyyyToDate(general.registrationDate) || null,
-              compliance: false,
-              operation: false,
-              previousRelationshipStatus: '',
-              creatorId,
-              creatorName,
-              updatorId: creatorId,
-              updatorName: creatorName,
-              createdAt: formatToIsoString(now),
-              updatedAt: formatToIsoString(now),
-              isDeleted: false
-            }
-
-            // 调用企业客户创建接口
-            response = await corporateClientApi.createCorporateClient(corporatePayload)
+          const payload: CreateClientParams = {
+            contactNature,
+            general: normalizedGeneral,
+            contact: { ...clientForm.contact },
+            secondaryContact: { ...clientForm.secondaryContact }
           }
+
+          response = await userClientApi.createClient(payload)
 
           const responseData = response.data || response
           // 尝试多种可能的字段名获取 ID（兼容 Individual 和 Corporate 创建接口）
@@ -3042,6 +3049,7 @@ const handleSave = async (closeAfter: boolean = false) => {
               try {
                 const portfolioResponse = await portfolioApi.createPortfolio({
                   clientId: currentClientId,
+                  clientType: clientForm.contactNature,
                   bank: portfolio.bank,
                   bookingCentre: portfolio.bookingCentre,
                   portfolioNo: portfolio.portfolioNo
@@ -3116,6 +3124,59 @@ const handleSave = async (closeAfter: boolean = false) => {
       }
     }
   })
+}
+
+const buildWorkflowClientDetailPayload = () => ({
+  contactNature: currentClientType.value,
+  general: { ...(clientForm.general as any) },
+  contact: { ...clientForm.contact },
+  secondaryContact: { ...clientForm.secondaryContact },
+  portfolios: clientForm.portfolios.map(item => ({ ...item }))
+})
+
+const validateClientForm = async () => {
+  if (!clientFormRef.value) return true
+  try {
+    await clientFormRef.value.validate()
+    return true
+  } catch {
+    return false
+  }
+}
+
+const handleReviewDecision = async (approve: boolean) => {
+  if (!clientId.value) return
+  if (approve) {
+    const valid = await validateClientForm()
+    if (!valid) {
+      ElMessage.warning('Please complete the required fields before approval')
+      return
+    }
+  }
+
+  workflowLoading.value = true
+  try {
+    const response = approve
+      ? await workflowApi.approve(clientId.value, currentClientType.value, { clientDetail: buildWorkflowClientDetailPayload() })
+      : await workflowApi.reject(clientId.value, currentClientType.value, { clientDetail: buildWorkflowClientDetailPayload() })
+
+    progressData.value = response.data || response
+    ElMessage.success(approve ? 'Review approved successfully' : 'Review rejected successfully')
+
+    const basePath = route.path.startsWith('/client/') ? '/client' : '/user/client'
+    await router.push({
+      path: `${basePath}/${clientId.value}`,
+      query: { clientType: currentClientType.value }
+    })
+  } catch (error: any) {
+    ElMessage.error(error.message || error.response?.data?.message || 'Review action failed')
+  } finally {
+    workflowLoading.value = false
+  }
+}
+
+const handleProgressUpdated = (progress: ClientProgressData) => {
+  progressData.value = progress
 }
 
 const handleNewPortfolio = () => {
@@ -3541,11 +3602,22 @@ watch(isViewMode, (newVal) => {
   }
 })
 
+watch(
+  () => route.fullPath,
+  async (newPath, oldPath) => {
+    if (newPath === oldPath) return
+    if (clientId.value) {
+      await loadClient()
+    } else {
+      progressData.value = null
+    }
+  }
+)
+
 onMounted(async () => {
   try {
     // 管理员不能新建客户，若访问新建页则重定向到 admin 客户列表
-    const role = authStore.user?.role ?? ''
-    if ((role === 'admin' || role === 'Admin') && (route.path === '/user/client/new' || route.path.includes('/new'))) {
+    if (isAdminRole(authStore.user?.role) && (route.path === '/user/client/new' || route.path.includes('/new'))) {
       router.replace('/client')
       return
     }
@@ -3553,6 +3625,8 @@ onMounted(async () => {
     // 编辑模式下，只加载必要的 client 数据
     if (isEditMode.value) {
       await loadClient()
+    } else {
+      progressData.value = null
     }
     
     // 下拉选项数据完全按需加载，不在 onMounted 中加载
@@ -3566,8 +3640,8 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .client-detail-page {
-  min-height: 100vh;
-  background-color: #f5f5f5;
+  min-height: 100%;
+  background-color: var(--crm-surface-page);
   display: flex;
   flex-direction: column;
 
@@ -3576,8 +3650,8 @@ onMounted(async () => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 20px;
-    background-color: #f5f5f5;
+    padding: 12px 24px;
+    background-color: var(--crm-surface-page);
     border-bottom: none;
 
     .header-left {
@@ -3592,32 +3666,14 @@ onMounted(async () => {
       }
     }
 
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #606266;
-      font-size: 14px;
-
-      :deep(.el-icon) {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: #d9dde3;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #5a6473;
-      }
-    }
   }
 
   /* 顶部 Tab 与内容区域：无内边距，左右与侧边栏/视口间隔扩大一倍 */
   .client-tabs {
     flex: 1;
-    background-color: #f5f5f5;
+    background-color: var(--crm-surface-page);
     margin: 4px 24px 12px;
-    border-radius: 6px;
+    border-radius: var(--crm-radius-md);
     padding: 0;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 
@@ -3639,7 +3695,7 @@ onMounted(async () => {
 
     :deep(.el-tabs__content) {
       padding-top: 12px;
-      background-color: #f5f5f5;
+      background-color: var(--crm-surface-page);
       border: none;
       border-top: none !important;
     }
@@ -3655,7 +3711,7 @@ onMounted(async () => {
     min-height: 280px;
     overflow: visible !important;
     position: relative;
-    background-color: #f5f5f5;
+    background-color: var(--crm-surface-page);
     padding: 12px 0;
     border-radius: 0 0 4px 4px;
   }
@@ -4343,4 +4399,3 @@ onMounted(async () => {
   color: #fff !important;
 }
 </style>
-

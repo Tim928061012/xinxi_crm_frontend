@@ -1,3 +1,21 @@
+// XinXi CRM — 与 Figma 稿对齐的设计变量（主色与现有 Element 覆盖一致）
+:root {
+  --crm-primary: #025189;
+  --crm-primary-hover: #0369a1;
+  --crm-surface-page: #f1f5f9;
+  --crm-surface-card: #ffffff;
+  --crm-sidebar-bg: #ffffff;
+  --crm-sidebar-border: #e5e7eb;
+  --crm-header-bg: #ffffff;
+  --crm-header-border: #e2e8f0;
+  --crm-text-primary: #0f172a;
+  --crm-text-secondary: #475569;
+  --crm-text-muted: #64748b;
+  --crm-radius-lg: 12px;
+  --crm-radius-md: 8px;
+  --crm-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
 * {
   margin: 0;
   padding: 0;

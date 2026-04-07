@@ -64,6 +64,7 @@ import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import { isEmployeeRole } from '@/utils/roles'
 import logoImage from '@/assets/simple_logo.png'
 
 const route = useRoute()
@@ -93,7 +94,7 @@ const activeMenu = computed(() => {
 
 // 检查用户角色，如果是普通用户，重定向到用户页面
 onMounted(() => {
-  if (authStore.user?.role === 'user') {
+  if (isEmployeeRole(authStore.user?.role)) {
     router.replace('/user/client')
   }
 })
