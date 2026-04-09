@@ -1,13 +1,18 @@
 <template>
   <div class="client-list-page">
     <div class="page-toolbar-row">
-      <p class="page-lead">
-        Browse clients, filter by RM or progress, and open the workflow dialog for approvals.
-      </p>
-      <el-button type="primary" @click="handleNewClient">
-        <el-icon><Plus /></el-icon>
-        New Client
-      </el-button>
+      <div class="left-actions">
+        <el-button type="primary" @click="handleNewClient">
+          <el-icon><Plus /></el-icon>
+          New Client
+        </el-button>
+        <el-button @click="openExportDialog">Export Client</el-button>
+      </div>
+      <div class="user-info">
+        <el-icon><User /></el-icon>
+        <span>{{ authStore.user?.name || authStore.user?.username || authStore.user?.account || 'User' }}</span>
+        <span class="user-role">{{ authStore.user?.roleDisplayName || '' }}</span>
+      </div>
     </div>
 
     <div class="toolbar-card">
@@ -112,9 +117,46 @@
       v-model="progressDialogVisible"
       :client-id="selectedProgressClient?.id || null"
       :client-type="selectedProgressClient?.contactNature || null"
+      :client-name="selectedProgressClient?.client || ''"
+      :client-business-id="String(selectedProgressClient?.clientId || '')"
+      :rm-name="selectedProgressClient?.rm || ''"
+      :created-time="selectedProgressClient?.createdTime || ''"
       @updated="handleProgressUpdated"
       @review="handleProgressReview"
     />
+
+    <el-dialog
+      v-model="exportDialogVisible"
+      class="client-export-dialog"
+      title="Export Client"
+      width="980px"
+      destroy-on-close
+    >
+      <el-table
+        :data="displayList"
+        size="small"
+        border
+        @selection-change="handleExportSelectionChange"
+      >
+        <el-table-column type="selection" width="48" />
+        <el-table-column prop="client" label="Client" min-width="140" />
+        <el-table-column prop="contactNature" label="Contact Nature" min-width="130" />
+        <el-table-column prop="rm" label="RM" min-width="120" />
+        <el-table-column prop="progressLabel" label="Progress" min-width="170" />
+        <el-table-column label="Created Time" min-width="140">
+          <template #default="{ row }">{{ formatDateTime(row.createdTime) }}</template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <div class="export-footer">
+          <span>{{ exportSelection.length }} items selected</span>
+          <div class="export-buttons">
+            <el-button type="primary" @click="handleExportList">Export List</el-button>
+            <el-button type="primary" @click="handleExportSpec">Export Spec</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -122,7 +164,8 @@
 import { computed, onActivated, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, User } from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/auth'
 import { userClientApi } from '@/api/user/client'
 import type { ClientProgressData, ClientType } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
@@ -144,10 +187,13 @@ interface ClientListRow {
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const clientList = ref<ClientListRow[]>([])
 const loading = ref(false)
 const progressDialogVisible = ref(false)
 const selectedProgressClient = ref<ClientListRow | null>(null)
+const exportDialogVisible = ref(false)
+const exportSelection = ref<ClientListRow[]>([])
 const sortBy = ref<'created-desc' | 'created-asc' | 'rm' | 'progress'>('created-desc')
 const filters = reactive({
   contactNature: [] as ClientType[],
@@ -290,6 +336,55 @@ const openProgress = (row: ClientListRow) => {
   progressDialogVisible.value = true
 }
 
+const openExportDialog = () => {
+  exportSelection.value = []
+  exportDialogVisible.value = true
+}
+
+const handleExportSelectionChange = (rows: ClientListRow[]) => {
+  exportSelection.value = rows
+}
+
+const downloadText = (filename: string, content: string) => {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+const handleExportList = () => {
+  if (!exportSelection.value.length) {
+    ElMessage.warning('Please select at least one client')
+    return
+  }
+  const header = ['Client', 'Contact Nature', 'RM', 'Progress', 'Created Time']
+  const rows = exportSelection.value.map(row => [
+    row.client,
+    row.contactNature,
+    row.rm,
+    row.progressLabel,
+    formatDateTime(row.createdTime)
+  ])
+  const csv = [header, ...rows]
+    .map(line => line.map(col => `"${String(col ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  downloadText(`client-list-${Date.now()}.csv`, csv)
+}
+
+const handleExportSpec = () => {
+  if (!exportSelection.value.length) {
+    ElMessage.warning('Please select at least one client')
+    return
+  }
+  const spec = exportSelection.value
+    .map((row, index) => `${index + 1}. ${row.client} (${row.contactNature}) | ${row.progressLabel} | ${formatDateTime(row.createdTime)}`)
+    .join('\n')
+  downloadText(`client-spec-${Date.now()}.txt`, spec)
+}
+
 const handleProgressUpdated = (progress: ClientProgressData) => {
   const target = clientList.value.find(item => item.id === progress.clientId && item.contactNature === progress.clientType)
   if (!target) return
@@ -337,18 +432,30 @@ onMounted(loadClients)
 
   .page-toolbar-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 18px;
+    margin-bottom: 12px;
   }
 
-  .page-lead {
-    margin: 0;
-    max-width: 520px;
+  .left-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 14px;
-    line-height: 1.5;
-    color: var(--crm-text-secondary);
+    color: #303133;
+
+    .user-role {
+      margin-left: 4px;
+      font-size: 12px;
+      color: #025189;
+    }
   }
 
   .toolbar-card {
@@ -398,5 +505,21 @@ onMounted(loadClients)
     box-shadow: var(--crm-shadow-card);
     border: 1px solid rgba(226, 232, 240, 0.9);
   }
+}
+
+:deep(.client-export-dialog .el-dialog__body) {
+  padding-top: 8px;
+}
+
+.export-footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.export-buttons {
+  display: flex;
+  gap: 8px;
 }
 </style>

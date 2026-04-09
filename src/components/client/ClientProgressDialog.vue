@@ -2,28 +2,28 @@
   <el-dialog
     :model-value="modelValue"
     class="client-progress-dialog"
-    width="820px"
+    width="980px"
     align-center
     destroy-on-close
+    :show-close="false"
     @open="loadProgress"
     @close="emit('update:modelValue', false)"
   >
     <template #header>
-      <div class="dialog-header-block">
-        <span class="dialog-title">Workflow progress</span>
-        <span class="dialog-sub">RM / ARM · 审批与操作记录</span>
+      <div class="dialog-header-row">
+        <h2 class="dialog-title">Progress</h2>
+        <el-button text class="close-btn" @click="emit('update:modelValue', false)">✕</el-button>
       </div>
     </template>
+
     <div v-loading="loading" class="progress-dialog">
-      <div v-if="progress" class="progress-summary">
-        <div class="summary-item">
-          <span class="label">Current Status</span>
-          <el-tag :type="progress.inactive ? 'info' : 'primary'">{{ progress.progressLabel || progress.progressStatus }}</el-tag>
-        </div>
-        <div class="summary-item">
-          <span class="label">Current Owner</span>
-          <span>{{ progress.ownerRoleLabel || '-' }}</span>
-        </div>
+      <div class="base-info-grid">
+        <div class="base-info-item"><span class="label">Client :</span><span>{{ clientName || '-' }}</span></div>
+        <div class="base-info-item"><span class="label">Contact Nature :</span><span>{{ clientType || '-' }}</span></div>
+        <div class="base-info-item"><span class="label">RM :</span><span>{{ rmName || '-' }}</span></div>
+        <div class="base-info-item"><span class="label">Client Id :</span><span>{{ clientBusinessId || '-' }}</span></div>
+        <div class="base-info-item"><span class="label">Created By :</span><span>{{ rmName || '-' }}</span></div>
+        <div class="base-info-item"><span class="label">Created Time :</span><span>{{ displayCreatedTime }}</span></div>
       </div>
 
       <div v-if="actionButtons.length" class="action-row">
@@ -38,27 +38,51 @@
         </el-button>
       </div>
 
-      <el-empty v-if="!progress?.logs?.length" description="No progress logs yet" />
-
-      <el-timeline v-else class="progress-timeline">
-        <el-timeline-item
-          v-for="log in progress.logs"
-          :key="log.logId"
-          :timestamp="formatDateTime(log.createdAt)"
-          placement="top"
+      <div class="tab-row">
+        <button
+          type="button"
+          class="tab-btn"
+          :class="{ active: activeTab === 'flowchart' }"
+          @click="activeTab = 'flowchart'"
         >
-          <div class="log-item">
-            <div class="log-title">
-              <span>{{ log.message || log.actionLabel || log.actionType }}</span>
-              <el-tag v-if="log.latest" size="small" type="success">Latest</el-tag>
-            </div>
-            <div class="log-subtitle">
-              <span>Status: {{ log.actionStatusLabel || log.actionStatus || '-' }}</span>
-              <span v-if="log.actorRoleLabel">Role: {{ log.actorRoleLabel }}</span>
+          Flowchart
+        </button>
+        <span class="tab-divider">|</span>
+        <button
+          type="button"
+          class="tab-btn"
+          :class="{ active: activeTab === 'timeline' }"
+          @click="activeTab = 'timeline'"
+        >
+          Timeline
+        </button>
+      </div>
+
+      <div v-if="activeTab === 'flowchart'" class="flowchart-panel">
+        <div v-for="(step, index) in workflowSteps" :key="step.status" class="step-row">
+          <div class="step-left">
+            <div class="step-circle" :class="{ current: step.status === currentStatus }">{{ index + 1 }}</div>
+            <div v-if="index < workflowSteps.length - 1" class="step-line" />
+          </div>
+          <div class="step-main">
+            <div class="step-title">{{ step.label }}</div>
+            <div v-if="step.status === currentStatus && latestLog" class="step-note">
+              <span>{{ buildTimelineMessage(latestLog) }} at {{ toDisplayDate(latestLog.createdAt) }}</span>
+              <span class="latest-flag">Latest</span>
             </div>
           </div>
-        </el-timeline-item>
-      </el-timeline>
+        </div>
+      </div>
+
+      <div v-else class="timeline-panel">
+        <el-empty v-if="!sortedLogs.length" description="No progress logs yet" />
+        <div v-else class="timeline-list">
+          <div v-for="log in sortedLogs" :key="log.logId" class="timeline-item">
+            <span class="timeline-time">{{ toDisplayDate(log.createdAt) }}</span>
+            <span class="timeline-text">{{ buildTimelineMessage(log) }}</span>
+          </div>
+        </div>
+      </div>
     </div>
   </el-dialog>
 </template>
@@ -66,13 +90,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { workflowApi, type ClientProgressData, type ClientType } from '@/api/user/workflow'
+import { workflowApi, type ClientProgressData, type ClientProgressLog, type ClientType } from '@/api/user/workflow'
 import { formatDateTime } from '@/utils/date'
+import { WORKFLOW_STATUS_ORDER, getProgressLabel, normalizeProgressStatus } from '@/utils/client-progress'
 
 const props = defineProps<{
   modelValue: boolean
   clientId: number | null
   clientType: ClientType | null
+  clientName?: string
+  clientBusinessId?: string
+  rmName?: string
+  createdTime?: string
 }>()
 
 const emit = defineEmits<{
@@ -83,6 +112,29 @@ const emit = defineEmits<{
 
 const loading = ref(false)
 const progress = ref<ClientProgressData | null>(null)
+const activeTab = ref<'flowchart' | 'timeline'>('flowchart')
+
+const currentStatus = computed(() => normalizeProgressStatus(progress.value?.progressStatus))
+
+const workflowSteps = computed(() =>
+  WORKFLOW_STATUS_ORDER.map(status => ({
+    status,
+    label: getProgressLabel(status, false)
+  }))
+)
+
+const sortedLogs = computed(() =>
+  [...(progress.value?.logs || [])].sort((a, b) => {
+    return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+  })
+)
+
+const latestLog = computed(() => {
+  if (!sortedLogs.value.length) return null
+  return sortedLogs.value[sortedLogs.value.length - 1]
+})
+
+const displayCreatedTime = computed(() => toDisplayDate(props.createdTime))
 
 const actionButtons = computed(() => {
   if (!progress.value) return []
@@ -105,6 +157,7 @@ const actionButtons = computed(() => {
 const loadProgress = async () => {
   if (!props.clientId || !props.clientType) return
   loading.value = true
+  activeTab.value = 'flowchart'
   try {
     const response = await workflowApi.getProgress(props.clientId, props.clientType)
     progress.value = response.data || response
@@ -158,99 +211,216 @@ const handleAction = async (action: string) => {
     ElMessage.error(error.message || 'Action failed')
   }
 }
+
+const toDisplayDate = (value?: string | null) => {
+  const text = formatDateTime(value || '')
+  if (!text || text === '-') return '-'
+  return text.replace(/^(\d{4})-(\d{2})-(\d{2}) /, '$3/$2/$1 ')
+}
+
+const buildTimelineMessage = (log: ClientProgressLog) => {
+  if (log.message) return log.message
+  const actionLabel = log.actionLabel || log.actionType || 'Updated'
+  const actorRole = log.actorRoleLabel || log.actorRole || ''
+  const actorName = log.actorName || '-'
+  if (!actorRole) return `${actionLabel}: ${actorName}`
+  return `${actionLabel} by ${actorRole}: ${actorName}`
+}
 </script>
 
 <style scoped lang="scss">
-.dialog-header-block {
+.dialog-header-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-right: 32px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .dialog-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--crm-text-primary, #0f172a);
-}
-
-.dialog-sub {
-  font-size: 13px;
-  color: var(--crm-text-muted, #64748b);
-  font-weight: 400;
+  margin: 0;
+  font-size: 44px;
+  line-height: 1;
+  font-weight: 700;
+  color: #111827;
+  transform: scale(0.4);
+  transform-origin: left center;
 }
 
 .progress-dialog {
-  min-height: 120px;
+  min-height: 580px;
 }
 
-.progress-summary {
-  display: flex;
-  gap: 24px;
-  margin-bottom: 20px;
-  padding: 14px 18px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid #e2e8f0;
-  border-radius: var(--crm-radius-md, 8px);
+.close-btn {
+  color: #111827;
+  font-size: 20px;
+  padding: 0;
+}
 
-  .summary-item {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+.base-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 18px;
+  column-gap: 32px;
+  margin-bottom: 28px;
+}
+
+.base-info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 40px;
+  transform: scale(0.4);
+  transform-origin: left center;
+  line-height: 1.1;
+  margin-top: -22px;
+  margin-bottom: -22px;
+  color: #1f2937;
 
   .label {
-    font-size: 12px;
-    color: #909399;
+    color: #9ca3af;
   }
 }
 
 .action-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
-.progress-timeline {
-  padding-top: 4px;
-}
-
-.log-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.log-title {
+.tab-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600;
+  gap: 12px;
+  margin: 12px 0 14px;
 }
 
-.log-subtitle {
+.tab-btn {
+  border: none;
+  background: none;
+  font-size: 46px;
+  transform: scale(0.4);
+  transform-origin: left center;
+  margin: -18px 0;
+  color: #4b5563;
+  cursor: pointer;
+  padding: 0;
+
+  &.active {
+    color: #2563eb;
+  }
+}
+
+.tab-divider {
+  color: #d1d5db;
+  font-size: 20px;
+}
+
+.step-row {
   display: flex;
-  flex-wrap: wrap;
+  gap: 14px;
+  min-height: 82px;
+}
+
+.step-left {
+  width: 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  transform: scale(0.4);
+  transform-origin: center;
+
+  &.current {
+    background: #2563eb;
+    color: #fff;
+  }
+}
+
+.step-line {
+  flex: 1;
+  width: 1px;
+  background: #e5e7eb;
+  margin-top: 6px;
+}
+
+.step-main {
+  padding-top: 3px;
+}
+
+.step-title {
+  font-size: 52px;
+  transform: scale(0.4);
+  transform-origin: left top;
+  line-height: 1.05;
+  margin: -6px 0 2px;
+  color: #1f2937;
+}
+
+.step-note {
+  margin-top: -6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 35px;
+  transform: scale(0.4);
+  transform-origin: left top;
+}
+
+.latest-flag {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+.timeline-list {
+  margin-top: 6px;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  align-items: baseline;
   gap: 16px;
-  color: #606266;
-  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.timeline-time,
+.timeline-text {
+  font-size: 39px;
+  transform: scale(0.4);
+  transform-origin: left top;
+  margin-bottom: -16px;
+  color: #6b7280;
 }
 </style>
 
 <style lang="scss">
 .client-progress-dialog.el-dialog {
-  border-radius: var(--crm-radius-lg, 12px);
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .client-progress-dialog .el-dialog__header {
-  padding: 18px 20px 12px;
-  border-bottom: 1px solid var(--crm-header-border, #e2e8f0);
+  padding: 18px 24px 0;
+  border-bottom: none;
   margin-right: 0;
 }
 
 .client-progress-dialog .el-dialog__body {
-  padding: 16px 20px 20px;
+  padding: 12px 24px 24px;
 }
 </style>
