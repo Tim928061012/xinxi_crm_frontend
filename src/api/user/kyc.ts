@@ -80,15 +80,28 @@ export const kycApi = {
   // 上传 KYC 文档（documentType: SUPPORTING_DOCUMENT | NAME_SCREENING）
   uploadKYCDocument(clientId: number, clientType: 'Individual' | 'Corporate', file: File, documentType: 'SUPPORTING_DOCUMENT' | 'NAME_SCREENING' = 'SUPPORTING_DOCUMENT') {
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('files', file)
     formData.append('clientId', String(clientId))
     formData.append('clientType', clientType)
     formData.append('documentType', documentType)
-    return request.post('/client-documents/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
+    return request.post('/client-documents/upload', formData)
+  },
+
+  uploadKYCDocumentsBatch(
+    clientId: number,
+    clientType: 'Individual' | 'Corporate',
+    files: File[],
+    documentType: 'SUPPORTING_DOCUMENT' | 'NAME_SCREENING' = 'SUPPORTING_DOCUMENT'
+  ) {
+    if (files.length > 10) {
+      return Promise.reject(new Error('At most 10 files per batch'))
+    }
+    const formData = new FormData()
+    files.forEach(f => formData.append('files', f))
+    formData.append('clientId', String(clientId))
+    formData.append('clientType', clientType)
+    formData.append('documentType', documentType)
+    return request.post('/client-documents/upload', formData)
   },
 
   // 删除 KYC 文档

@@ -1929,19 +1929,20 @@
         ref="uploadRef"
         class="upload-demo"
         drag
+        multiple
         :auto-upload="false"
         :on-change="handleFileChange"
         :on-exceed="handleFileExceed"
-        :file-list="fileList"
-        :limit="1"
-        accept=".pdf"
+        v-model:file-list="fileList"
+        :limit="10"
+        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
       >
         <el-icon class="el-icon--upload"><upload-filled /></el-icon>
         <div class="el-upload__text">
           Drag & drop files here, or <em>click to upload</em>
         </div>
         <div class="el-upload__tip">
-          Only pdf can be uploaded, and the size does not exceed 100MB
+          PDF, JPEG or PNG — up to 10 files per batch (all-or-nothing on the server). Max 100MB per file.
         </div>
       </el-upload>
       <template #footer>
@@ -2318,7 +2319,6 @@ const documentUploadTitle = computed(() => {
 const uploadRef = ref()
 const fileList = ref<UploadFile[]>([])
 const uploading = ref(false)
-const currentUploadFile = ref<File | null>(null)
 
 // 可用的 Booking Centres（根据选择的 Bank 动态获取）
 const availableBookingCentres = computed(() => {
@@ -3315,7 +3315,6 @@ const handleUploadKYCDocument = (type: 'SUPPORTING_DOCUMENT' | 'NAME_SCREENING' 
   documentUploadType.value = 'kyc'
   kycUploadDocumentType.value = type
   fileList.value = []
-  currentUploadFile.value = null
   documentUploadDialogVisible.value = true
 }
 
@@ -3386,7 +3385,6 @@ const handleUploadDocument = (type: DocumentType) => {
   }
   documentUploadType.value = type
   fileList.value = []
-  currentUploadFile.value = null
   documentUploadDialogVisible.value = true
 }
 
@@ -3450,58 +3448,54 @@ const handleDeleteDocument = async (document: Document) => {
   }
 }
 
-// 文件上传处理
-const handleFileChange = (file: UploadFile) => {
-  if (file.raw) {
-    // 检查文件类型
-    if (file.raw.type !== 'application/pdf') {
-      ElMessage.error('Only PDF files are allowed')
-      // 移除无效文件
-      fileList.value = fileList.value.filter(f => f.uid !== file.uid)
-      return
-    }
-    // 检查文件大小 (100MB)
-    if (file.raw.size > 100 * 1024 * 1024) {
-      ElMessage.error('File size cannot exceed 100MB')
-      // 移除无效文件
-      fileList.value = fileList.value.filter(f => f.uid !== file.uid)
-      return
-    }
-    // 文件验证通过，更新当前上传文件和文件列表
-    currentUploadFile.value = file.raw
-    // 确保 fileList 只包含当前文件（替换旧文件）
-    // 直接设置为只包含当前文件，实现替换效果
-    fileList.value = [file]
+const validateUploadFile = (file: File): string | null => {
+  const name = file.name.toLowerCase()
+  const extOk =
+    name.endsWith('.pdf') ||
+    name.endsWith('.jpg') ||
+    name.endsWith('.jpeg') ||
+    name.endsWith('.png')
+  const mime = (file.type || '').toLowerCase()
+  const mimeOk =
+    !mime ||
+    mime === 'application/pdf' ||
+    mime === 'image/jpeg' ||
+    mime === 'image/jpg' ||
+    mime === 'image/png' ||
+    mime === 'application/x-pdf'
+  if (!extOk) return 'Only PDF, JPEG and PNG files are allowed'
+  if (!mimeOk) return 'Only PDF, JPEG and PNG files are allowed'
+  if (file.size > 100 * 1024 * 1024) return 'File size cannot exceed 100MB'
+  return null
+}
+
+const handleFileChange = (file: UploadFile, _uploadFiles: UploadFiles) => {
+  if (!file.raw) return
+  const msg = validateUploadFile(file.raw)
+  if (msg) {
+    ElMessage.error(msg)
+    nextTick(() => uploadRef.value?.handleRemove(file))
   }
 }
 
-// 处理文件超出限制（允许替换旧文件）
-const handleFileExceed = (files: File[]) => {
-  // 当用户选择新文件时，如果已经有文件，允许替换
-  if (files.length > 0 && files[0]) {
-    const newFile = files[0]
-    // 先清空旧文件
-    fileList.value = []
-    currentUploadFile.value = null
-    // 使用 nextTick 确保清空后再处理新文件
-    nextTick(() => {
-      // 手动触发文件选择，创建 UploadFile 对象
-      const uploadFile: UploadFile = {
-        uid: Date.now(),
-        name: newFile.name,
-        size: newFile.size,
-        raw: newFile as any, // 类型转换，因为 File 类型可能不完全匹配
-        status: 'ready'
-      }
-      // 直接调用 handleFileChange 进行验证和设置
-      handleFileChange(uploadFile)
-    })
-  }
+const handleFileExceed = () => {
+  ElMessage.warning('At most 10 files per batch')
+}
+
+/** Resolve File objects from Element Plus upload list (v-model:file-list keeps `raw` in sync). */
+const collectUploadFiles = (): File[] => {
+  const list = fileList.value
+  const fromRaw = list.map(f => f.raw).filter((f): f is File => f instanceof File)
+  if (fromRaw.length) return fromRaw
+  return list
+    .map(f => (f as UploadFile & { file?: File }).file)
+    .filter((f): f is File => f instanceof File)
 }
 
 const handleSubmitDocumentUpload = async () => {
-  if (!currentUploadFile.value || !clientId.value) {
-    ElMessage.warning('Please select a file')
+  const files = collectUploadFiles()
+  if (!files.length || !clientId.value) {
+    ElMessage.warning('Please select at least one file')
     return
   }
 
@@ -3509,47 +3503,98 @@ const handleSubmitDocumentUpload = async () => {
   try {
     if (documentUploadType.value === 'kyc') {
       const docType = kycUploadDocumentType.value
-      const response = await kycApi.uploadKYCDocument(clientId.value, clientForm.contactNature as any, currentUploadFile.value, docType)
-      const data = response.data || response
-      const docId = data.documentId || data.id
-      if (!docId) {
-        ElMessage.error('Failed to get document ID from server response')
-        return
+      const targetList = docType === 'NAME_SCREENING' ? kycData.nameScreeningDocuments : kycData.documents
+
+      const appendKycDocs = (saved: any[]) => {
+        saved.forEach((data: any, i: number) => {
+          const file = files[i]
+          const docId = data.documentId || data.id
+          if (!docId) return
+          targetList.push({
+            id: docId,
+            document: data.originalFilename || data.document || file?.name || '',
+            size: formatFileSize(file?.size ?? 0),
+            uploadTime: data.uploadTime || data.createdAt || new Date().toISOString()
+          })
+        })
       }
-      const newDoc: KYCDocument = {
-        id: docId,
-        document: data.originalFilename || data.document || currentUploadFile.value.name,
-        size: formatFileSize(currentUploadFile.value.size),
-        uploadTime: data.uploadTime || data.createdAt || new Date().toISOString()
-      }
-      if (docType === 'NAME_SCREENING') {
-        kycData.nameScreeningDocuments.push(newDoc)
+
+      if (files.length === 1) {
+        const response = await kycApi.uploadKYCDocument(
+          clientId.value,
+          clientForm.contactNature as any,
+          files[0],
+          docType
+        )
+        const raw = (response as any).data ?? response
+        const saved = Array.isArray(raw) ? raw : [raw]
+        appendKycDocs(saved)
       } else {
-        kycData.documents.push(newDoc)
+        const response = await kycApi.uploadKYCDocumentsBatch(
+          clientId.value,
+          clientForm.contactNature as any,
+          files,
+          docType
+        )
+        const saved = (response as any).data
+        if (!Array.isArray(saved)) {
+          ElMessage.error('Unexpected server response for batch upload')
+          return
+        }
+        appendKycDocs(saved)
       }
-      ElMessage.success('Document uploaded successfully')
+      ElMessage.success(
+        files.length > 1 ? `${files.length} documents uploaded successfully` : 'Document uploaded successfully'
+      )
     } else {
-      const response = await documentsApi.uploadDocument(clientId.value, clientForm.contactNature as any, documentUploadType.value, currentUploadFile.value)
-      const data = response.data || response
-      // 后端可能返回 documentId 或 id，优先使用 documentId
-      const docId = data.documentId || data.id
-      if (!docId) {
-        ElMessage.error('Failed to get document ID from server response')
-        return
+      const docTypeKey = documentUploadType.value as DocumentType
+      const targetList = documentsData[docTypeKey]
+
+      const appendDocs = (saved: any[]) => {
+        saved.forEach((data: any, i: number) => {
+          const file = files[i]
+          const docId = data.documentId || data.id
+          if (!docId) return
+          targetList.push({
+            id: docId,
+            document: data.originalFilename || data.document || file?.name || '',
+            size: formatFileSize(file?.size ?? 0),
+            uploadTime: data.uploadTime || data.createdAt || new Date().toISOString(),
+            type: docTypeKey
+          })
+        })
       }
-      const newDoc: Document = {
-        id: docId,
-        document: data.originalFilename || data.document || currentUploadFile.value.name,
-        size: formatFileSize(currentUploadFile.value.size),
-        uploadTime: data.uploadTime || data.createdAt || new Date().toISOString(),
-        type: documentUploadType.value
+
+      if (files.length === 1) {
+        const response = await documentsApi.uploadDocument(
+          clientId.value,
+          clientForm.contactNature as any,
+          docTypeKey,
+          files[0]
+        )
+        const raw = (response as any).data ?? response
+        const saved = Array.isArray(raw) ? raw : [raw]
+        appendDocs(saved)
+      } else {
+        const response = await documentsApi.uploadDocumentsBatch(
+          clientId.value,
+          clientForm.contactNature as any,
+          docTypeKey,
+          files
+        )
+        const saved = (response as any).data
+        if (!Array.isArray(saved)) {
+          ElMessage.error('Unexpected server response for batch upload')
+          return
+        }
+        appendDocs(saved)
       }
-      documentsData[documentUploadType.value].push(newDoc)
-      ElMessage.success('Document uploaded successfully')
+      ElMessage.success(
+        files.length > 1 ? `${files.length} documents uploaded successfully` : 'Document uploaded successfully'
+      )
     }
     documentUploadDialogVisible.value = false
     fileList.value = []
-    currentUploadFile.value = null
   } catch (error: any) {
     console.error('Failed to upload document:', error)
     const errorMessage = error.message || error.response?.data?.message || 'Failed to upload document'

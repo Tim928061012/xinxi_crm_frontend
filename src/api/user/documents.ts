@@ -79,7 +79,8 @@ export const documentsApi = {
   // 上传文档
   uploadDocument(clientId: number, clientType: 'Individual' | 'Corporate', type: DocumentType, file: File) {
     const formData = new FormData()
-    formData.append('file', file)
+    // 与多文件一致使用 part 名 `files`，避免服务端/网关对 `file` 的兼容问题
+    formData.append('files', file)
     formData.append('clientId', String(clientId))
     formData.append('clientType', clientType)
 
@@ -92,11 +93,33 @@ export const documentsApi = {
 
     formData.append('documentType', documentType)
 
-    return request.post('/client-documents/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
+    return request.post('/client-documents/upload', formData)
+  },
+
+  /** 同一 documentType 下最多 10 个文件；与单文件共用 POST /upload，字段名为 files */
+  uploadDocumentsBatch(
+    clientId: number,
+    clientType: 'Individual' | 'Corporate',
+    type: DocumentType,
+    files: File[]
+  ) {
+    if (files.length > 10) {
+      return Promise.reject(new Error('At most 10 files per batch'))
+    }
+    const formData = new FormData()
+    files.forEach(f => formData.append('files', f))
+    formData.append('clientId', String(clientId))
+    formData.append('clientType', clientType)
+
+    let documentType = ''
+    if (type === 'identity') documentType = 'IDENTITY_PROOF'
+    else if (type === 'address') documentType = 'ADDRESS_PROOF'
+    else if (type === 'forms') documentType = 'FORMS'
+    else if (type === 'statements') documentType = 'XINXI_STATEMENTS'
+    else if (type === 'others') documentType = 'OTHER_DOCUMENTS'
+
+    formData.append('documentType', documentType)
+    return request.post('/client-documents/upload', formData)
   },
 
   // 删除文档

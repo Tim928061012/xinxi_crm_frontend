@@ -7,6 +7,9 @@
       <div class="user-info">
         <el-icon><User /></el-icon>
         <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
+        <span v-if="authStore.user?.roleDisplayName || authStore.user?.role" class="user-role-pill">
+          {{ authStore.user?.roleDisplayName || roleDisplayName(authStore.user?.role) }}
+        </span>
       </div>
     </div>
 
@@ -67,11 +70,19 @@
           </el-table-column>
           <el-table-column label="Progress" min-width="220">
             <template #default="{ row }">
-              <div class="progress-cell">
+              <div
+                class="progress-cell progress-cell--clickable"
+                role="button"
+                tabindex="0"
+                @click.stop="openProgress(row)"
+                @keydown.enter.prevent="openProgress(row)"
+              >
                 <el-tag :type="getProgressTagType(row.progressStatus, row.inactive)">
                   {{ row.progressLabel }}
                 </el-tag>
-                <span v-if="row.progressOwnerRoleLabel" class="progress-owner">{{ row.progressOwnerRoleLabel }}</span>
+                <span v-if="row.progressOwnerRoleLabel && !row.inactive" class="progress-owner">{{
+                  row.progressOwnerRoleLabel
+                }}</span>
               </div>
             </template>
           </el-table-column>
@@ -83,8 +94,6 @@
           <el-table-column label="Actions" width="300" fixed="right">
             <template #default="{ row }">
               <el-link type="primary" :underline="false" @click="handleView(row)">View</el-link>
-              <el-divider direction="vertical" />
-              <el-link type="primary" :underline="false" @click="handleEdit(row)">Edit</el-link>
               <el-divider direction="vertical" />
               <el-link type="primary" :underline="false" @click="openProgress(row)">Progress</el-link>
               <el-divider direction="vertical" />
@@ -103,6 +112,10 @@
       v-model="progressDialogVisible"
       :client-id="selectedProgressClient?.id || null"
       :client-type="selectedProgressClient?.contactNature || null"
+      :client-name="selectedProgressClient?.client || ''"
+      :client-business-id="selectedProgressClient?.clientBusinessId != null ? String(selectedProgressClient.clientBusinessId) : ''"
+      :rm-name="selectedProgressClient?.rm || ''"
+      :created-time="selectedProgressClient?.createdTime || ''"
       @updated="handleProgressUpdated"
       @review="handleProgressReview"
     />
@@ -120,9 +133,11 @@ import type { ClientProgressData, ClientType } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import { formatDateTime } from '@/utils/date'
 import { getProgressLabel, getProgressSortWeight, getProgressTagType } from '@/utils/client-progress'
+import { roleDisplayName } from '@/utils/roles'
 
 interface AdminClientRow {
   id: number
+  clientBusinessId?: number | string
   client: string
   rm: string
   rmDisabled?: boolean
@@ -200,6 +215,7 @@ const normalizeClient = (item: any): AdminClientRow => {
 
   return {
     id: Number(item.id),
+    clientBusinessId: item.clientBusinessId ?? item.clientId ?? item.client_id,
     client: clientName,
     rm: rmName,
     rmDisabled: item.rmActive === false,
@@ -239,13 +255,6 @@ const resetFilters = () => {
 const handleView = (row: AdminClientRow) => {
   router.push({
     path: `/client/${row.id}`,
-    query: { clientType: row.contactNature }
-  })
-}
-
-const handleEdit = (row: AdminClientRow) => {
-  router.push({
-    path: `/client/${row.id}/edit`,
     query: { clientType: row.contactNature }
   })
 }
@@ -353,6 +362,15 @@ onMounted(loadClients)
     color: #606266;
     font-size: 14px;
 
+    .user-role-pill {
+      margin-left: 6px;
+      padding: 2px 8px;
+      font-size: 12px;
+      color: #025189;
+      background: #e8f1fa;
+      border-radius: 4px;
+    }
+
     :deep(.el-icon) {
       width: 32px;
       height: 32px;
@@ -380,6 +398,17 @@ onMounted(loadClients)
     display: flex;
     flex-direction: column;
     gap: 6px;
+
+    &.progress-cell--clickable {
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 4px 2px;
+      margin: -4px -2px;
+
+      &:hover {
+        background: rgba(2, 81, 137, 0.06);
+      }
+    }
   }
 
   .progress-owner {

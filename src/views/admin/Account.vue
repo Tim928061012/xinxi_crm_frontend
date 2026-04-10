@@ -9,6 +9,9 @@
       <div class="user-info">
         <el-icon><User /></el-icon>
         <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
+        <span v-if="authStore.user?.roleDisplayName || authStore.user?.role" class="user-role-pill">
+          {{ authStore.user?.roleDisplayName || roleDisplayName(authStore.user?.role) }}
+        </span>
       </div>
     </div>
 
@@ -418,6 +421,15 @@ onMounted(() => {
       font-size: 14px;
       padding: 0;
       margin: 0;
+
+      .user-role-pill {
+        margin-left: 6px;
+        padding: 2px 8px;
+        font-size: 12px;
+        color: #025189;
+        background: #e8f1fa;
+        border-radius: 4px;
+      }
 
       :deep(.el-icon) {
         width: 32px;

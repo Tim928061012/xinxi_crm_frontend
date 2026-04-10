@@ -34,6 +34,14 @@ request.interceptors.request.use(
       config.headers['X-Auth-Token'] = token
     }
 
+    // FormData 必须由浏览器设置 multipart 边界；若保留默认 application/json 会导致服务端无法解析 multipart
+    const data = (config as { data?: unknown }).data
+    if (data instanceof FormData && config.headers) {
+      const h = config.headers as Record<string, unknown>
+      delete h['Content-Type']
+      delete h['content-type']
+    }
+
     return config
   },
   (error) => {

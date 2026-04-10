@@ -67,11 +67,19 @@
           <el-table-column prop="rm" label="RM" min-width="180" />
           <el-table-column label="Progress" min-width="220">
             <template #default="{ row }">
-              <div class="progress-cell">
+              <div
+                class="progress-cell progress-cell--clickable"
+                role="button"
+                tabindex="0"
+                @click.stop="openProgress(row)"
+                @keydown.enter.prevent="openProgress(row)"
+              >
                 <el-tag :type="getProgressTagType(row.progressStatus, row.inactive)">
                   {{ row.progressLabel }}
                 </el-tag>
-                <span v-if="row.progressOwnerRoleLabel" class="progress-owner">{{ row.progressOwnerRoleLabel }}</span>
+                <span v-if="row.progressOwnerRoleLabel && !row.inactive" class="progress-owner">{{
+                  row.progressOwnerRoleLabel
+                }}</span>
               </div>
             </template>
           </el-table-column>
@@ -488,6 +496,17 @@ onMounted(loadClients)
     display: flex;
     flex-direction: column;
     gap: 6px;
+
+    &.progress-cell--clickable {
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 4px 2px;
+      margin: -4px -2px;
+
+      &:hover {
+        background: rgba(2, 81, 137, 0.06);
+      }
+    }
   }
 
   .progress-owner {
