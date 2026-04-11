@@ -35,9 +35,9 @@ export interface InvestmentRiskProfile {
 }
 
 // 工具函数：后端 Date(ISO/标准) <-> 前端 dd/MM/yyyy
-const formatIsoToDdMmYyyy = (value?: string | null): string | undefined => {
-  if (!value) return undefined
-  const d = new Date(value)
+const formatIsoToDdMmYyyy = (value?: string | number | null): string | undefined => {
+  if (value === undefined || value === null || value === '') return undefined
+  const d = typeof value === 'number' ? new Date(value) : new Date(value as string)
   if (isNaN(d.getTime())) return undefined
   const day = String(d.getDate()).padStart(2, '0')
   const month = String(d.getMonth() + 1).padStart(2, '0')
@@ -56,6 +56,9 @@ const parseDdMmYyyyToIso = (value?: string | null): string | null => {
   return d.toISOString()
 }
 
+/** 兼容 JSON true / JDBC 部分驱动返回 1 */
+const asBool = (v: unknown): boolean => v === true || v === 1
+
 export const riskProfileApi = {
   // 获取投资风险档案（使用 client-risk-profiles/assessment 接口）
   async getRiskProfile(clientId: number, clientType: 'Individual' | 'Corporate') {
@@ -70,14 +73,14 @@ export const riskProfileApi = {
     const result: InvestmentRiskProfile = {
       investmentRiskRating: profile.riskRating,
       remarks: profile.remarks || '',
-      hongKongPI: profile.isHkPi === true,
+      hongKongPI: asBool(profile.isHkPi),
       vulnerableClientAssessment: {
-        age65AndAbove: profile.vAge65Plus === true,
-        physicalOrIntellectualDisabilities: profile.vDisability === true,
-        // 后端字段是“语言熟练”，前端需要“英文不熟练”，取反
-        notProficientInEnglish: profile.vLanguageProficient === false,
-        educationPrimaryOrBelow: profile.vLowEducationInvestment === true,
-        vulnerableClient: profile.isVulnerableClient === true,
+        age65AndAbove: asBool(profile.vAge65Plus),
+        physicalOrIntellectualDisabilities: asBool(profile.vDisability),
+        // 后端字段是“语言熟练”，前端需要“英文不熟练”，取反（仅当明确为不熟练时标 true）
+        notProficientInEnglish: profile.vLanguageProficient === false || profile.vLanguageProficient === 0,
+        educationPrimaryOrBelow: asBool(profile.vLowEducationInvestment),
+        vulnerableClient: asBool(profile.isVulnerableClient),
         reviewDate: formatIsoToDdMmYyyy(profile.reviewDate)
       },
       // 先用默认结构填充，之后根据 experiences 覆盖
@@ -121,19 +124,21 @@ export const riskProfileApi = {
 
   // 更新/保存投资风险档案（调用 client-risk-profiles/assessment 接口）
   async updateRiskProfile(clientId: number, data: InvestmentRiskProfile, clientType: 'Individual' | 'Corporate') {
+    const v = data.vulnerableClientAssessment
     const riskProfilePayload: any = {
       clientId,
       clientType,
       riskRating: data.investmentRiskRating,
-      isHkPi: data.hongKongPI,
-      remarks: data.remarks || '',
-      vAge65Plus: data.vulnerableClientAssessment.age65AndAbove,
-      vDisability: data.vulnerableClientAssessment.physicalOrIntellectualDisabilities,
+      // 显式布尔，避免 undefined 被 axios 省略后后端反序列化为 null 把 bit 列写成 NULL
+      isHkPi: data.hongKongPI === true,
+      remarks: data.remarks ?? '',
+      vAge65Plus: v ? v.age65AndAbove === true : false,
+      vDisability: v ? v.physicalOrIntellectualDisabilities === true : false,
       // 后端字段是“语言熟练”，前端是“英文不熟练”，取反
-      vLanguageProficient: !data.vulnerableClientAssessment.notProficientInEnglish,
-      vLowEducationInvestment: data.vulnerableClientAssessment.educationPrimaryOrBelow,
-      isVulnerableClient: data.vulnerableClientAssessment.vulnerableClient,
-      reviewDate: parseDdMmYyyyToIso(data.vulnerableClientAssessment.reviewDate) // 转为 ISO，后端才可解析
+      vLanguageProficient: v ? v.notProficientInEnglish !== true : true,
+      vLowEducationInvestment: v ? v.educationPrimaryOrBelow === true : false,
+      isVulnerableClient: v ? v.vulnerableClient === true : false,
+      reviewDate: v ? parseDdMmYyyyToIso(v.reviewDate) : null // 转为 ISO，后端才可解析
     }
 
     // 构造投资经验列表

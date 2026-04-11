@@ -2599,8 +2599,23 @@ const loadClient = async () => {
     tabLoading.risk = true
     try {
       const risk = await riskProfileApi.getRiskProfile(clientId.value, clientForm.contactNature as any)
-      // 用后端返回的数据整体替换前端结构，确保元数据（如 __hasExisting）也被带上
-      Object.assign(riskProfileData, risk)
+      // 合并到已有 reactive 嵌套对象，避免浅拷贝导致脆弱客户等子对象未更新或丢失响应式
+      riskProfileData.investmentRiskRating = risk.investmentRiskRating
+      riskProfileData.remarks = risk.remarks ?? ''
+      riskProfileData.hongKongPI = risk.hongKongPI === true
+      if (risk.vulnerableClientAssessment) {
+        Object.assign(riskProfileData.vulnerableClientAssessment, risk.vulnerableClientAssessment)
+      }
+      const srcTypes = risk.investmentKnowledgeExperience?.types || []
+      srcTypes.forEach(st => {
+        const t = riskProfileData.investmentKnowledgeExperience.types.find(x => x.type === st.type)
+        if (t) {
+          t.knowledge = st.knowledge === true
+          t.experience = st.experience === true
+        }
+      })
+      ;(riskProfileData as any).__hasExisting = (risk as any).__hasExisting === true
+      ;(riskProfileData as any).__lastUpdatedAt = (risk as any).__lastUpdatedAt ?? null
 
       // Risk Tab 的 Last saved：用后端 riskProfile 的 updatedAt/createdAt
       const riskLast = (risk as any).__lastUpdatedAt

@@ -50,6 +50,51 @@ export const isClientEditable = (status?: string | null, inactive?: boolean | nu
   return normalized === 'PENDING_SUBMISSION' || normalized === 'ACTIVE'
 }
 
+/** 列表页「Edit / Delete」是否与参考稿一致：仅 Pending Submission 为高亮可点 */
+export const canEditDeleteInClientList = (status?: string | null, inactive?: boolean | null) => {
+  if (inactive) return false
+  return normalizeProgressStatus(status) === 'PENDING_SUBMISSION'
+}
+
+export const isPendingSubmissionStatus = (status?: string | null, inactive?: boolean | null) => {
+  if (inactive) return false
+  return normalizeProgressStatus(status) === 'PENDING_SUBMISSION'
+}
+
+export type ProgressOwnerBadgeKind = 'rm' | 'operation' | 'compliance' | 'ro' | 'none'
+
+/** 进度列右侧 pill：颜色参照设计稿（RM/ARM / Operation / Compliance / RO） */
+export const getProgressOwnerBadgeKind = (
+  ownerLabel?: string | null,
+  progressStatus?: string | null,
+  inactive?: boolean | null
+): ProgressOwnerBadgeKind => {
+  if (inactive) return 'none'
+  const st = normalizeProgressStatus(progressStatus)
+  if (st === 'ACTIVE') return 'none'
+
+  const o = (ownerLabel || '').trim()
+  const ol = o.toLowerCase()
+  if (ol.includes('rm') || ol.includes('arm')) return 'rm'
+  if (ol.includes('compliance')) return 'compliance'
+  if (ol.includes('operation')) return 'operation'
+  if (/\bro\b/.test(ol) || ol === 'ro') return 'ro'
+
+  switch (st) {
+    case 'PENDING_SUBMISSION':
+      return 'rm'
+    case 'OPERATIONAL_REVIEW':
+    case 'PENDING_SIGNATURE':
+      return 'operation'
+    case 'COMPLIANCE_REVIEW':
+      return 'compliance'
+    case 'SIGNATURE_UNDER_REVIEW':
+      return 'ro'
+    default:
+      return 'none'
+  }
+}
+
 export const mapTabToCommentModule = (tab: string): WorkflowModule => {
   switch (tab) {
     case 'kyc':
