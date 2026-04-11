@@ -93,6 +93,36 @@
               </div>
             </template>
           </el-table-column>
+          <el-table-column label="Compliance" width="150">
+            <template #default="{ row }">
+              <div class="compliance-op-cell">
+                <el-switch
+                  v-model="row.compliance"
+                  :active-value="true"
+                  :inactive-value="false"
+                  @change="handleComplianceChange(row)"
+                />
+                <span :class="row.compliance ? 'text-yes' : 'text-no'">
+                  {{ row.compliance ? 'Yes' : 'No' }}
+                </span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="Operation" width="150">
+            <template #default="{ row }">
+              <div class="compliance-op-cell">
+                <el-switch
+                  v-model="row.operation"
+                  :active-value="true"
+                  :inactive-value="false"
+                  @change="handleOperationChange(row)"
+                />
+                <span :class="row.operation ? 'text-yes' : 'text-no'">
+                  {{ row.operation ? 'Yes' : 'No' }}
+                </span>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column label="Created Time" width="200">
             <template #default="{ row }">
               {{ formatDateTime(row.createdTime) }}
@@ -147,7 +177,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import { adminClientApi } from '@/api/client'
+import { adminClientApi, type UpdateComplianceOperationParams } from '@/api/client'
 import type { ClientProgressData, ClientType } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import { formatDateTime } from '@/utils/date'
@@ -171,6 +201,9 @@ interface AdminClientRow {
   progressLabel: string
   progressOwnerRoleLabel?: string
   inactive?: boolean
+  /** 管理端 Compliance / Operation 开关 */
+  compliance: boolean
+  operation: boolean
 }
 
 const route = useRoute()
@@ -237,6 +270,21 @@ const normalizeClient = (item: any): AdminClientRow => {
   const inactive = item.inactive === true || item.isInactive === true || item.is_inactive === true
   const progressStatus = item.progressStatus || item.progress_status || ''
 
+  const compliance =
+    item.compliance === true ||
+    item.compliance === 1 ||
+    item.compliance === 'true' ||
+    item.compliance === '1' ||
+    item.compliance === 'Yes' ||
+    item.compliance === 'yes'
+  const operation =
+    item.operation === true ||
+    item.operation === 1 ||
+    item.operation === 'true' ||
+    item.operation === '1' ||
+    item.operation === 'Yes' ||
+    item.operation === 'yes'
+
   return {
     id: Number(item.id),
     clientBusinessId: item.clientBusinessId ?? item.clientId ?? item.client_id,
@@ -248,7 +296,9 @@ const normalizeClient = (item: any): AdminClientRow => {
     progressStatus,
     progressLabel: item.progressLabel || getProgressLabel(progressStatus, inactive),
     progressOwnerRoleLabel: item.progressOwnerRoleLabel || item.ownerRoleLabel || item.progressOwnerRole || '',
-    inactive
+    inactive,
+    compliance,
+    operation
   }
 }
 
@@ -266,6 +316,46 @@ const loadClients = async () => {
     clientList.value = []
   } finally {
     loading.value = false
+  }
+}
+
+const handleComplianceChange = async (row: AdminClientRow) => {
+  const originalCompliance = row.compliance
+  try {
+    const params: UpdateComplianceOperationParams = {
+      compliance: row.compliance,
+      operation: row.operation
+    }
+    if (row.contactNature === 'Individual') {
+      await adminClientApi.updateIndividualComplianceOperation(row.id, params)
+    } else {
+      await adminClientApi.updateCorporateComplianceOperation(row.id, params)
+    }
+    ElMessage.success(`Compliance ${row.compliance ? 'enabled' : 'disabled'}`)
+  } catch (error: any) {
+    console.error('Failed to update compliance:', error)
+    ElMessage.error(error?.response?.data?.message || error?.message || 'Failed to update compliance')
+    row.compliance = originalCompliance
+  }
+}
+
+const handleOperationChange = async (row: AdminClientRow) => {
+  const originalOperation = row.operation
+  try {
+    const params: UpdateComplianceOperationParams = {
+      compliance: row.compliance,
+      operation: row.operation
+    }
+    if (row.contactNature === 'Individual') {
+      await adminClientApi.updateIndividualComplianceOperation(row.id, params)
+    } else {
+      await adminClientApi.updateCorporateComplianceOperation(row.id, params)
+    }
+    ElMessage.success(`Operation ${row.operation ? 'enabled' : 'disabled'}`)
+  } catch (error: any) {
+    console.error('Failed to update operation:', error)
+    ElMessage.error(error?.response?.data?.message || error?.message || 'Failed to update operation')
+    row.operation = originalOperation
   }
 }
 
@@ -541,6 +631,20 @@ onMounted(loadClients)
 
   .action-link {
     font-weight: 500;
+  }
+
+  .compliance-op-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .text-yes {
+    color: #67c23a;
+  }
+
+  .text-no {
+    color: #909399;
   }
 
   .empty-state {
