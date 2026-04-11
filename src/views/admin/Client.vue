@@ -205,8 +205,21 @@ const loadClients = async () => {
             : (rmActiveFromServer === true
                 ? false
                 : (numericRmUserId ? rmActiveMap.value.get(numericRmUserId) === false : false)),
-        compliance: item.compliance === true || item.compliance === 'true' || item.compliance === 'Yes' || item.compliance === 'yes',
-        operation: item.operation === true || item.operation === 'true' || item.operation === 'Yes' || item.operation === 'yes',
+        // 后端 Boolean / MySQL tinyint(0/1) / 字符串 均兼容
+        compliance:
+          item.compliance === true ||
+          item.compliance === 1 ||
+          item.compliance === 'true' ||
+          item.compliance === '1' ||
+          item.compliance === 'Yes' ||
+          item.compliance === 'yes',
+        operation:
+          item.operation === true ||
+          item.operation === 1 ||
+          item.operation === 'true' ||
+          item.operation === '1' ||
+          item.operation === 'Yes' ||
+          item.operation === 'yes',
         createdTime: item.createdAt || item.created_at || item.createdTime || item.created_time || item.createTime || '',
         type: type
       }
