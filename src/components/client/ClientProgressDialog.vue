@@ -17,18 +17,40 @@
     </template>
 
     <div v-loading="loading" class="progress-dialog">
+      <p v-if="progress?.inactive" class="inactive-banner">This client is inactive.</p>
+
+      <!-- 信息区：两列网格，标签灰、值深色，单行展示 -->
       <div class="base-info-grid">
-        <div class="base-info-item"><span class="label">Client :</span><span>{{ clientName || '-' }}</span></div>
-        <div class="base-info-item"><span class="label">Contact Nature :</span><span>{{ clientType || '-' }}</span></div>
-        <div class="base-info-item"><span class="label">RM :</span><span>{{ rmName || '-' }}</span></div>
-        <div class="base-info-item"><span class="label">Client Id :</span><span>{{ clientBusinessId || '-' }}</span></div>
-        <div class="base-info-item"><span class="label">Created By :</span><span>{{ rmName || '-' }}</span></div>
-        <div class="base-info-item"><span class="label">Created Time :</span><span>{{ displayCreatedTime }}</span></div>
+        <div class="base-info-item">
+          <span class="label">Client :</span>
+          <span class="base-info-value">{{ clientName || '-' }}</span>
+        </div>
+        <div class="base-info-item">
+          <span class="label">Contact Nature :</span>
+          <span class="base-info-value">{{ clientType || '-' }}</span>
+        </div>
+        <div class="base-info-item">
+          <span class="label">RM :</span>
+          <span class="base-info-value">{{ rmName || '-' }}</span>
+        </div>
+        <div class="base-info-item">
+          <span class="label">Client Id :</span>
+          <span class="base-info-value">{{ clientBusinessId || '-' }}</span>
+        </div>
+        <div class="base-info-item">
+          <span class="label">Created By :</span>
+          <span class="base-info-value">{{ rmName || '-' }}</span>
+        </div>
+        <div class="base-info-item">
+          <span class="label">Created Time :</span>
+          <span class="base-info-value">{{ displayCreatedTime }}</span>
+        </div>
       </div>
 
-      <div v-if="actionButtons.length" class="action-row">
+      <!-- 全局操作：与当前步骤行内操作互斥，避免重复 -->
+      <div v-if="globalActionButtons.length" class="action-row">
         <el-button
-          v-for="action in actionButtons"
+          v-for="action in globalActionButtons"
           :key="action.value"
           :type="action.type"
           :plain="action.plain"
@@ -38,48 +60,97 @@
         </el-button>
       </div>
 
-      <div class="tab-row">
+      <div class="tab-row" role="tablist" aria-label="Progress views">
         <button
           type="button"
+          role="tab"
           class="tab-btn"
           :class="{ active: activeTab === 'flowchart' }"
+          :aria-selected="activeTab === 'flowchart'"
           @click="activeTab = 'flowchart'"
         >
           Flowchart
         </button>
-        <span class="tab-divider">|</span>
+        <span class="tab-divider" aria-hidden="true">|</span>
         <button
           type="button"
+          role="tab"
           class="tab-btn"
           :class="{ active: activeTab === 'timeline' }"
+          :aria-selected="activeTab === 'timeline'"
           @click="activeTab = 'timeline'"
         >
           Timeline
         </button>
       </div>
 
-      <div v-if="activeTab === 'flowchart'" class="flowchart-panel">
+      <!-- Flowchart：纵向步骤（已完成=勾选+蓝连线；当前=蓝底序号；待办=灰圈） -->
+      <div v-show="activeTab === 'flowchart'" class="flowchart-panel">
         <div v-for="(step, index) in workflowSteps" :key="step.status" class="step-row">
-          <div class="step-left">
-            <div class="step-circle" :class="{ current: step.status === currentStatus }">{{ index + 1 }}</div>
-            <div v-if="index < workflowSteps.length - 1" class="step-line" />
+          <div class="step-track">
+            <div
+              class="step-circle"
+              :class="{
+                'step-circle--done': isStepCompleted(index),
+                'step-circle--current': isCurrentStep(index),
+                'step-circle--pending': isStepPending(index)
+              }"
+            >
+              <el-icon v-if="isStepCompleted(index)" class="step-check-icon"><Check /></el-icon>
+              <span v-else class="step-num">{{ index + 1 }}</span>
+            </div>
+            <div
+              v-if="index < workflowSteps.length - 1"
+              class="step-connector"
+              :class="{ 'step-connector--done': isConnectorDone(index) }"
+            />
           </div>
-          <div class="step-main">
-            <div class="step-title">{{ step.label }}</div>
-            <div v-if="step.status === currentStatus && latestLog" class="step-note">
-              <span>{{ buildTimelineMessage(latestLog) }} at {{ toDisplayDate(latestLog.createdAt) }}</span>
-              <span class="latest-flag">Latest</span>
+          <div class="step-body">
+            <div class="step-title-row">
+              <div
+                class="step-title"
+                :class="{
+                  'step-title--muted': isStepPending(index),
+                  'step-title--emphasis': isStepCompleted(index) || isCurrentStep(index)
+                }"
+              >
+                {{ step.label }}
+              </div>
+              <el-button
+                v-if="stepRowInlineAction(index)"
+                text
+                :type="inlineActionButtonType(stepRowInlineAction(index)!.value)"
+                class="step-inline-action"
+                @click="handleAction(stepRowInlineAction(index)!.value)"
+              >
+                {{ stepRowInlineAction(index)!.label }}
+              </el-button>
+            </div>
+
+            <div v-if="detailEntriesForStep(step.status, index).length" class="step-details">
+              <div
+                v-for="(entry, li) in detailEntriesForStep(step.status, index)"
+                :key="`${step.status}-${entry.logId}-${li}`"
+                class="step-detail-inline"
+              >
+                <span class="step-detail-line">{{ entry.text }}</span>
+                <span
+                  v-if="isLatestLogRow(entry.logId)"
+                  class="latest-pill"
+                >Latest</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div v-else class="timeline-panel">
+      <!-- Timeline：时间 | 描述，左对齐、易扫读 -->
+      <div v-show="activeTab === 'timeline'" class="timeline-panel">
         <el-empty v-if="!sortedLogs.length" description="No progress logs yet" />
         <div v-else class="timeline-list">
           <div v-for="log in sortedLogs" :key="log.logId" class="timeline-item">
             <span class="timeline-time">{{ toDisplayDate(log.createdAt) }}</span>
-            <span class="timeline-text">{{ buildTimelineMessage(log) }}</span>
+            <span class="timeline-text">{{ formatLogLine(log) }}</span>
           </div>
         </div>
       </div>
@@ -89,6 +160,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Check } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientProgressData, type ClientProgressLog, type ClientType } from '@/api/user/workflow'
 import { formatDateTime } from '@/utils/date'
@@ -123,16 +195,33 @@ const workflowSteps = computed(() =>
   }))
 )
 
+const currentStepIndex = computed(() => {
+  const s = currentStatus.value
+  const idx = WORKFLOW_STATUS_ORDER.indexOf(s as (typeof WORKFLOW_STATUS_ORDER)[number])
+  return idx === -1 ? 0 : idx
+})
+
 const sortedLogs = computed(() =>
   [...(progress.value?.logs || [])].sort((a, b) => {
     return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
   })
 )
 
-const latestLog = computed(() => {
-  if (!sortedLogs.value.length) return null
-  return sortedLogs.value[sortedLogs.value.length - 1]
+/**
+ * 用于 Latest 徽标：优先后端标记 latest 的日志，否则取时间最新一条（Submit/Withdraw 等会刷新列表，徽标随最新记录移动）
+ */
+const latestLogForBadge = computed((): ClientProgressLog | null => {
+  const logs = sortedLogs.value
+  if (!logs.length) return null
+  const marked = logs.find(l => l.latest)
+  if (marked) return marked
+  return logs[logs.length - 1]
 })
+
+function isLatestLogRow(logId: number) {
+  const latest = latestLogForBadge.value
+  return !!latest && latest.logId === logId
+}
 
 const displayCreatedTime = computed(() => toDisplayDate(props.createdTime))
 
@@ -153,6 +242,121 @@ const actionButtons = computed(() => {
       ...actionMap[action]
     }))
 })
+
+/**
+ * 当前步骤行内展示的主操作（与设计稿一致：操作贴在对应阶段标题行右侧）
+ * 仅当「当前阶段 index === 当前进度」且后端下发该 action 时显示。
+ */
+function stepRowInlineAction(index: number): { label: string; value: string } | null {
+  if (index !== currentStepIndex.value || !progress.value) return null
+  const step = workflowSteps.value[index]
+  if (!step) return null
+  const st = normalizeProgressStatus(step.status)
+  const actions = progress.value.availableActions || []
+
+  if (st === 'PENDING_SUBMISSION' && actions.includes('SUBMIT')) {
+    return { label: 'Submit', value: 'SUBMIT' }
+  }
+  if (st === 'OPERATIONAL_REVIEW' && actions.includes('REVIEW')) {
+    return { label: 'Review', value: 'REVIEW' }
+  }
+  if (st === 'COMPLIANCE_REVIEW' && actions.includes('WITHDRAW')) {
+    return { label: 'Withdraw', value: 'WITHDRAW' }
+  }
+  if (st === 'PENDING_SIGNATURE' && actions.includes('SUBMIT_SIGNATURE')) {
+    return { label: 'Submit Signature', value: 'SUBMIT_SIGNATURE' }
+  }
+  if (st === 'SIGNATURE_UNDER_REVIEW' && actions.includes('REVIEW')) {
+    return { label: 'Review', value: 'REVIEW' }
+  }
+  if (st === 'ACTIVE' && actions.includes('DEACTIVATE')) {
+    return { label: 'Deactivate', value: 'DEACTIVATE' }
+  }
+  if (progress.value.inactive && actions.includes('ACTIVATE')) {
+    if (st === 'ACTIVE' || index === WORKFLOW_STATUS_ORDER.length - 1) {
+      return { label: 'Activate', value: 'ACTIVATE' }
+    }
+  }
+  return null
+}
+
+function inlineActionButtonType(
+  value: string
+): 'primary' | 'success' | 'warning' | 'danger' | 'info' {
+  switch (value) {
+    case 'DEACTIVATE':
+      return 'danger'
+    case 'WITHDRAW':
+      return 'warning'
+    case 'REVIEW':
+    case 'SUBMIT':
+    case 'SUBMIT_SIGNATURE':
+    case 'ACTIVATE':
+      return 'primary'
+    default:
+      return 'primary'
+  }
+}
+
+/** 与行内操作去重后的顶部按钮组 */
+const globalActionButtons = computed(() => {
+  const inline = stepRowInlineAction(currentStepIndex.value)
+  if (!inline) return actionButtons.value
+  return actionButtons.value.filter(b => b.value !== inline.value)
+})
+
+function isStepCompleted(index: number) {
+  return index < currentStepIndex.value
+}
+
+function isCurrentStep(index: number) {
+  return index === currentStepIndex.value
+}
+
+function isStepPending(index: number) {
+  return index > currentStepIndex.value
+}
+
+function isConnectorDone(index: number) {
+  return index < currentStepIndex.value
+}
+
+const buildTimelineMessage = (log: ClientProgressLog) => {
+  if (log.message) return log.message
+  const actionLabel = log.actionLabel || log.actionType || 'Updated'
+  const actorRole = log.actorRoleLabel || log.actorRole || ''
+  const actorName = log.actorName || '-'
+  if (!actorRole) return `${actionLabel}: ${actorName}`
+  return `${actionLabel} by ${actorRole}: ${actorName}`
+}
+
+function formatLogLine(log: ClientProgressLog) {
+  const msg = log.message?.trim()
+  if (msg) {
+    if (/\s+at\s+\d/.test(msg) || (msg.includes(' at ') && /\d{2}\/\d{2}\/\d{4}/.test(msg))) return msg
+    return `${msg} at ${toDisplayDate(log.createdAt)}`
+  }
+  return `${buildTimelineMessage(log)} at ${toDisplayDate(log.createdAt)}`
+}
+
+/** 每行绑定 logId，便于 Latest 与「当前最新一条日志」对应 */
+function detailEntriesForStep(
+  stepStatus: string,
+  stepIndex: number
+): { logId: number; text: string }[] {
+  const st = normalizeProgressStatus(stepStatus)
+  const matched = sortedLogs.value.filter(
+    l => l.toStatus && normalizeProgressStatus(l.toStatus) === st
+  )
+  if (matched.length > 0) {
+    return matched.map(log => ({ logId: log.logId, text: formatLogLine(log) }))
+  }
+  if (stepIndex === 0 && sortedLogs.value.length > 0) {
+    const early = sortedLogs.value.slice(0, 4)
+    return early.map(log => ({ logId: log.logId, text: formatLogLine(log) }))
+  }
+  return []
+}
 
 const loadProgress = async () => {
   if (!props.clientId || !props.clientType) return
@@ -217,15 +421,6 @@ const toDisplayDate = (value?: string | null) => {
   if (!text || text === '-') return '-'
   return text.replace(/^(\d{4})-(\d{2})-(\d{2}) /, '$3/$2/$1 ')
 }
-
-const buildTimelineMessage = (log: ClientProgressLog) => {
-  if (log.message) return log.message
-  const actionLabel = log.actionLabel || log.actionType || 'Updated'
-  const actorRole = log.actorRoleLabel || log.actorRole || ''
-  const actorName = log.actorName || '-'
-  if (!actorRole) return `${actionLabel}: ${actorName}`
-  return `${actionLabel} by ${actorRole}: ${actorName}`
-}
 </script>
 
 <style scoped lang="scss">
@@ -238,46 +433,66 @@ const buildTimelineMessage = (log: ClientProgressLog) => {
 
 .dialog-title {
   margin: 0;
-  font-size: 44px;
-  line-height: 1;
+  font-size: 20px;
+  line-height: 1.35;
   font-weight: 700;
   color: #111827;
-  transform: scale(0.4);
-  transform-origin: left center;
+  letter-spacing: -0.02em;
 }
 
 .progress-dialog {
-  min-height: 580px;
+  max-height: min(780px, calc(100vh - 160px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 2px;
+  /* 与 .flowchart-panel 左 padding 一致，使信息区与步骤序号圆点左缘对齐 */
+  --progress-track-indent: 4px;
+}
+
+.inactive-banner {
+  margin: 0 0 12px;
+  padding-left: var(--progress-track-indent);
+  font-size: 13px;
+  color: #b45309;
 }
 
 .close-btn {
   color: #111827;
   font-size: 20px;
   padding: 0;
+  min-height: auto;
 }
 
 .base-info-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  row-gap: 18px;
-  column-gap: 32px;
-  margin-bottom: 28px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  row-gap: 12px;
+  column-gap: 56px;
+  margin-bottom: 20px;
+  padding-left: var(--progress-track-indent);
+  box-sizing: border-box;
 }
 
 .base-info-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 40px;
-  transform: scale(0.4);
-  transform-origin: left center;
-  line-height: 1.1;
-  margin-top: -22px;
-  margin-bottom: -22px;
-  color: #1f2937;
+  flex-wrap: nowrap;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #111827;
+  min-width: 0;
 
   .label {
+    flex-shrink: 0;
     color: #9ca3af;
+    white-space: nowrap;
+  }
+
+  .base-info-value {
+    flex: 1 1 0%;
+    min-width: 0;
+    white-space: nowrap;
   }
 }
 
@@ -285,26 +500,32 @@ const buildTimelineMessage = (log: ClientProgressLog) => {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
+  padding-left: var(--progress-track-indent);
+  box-sizing: border-box;
 }
 
+/* 与弹窗标题「Progress」左缘对齐（不额外缩进） */
 .tab-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 12px 0 14px;
+  margin-bottom: 20px;
 }
 
 .tab-btn {
   border: none;
   background: none;
-  font-size: 46px;
-  transform: scale(0.4);
-  transform-origin: left center;
-  margin: -18px 0;
-  color: #4b5563;
-  cursor: pointer;
   padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: #6b7280;
+  }
 
   &.active {
     color: #2563eb;
@@ -313,114 +534,231 @@ const buildTimelineMessage = (log: ClientProgressLog) => {
 
 .tab-divider {
   color: #d1d5db;
-  font-size: 20px;
+  font-size: 14px;
+  user-select: none;
+}
+
+.flowchart-panel {
+  padding: 4px 0 8px 4px;
+}
+
+.timeline-panel {
+  padding: 8px 0;
+  padding-left: var(--progress-track-indent);
+  min-height: 120px;
+  box-sizing: border-box;
 }
 
 .step-row {
   display: flex;
-  gap: 14px;
-  min-height: 82px;
+  gap: 16px;
+  align-items: stretch;
+  min-height: 0;
 }
 
-.step-left {
-  width: 42px;
+.step-track {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 28px;
+  flex-shrink: 0;
 }
 
 .step-circle {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: #f3f4f6;
-  color: #6b7280;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  transform: scale(0.4);
-  transform-origin: center;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  box-sizing: border-box;
 
-  &.current {
+  &--done {
+    background: #dbeafe;
+    color: #2563eb;
+    border: none;
+  }
+
+  &--current {
     background: #2563eb;
     color: #fff;
+    border: none;
+  }
+
+  &--pending {
+    background: #f3f4f6;
+    color: #9ca3af;
+    border: 1px solid #e5e7eb;
   }
 }
 
-.step-line {
-  flex: 1;
-  width: 1px;
-  background: #e5e7eb;
-  margin-top: 6px;
+.step-check-icon {
+  font-size: 16px;
 }
 
-.step-main {
-  padding-top: 3px;
+.step-num {
+  transform: translateY(0.5px);
+}
+
+.step-connector {
+  flex: 1;
+  width: 2px;
+  min-height: 32px;
+  margin: 4px 0 0;
+  background: #e5e7eb;
+  border-radius: 1px;
+
+  &--done {
+    background: #2563eb;
+  }
+}
+
+.step-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 22px;
+}
+
+.step-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .step-title {
-  font-size: 52px;
-  transform: scale(0.4);
-  transform-origin: left top;
-  line-height: 1.05;
-  margin: -6px 0 2px;
-  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 400;
+  color: #111827;
+
+  &--emphasis {
+    font-weight: 600;
+  }
+
+  &--muted {
+    color: #9ca3af;
+    font-weight: 400;
+  }
 }
 
-.step-note {
-  margin-top: -6px;
-  display: inline-flex;
+/* 设计稿：步骤行右侧为「文字按钮」— 透明底、主色字、无描边，与标题同一行垂直居中 */
+.step-inline-action {
+  flex-shrink: 0;
+  margin: 0 !important;
+  padding: 4px 8px !important;
+  min-height: auto !important;
+  height: auto !important;
+  font-size: 14px;
+  font-weight: 500;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+
+  &:hover,
+  &:focus-visible {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* primary：品牌蓝字（Submit / Review / Activate / Submit Signature） */
+  &.el-button--primary {
+    --el-button-text-color: #2563eb;
+    --el-button-hover-text-color: #1d4ed8;
+    --el-button-hover-bg-color: transparent;
+    --el-button-active-bg-color: transparent;
+  }
+
+  &.el-button--primary:hover,
+  &.el-button--primary:focus {
+    color: #1d4ed8 !important;
+  }
+
+  &.el-button--warning {
+    --el-button-hover-bg-color: transparent;
+  }
+
+  &.el-button--danger {
+    --el-button-hover-bg-color: transparent;
+  }
+}
+
+.step-details {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.step-detail-inline {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  color: #6b7280;
-  font-size: 35px;
-  transform: scale(0.4);
-  transform-origin: left top;
+  gap: 10px;
 }
 
-.latest-flag {
-  background: #f3f4f6;
-  color: #374151;
+.step-detail-line {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.latest-pill {
+  display: inline-block;
+  flex-shrink: 0;
   padding: 2px 8px;
-  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #374151;
+  background: #f3f4f6;
+  border-radius: 4px;
 }
 
 .timeline-list {
-  margin-top: 6px;
+  padding: 4px 0 12px;
 }
 
 .timeline-item {
-  display: grid;
-  grid-template-columns: 210px 1fr;
-  align-items: baseline;
+  display: flex;
+  align-items: flex-start;
   gap: 16px;
-  margin-bottom: 4px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-.timeline-time,
+.timeline-time {
+  flex: 0 0 168px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
 .timeline-text {
-  font-size: 39px;
-  transform: scale(0.4);
-  transform-origin: left top;
-  margin-bottom: -16px;
+  flex: 1;
+  min-width: 0;
   color: #6b7280;
+  word-break: break-word;
 }
 </style>
 
 <style lang="scss">
 .client-progress-dialog.el-dialog {
-  border-radius: 2px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
 .client-progress-dialog .el-dialog__header {
-  padding: 18px 24px 0;
+  padding: 20px 24px 0;
   border-bottom: none;
   margin-right: 0;
 }
 
 .client-progress-dialog .el-dialog__body {
-  padding: 12px 24px 24px;
+  padding: 8px 24px 24px;
 }
 </style>

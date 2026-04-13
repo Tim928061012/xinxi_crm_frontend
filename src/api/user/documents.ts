@@ -1,4 +1,5 @@
 import request from '../request'
+import { formatFileSizeMb } from '@/utils/file-size'
 
 // 文档类型
 export type DocumentType = 'identity' | 'address' | 'forms' | 'statements' | 'others'
@@ -42,7 +43,7 @@ export const documentsApi = {
     const mapOne = (item: any): Document => ({
       id: item.documentId || item.id,
       document: item.originalFilename || item.document || '',
-      size: `${Math.round(((item.fileSizeBytes || 0) / 1024) * 100) / 100}KB`,
+      size: formatFileSizeMb(item.fileSizeBytes || 0),
       uploadTime: item.uploadTime || item.createdAt || item.created_at || '',
       type: 'identity'
     })

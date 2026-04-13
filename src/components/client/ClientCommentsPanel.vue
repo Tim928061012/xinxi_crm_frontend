@@ -5,7 +5,7 @@
         <el-option label="All Modules" value="" />
         <el-option v-for="module in modules" :key="module.value" :label="module.label" :value="module.value" />
       </el-select>
-      <el-button type="primary" @click="openNewComment">Add Comment</el-button>
+      <AddCommentButton @click="openNewComment" />
     </div>
 
     <div v-loading="loading">
@@ -37,7 +37,7 @@
           <div class="comment-body">{{ comment.description }}</div>
 
           <div v-if="replyTargetId === comment.commentId" class="reply-box">
-            <el-input v-model="replyText" type="textarea" :rows="3" placeholder="Please enter reply" />
+            <el-input v-model="replyText" type="textarea" :rows="3" maxlength="1000" show-word-limit placeholder="Please enter reply" />
             <div class="reply-actions">
               <el-button @click="cancelReply">Cancel</el-button>
               <el-button type="primary" @click="submitReply(comment.commentId)">Submit Reply</el-button>
@@ -74,10 +74,17 @@
           </el-select>
         </el-form-item>
         <el-form-item label="Title">
-          <el-input v-model="commentForm.title" placeholder="Please enter title" />
+          <el-input v-model="commentForm.title" maxlength="50" show-word-limit placeholder="Please enter title" />
         </el-form-item>
         <el-form-item label="Description">
-          <el-input v-model="commentForm.description" type="textarea" :rows="4" placeholder="Please enter description" />
+          <el-input
+            v-model="commentForm.description"
+            type="textarea"
+            :rows="4"
+            maxlength="1000"
+            show-word-limit
+            placeholder="Please enter description"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -92,13 +99,28 @@
 import { reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
+import type { WorkflowModule } from '@/utils/client-progress'
 import { formatDateTime } from '@/utils/date'
+import AddCommentButton from '@/components/common/AddCommentButton.vue'
+
+const MODULE_PRESET_TITLE: Record<string, string> = {
+  GENERAL: 'General',
+  KYC: 'KYC',
+  RISK: 'Investment Risk Profile',
+  DOCUMENTS: 'Documents',
+  FEE: 'Fee Schedule'
+}
 
 const props = defineProps<{
   clientId: number
   clientType: ClientType
   currentUserId?: string | number
   defaultModule?: string
+}>()
+
+const emit = defineEmits<{
+  /** 列表变化（含加载完成），供详情页同步右侧评论栏数量 */
+  (e: 'changed'): void
 }>()
 
 const modules = [
@@ -126,6 +148,7 @@ const loadComments = async () => {
   try {
     const response = await workflowApi.getComments(props.clientId, props.clientType, selectedModule.value || undefined)
     comments.value = response.data || response || []
+    emit('changed')
   } catch (error: any) {
     ElMessage.error(error.message || 'Failed to load comments')
   } finally {
@@ -133,12 +156,31 @@ const loadComments = async () => {
   }
 }
 
+/** 自由添加：title 初始为空（Comments 标签内「Add Comment」） */
 const openNewComment = () => {
-  commentForm.moduleName = selectedModule.value || props.defaultModule || 'GENERAL'
-  commentForm.title = ''
+  openAddComment({ freeForm: true })
+}
+
+/** 模块添加：可带模块名与标题初值（预览/审批视图模块角标 Add） */
+function openAddComment(options?: {
+  moduleName?: WorkflowModule | string
+  presetTitle?: string
+  freeForm?: boolean
+}) {
+  const mod = (options?.moduleName || selectedModule.value || props.defaultModule || 'GENERAL') as string
+  commentForm.moduleName = mod
+  if (options?.freeForm) {
+    commentForm.title = ''
+  } else {
+    commentForm.title = options?.presetTitle ?? MODULE_PRESET_TITLE[mod] ?? mod
+  }
   commentForm.description = ''
   commentDialogVisible.value = true
 }
+
+defineExpose({
+  openAddComment
+})
 
 const closeNewComment = () => {
   commentDialogVisible.value = false
@@ -147,6 +189,10 @@ const closeNewComment = () => {
 const submitComment = async () => {
   if (!commentForm.title.trim() || !commentForm.description.trim()) {
     ElMessage.warning('Please complete title and description')
+    return
+  }
+  if (commentForm.title.trim().length > 50 || commentForm.description.trim().length > 1000) {
+    ElMessage.warning('Title max 50 characters, description max 1000')
     return
   }
   try {
@@ -176,6 +222,10 @@ const cancelReply = () => {
 const submitReply = async (commentId: number) => {
   if (!replyText.value.trim()) {
     ElMessage.warning('Please enter reply')
+    return
+  }
+  if (replyText.value.trim().length > 1000) {
+    ElMessage.warning('Reply max 1000 characters')
     return
   }
   try {

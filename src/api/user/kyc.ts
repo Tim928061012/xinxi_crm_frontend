@@ -1,4 +1,5 @@
 import request from '../request'
+import { formatFileSizeMb } from '@/utils/file-size'
 
 // KYC 文档
 export interface KYCDocument {
@@ -59,7 +60,7 @@ export const kycApi = {
     const mapDoc = (list: any[]) => (list || []).map((item: any) => ({
       id: item.documentId || item.id,
       document: item.originalFilename || item.document || '',
-      size: `${Math.round(((item.fileSizeBytes || 0) / 1024) * 100) / 100}KB`,
+      size: formatFileSizeMb(item.fileSizeBytes || 0),
       uploadTime: item.uploadTime || item.createdAt || item.created_at || ''
     })) as KYCDocument[]
     const documents = mapDoc((supportingRes as any).data || supportingRes || [])

@@ -3,6 +3,7 @@
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title">All Clients</h1>
+        <el-button :disabled="!clientList.length" @click="openExportDialog">Export Client</el-button>
       </div>
       <div class="user-info">
         <el-icon><User /></el-icon>
@@ -93,50 +94,16 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="Compliance" width="150">
-            <template #default="{ row }">
-              <div class="compliance-op-cell">
-                <el-switch
-                  v-model="row.compliance"
-                  :active-value="true"
-                  :inactive-value="false"
-                  @change="handleComplianceChange(row)"
-                />
-                <span :class="row.compliance ? 'text-yes' : 'text-no'">
-                  {{ row.compliance ? 'Yes' : 'No' }}
-                </span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="Operation" width="150">
-            <template #default="{ row }">
-              <div class="compliance-op-cell">
-                <el-switch
-                  v-model="row.operation"
-                  :active-value="true"
-                  :inactive-value="false"
-                  @change="handleOperationChange(row)"
-                />
-                <span :class="row.operation ? 'text-yes' : 'text-no'">
-                  {{ row.operation ? 'Yes' : 'No' }}
-                </span>
-              </div>
-            </template>
-          </el-table-column>
           <el-table-column label="Created Time" width="200">
             <template #default="{ row }">
               {{ formatDateTime(row.createdTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="Actions" width="300" fixed="right">
+          <el-table-column label="Actions" width="260" fixed="right">
             <template #default="{ row }">
               <div class="client-actions">
                 <el-link type="primary" class="action-link" :underline="false" @click.prevent="handleView(row)">
                   View
-                </el-link>
-                <span class="action-sep" aria-hidden="true">|</span>
-                <el-link type="primary" class="action-link" :underline="false" @click.prevent="handleEdit(row)">
-                  Edit
                 </el-link>
                 <span class="action-sep" aria-hidden="true">|</span>
                 <el-link type="primary" class="action-link" :underline="false" @click.prevent="openProgress(row)">
@@ -157,6 +124,102 @@
       </div>
     </div>
 
+    <el-dialog
+      v-model="exportDialogVisible"
+      class="client-export-dialog"
+      title="Export Client"
+      width="980px"
+      destroy-on-close
+      :close-on-click-modal="!exportLoading"
+      :close-on-press-escape="!exportLoading"
+      :show-close="!exportLoading"
+      @closed="exportLoading = false"
+    >
+      <div v-loading="exportLoading" class="export-dialog-inner">
+        <div class="toolbar-card export-dialog-toolbar">
+          <el-select
+            v-model="exportDialogFilters.contactNature"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            clearable
+            placeholder="Contact Nature"
+            style="width: 200px"
+          >
+            <el-option label="Individual" value="Individual" />
+            <el-option label="Corporate" value="Corporate" />
+          </el-select>
+          <el-select
+            v-model="exportDialogFilters.rm"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            clearable
+            placeholder="RM"
+            style="width: 220px"
+          >
+            <el-option v-for="rm in rmOptions" :key="rm" :label="rm" :value="rm" />
+          </el-select>
+          <el-select
+            v-model="exportDialogFilters.progress"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            clearable
+            placeholder="Progress"
+            style="width: 240px"
+          >
+            <el-option v-for="progress in progressOptions" :key="progress" :label="progress" :value="progress" />
+          </el-select>
+          <el-select v-model="exportDialogSortBy" placeholder="Sort By" style="width: 220px">
+            <el-option label="Created Time (Newest)" value="created-desc" />
+            <el-option label="Created Time (Oldest)" value="created-asc" />
+            <el-option label="RM" value="rm" />
+            <el-option label="Progress" value="progress" />
+          </el-select>
+          <el-button text @click="resetExportDialogFilters">Reset</el-button>
+        </div>
+        <el-table :data="exportDisplayList" row-key="id" size="small" border class="export-client-table">
+          <el-table-column width="52" align="center">
+            <template #header>
+              <el-checkbox
+                :model-value="exportHeaderAllChecked"
+                :indeterminate="exportHeaderIndeterminate"
+                :disabled="!exportDisplayList.length"
+                @change="onExportToggleAll"
+              />
+            </template>
+            <template #default="{ row }">
+              <el-checkbox
+                :model-value="exportSelectedIds.has(row.id)"
+                @change="(val: string | number | boolean) => toggleExportRow(row.id, !!val)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column prop="client" label="Client" min-width="140" />
+          <el-table-column prop="contactNature" label="Contact Nature" min-width="130" />
+          <el-table-column prop="rm" label="RM" min-width="120" />
+          <el-table-column prop="progressLabel" label="Progress" min-width="170" />
+          <el-table-column label="Created Time" min-width="140">
+            <template #default="{ row }">{{ formatDateTime(row.createdTime) }}</template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <template #footer>
+        <div class="export-footer">
+          <span>{{ exportSelectedCount }} items selected</span>
+          <div class="export-buttons">
+            <el-button type="primary" :disabled="!exportSelectedCount || exportLoading" :loading="exportLoading" @click="handleExportList">
+              Export List
+            </el-button>
+            <el-button type="primary" :disabled="!exportSelectedCount || exportLoading" :loading="exportLoading" @click="handleExportSpec">
+              Export Spec
+            </el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
+
     <ClientProgressDialog
       v-model="progressDialogVisible"
       :client-id="selectedProgressClient?.id || null"
@@ -172,12 +235,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onActivated, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onActivated, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import { adminClientApi, type UpdateComplianceOperationParams } from '@/api/client'
+import { adminClientApi } from '@/api/client'
 import type { ClientProgressData, ClientType } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import { formatDateTime } from '@/utils/date'
@@ -201,9 +264,6 @@ interface AdminClientRow {
   progressLabel: string
   progressOwnerRoleLabel?: string
   inactive?: boolean
-  /** 管理端 Compliance / Operation 开关 */
-  compliance: boolean
-  operation: boolean
 }
 
 const route = useRoute()
@@ -214,6 +274,16 @@ const clientList = ref<AdminClientRow[]>([])
 const loading = ref(false)
 const progressDialogVisible = ref(false)
 const selectedProgressClient = ref<AdminClientRow | null>(null)
+const exportDialogVisible = ref(false)
+const exportLoading = ref(false)
+const exportDialogFilters = reactive({
+  contactNature: [] as ClientType[],
+  rm: [] as string[],
+  progress: [] as string[]
+})
+const exportDialogSortBy = ref<'created-desc' | 'created-asc' | 'rm' | 'progress'>('created-desc')
+const exportSelectedIds = shallowRef(new Set<number>())
+const EXPORT_JOB_MS = 120_000
 const sortBy = ref<'created-desc' | 'created-asc' | 'rm' | 'progress'>('created-desc')
 const filters = reactive({
   contactNature: [] as ClientType[],
@@ -224,16 +294,20 @@ const filters = reactive({
 const rmOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.rm).filter(Boolean))).sort())
 const progressOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.progressLabel).filter(Boolean))))
 
-const displayList = computed(() => {
-  const list = clientList.value.filter(item => {
-    if (filters.contactNature.length && !filters.contactNature.includes(item.contactNature)) return false
-    if (filters.rm.length && !filters.rm.includes(item.rm)) return false
-    if (filters.progress.length && !filters.progress.includes(item.progressLabel)) return false
+const filterRows = (
+  list: AdminClientRow[],
+  f: { contactNature: ClientType[]; rm: string[]; progress: string[] }
+) =>
+  list.filter(item => {
+    if (f.contactNature.length && !f.contactNature.includes(item.contactNature)) return false
+    if (f.rm.length && !f.rm.includes(item.rm)) return false
+    if (f.progress.length && !f.progress.includes(item.progressLabel)) return false
     return true
   })
 
-  return [...list].sort((left, right) => {
-    switch (sortBy.value) {
+const sortRows = (list: AdminClientRow[], sort: 'created-desc' | 'created-asc' | 'rm' | 'progress') =>
+  [...list].sort((left, right) => {
+    switch (sort) {
       case 'created-asc':
         return new Date(left.createdTime || 0).getTime() - new Date(right.createdTime || 0).getTime()
       case 'rm':
@@ -245,7 +319,52 @@ const displayList = computed(() => {
         return new Date(right.createdTime || 0).getTime() - new Date(left.createdTime || 0).getTime()
     }
   })
+
+const displayList = computed(() => sortRows(filterRows(clientList.value, filters), sortBy.value))
+
+const exportDisplayList = computed(() =>
+  sortRows(filterRows(clientList.value, exportDialogFilters), exportDialogSortBy.value)
+)
+
+const exportSelectedCount = computed(() => exportSelectedIds.value.size)
+
+const exportHeaderAllChecked = computed(() => {
+  const rows = exportDisplayList.value
+  if (!rows.length) return false
+  return rows.every(r => exportSelectedIds.value.has(r.id))
 })
+
+const exportHeaderIndeterminate = computed(() => {
+  const rows = exportDisplayList.value
+  const n = rows.filter(r => exportSelectedIds.value.has(r.id)).length
+  return n > 0 && n < rows.length
+})
+
+function toggleExportRow(id: number, checked: boolean) {
+  const next = new Set(exportSelectedIds.value)
+  if (checked) next.add(id)
+  else next.delete(id)
+  exportSelectedIds.value = next
+}
+
+function onExportToggleAll(val: string | number | boolean) {
+  const checked = !!val
+  const rows = exportDisplayList.value
+  const next = new Set(exportSelectedIds.value)
+  if (checked) {
+    rows.forEach(r => next.add(r.id))
+  } else {
+    rows.forEach(r => next.delete(r.id))
+  }
+  exportSelectedIds.value = next
+}
+
+function resetExportDialogFilters() {
+  exportDialogFilters.contactNature = []
+  exportDialogFilters.rm = []
+  exportDialogFilters.progress = []
+  exportDialogSortBy.value = 'created-desc'
+}
 
 const normalizeClient = (item: any): AdminClientRow => {
   const contactNature = (item.clientType || item.contactNature || item.contact_nature || 'Individual') as ClientType
@@ -270,21 +389,6 @@ const normalizeClient = (item: any): AdminClientRow => {
   const inactive = item.inactive === true || item.isInactive === true || item.is_inactive === true
   const progressStatus = item.progressStatus || item.progress_status || ''
 
-  const compliance =
-    item.compliance === true ||
-    item.compliance === 1 ||
-    item.compliance === 'true' ||
-    item.compliance === '1' ||
-    item.compliance === 'Yes' ||
-    item.compliance === 'yes'
-  const operation =
-    item.operation === true ||
-    item.operation === 1 ||
-    item.operation === 'true' ||
-    item.operation === '1' ||
-    item.operation === 'Yes' ||
-    item.operation === 'yes'
-
   return {
     id: Number(item.id),
     clientBusinessId: item.clientBusinessId ?? item.clientId ?? item.client_id,
@@ -296,9 +400,7 @@ const normalizeClient = (item: any): AdminClientRow => {
     progressStatus,
     progressLabel: item.progressLabel || getProgressLabel(progressStatus, inactive),
     progressOwnerRoleLabel: item.progressOwnerRoleLabel || item.ownerRoleLabel || item.progressOwnerRole || '',
-    inactive,
-    compliance,
-    operation
+    inactive
   }
 }
 
@@ -319,46 +421,6 @@ const loadClients = async () => {
   }
 }
 
-const handleComplianceChange = async (row: AdminClientRow) => {
-  const originalCompliance = row.compliance
-  try {
-    const params: UpdateComplianceOperationParams = {
-      compliance: row.compliance,
-      operation: row.operation
-    }
-    if (row.contactNature === 'Individual') {
-      await adminClientApi.updateIndividualComplianceOperation(row.id, params)
-    } else {
-      await adminClientApi.updateCorporateComplianceOperation(row.id, params)
-    }
-    ElMessage.success(`Compliance ${row.compliance ? 'enabled' : 'disabled'}`)
-  } catch (error: any) {
-    console.error('Failed to update compliance:', error)
-    ElMessage.error(error?.response?.data?.message || error?.message || 'Failed to update compliance')
-    row.compliance = originalCompliance
-  }
-}
-
-const handleOperationChange = async (row: AdminClientRow) => {
-  const originalOperation = row.operation
-  try {
-    const params: UpdateComplianceOperationParams = {
-      compliance: row.compliance,
-      operation: row.operation
-    }
-    if (row.contactNature === 'Individual') {
-      await adminClientApi.updateIndividualComplianceOperation(row.id, params)
-    } else {
-      await adminClientApi.updateCorporateComplianceOperation(row.id, params)
-    }
-    ElMessage.success(`Operation ${row.operation ? 'enabled' : 'disabled'}`)
-  } catch (error: any) {
-    console.error('Failed to update operation:', error)
-    ElMessage.error(error?.response?.data?.message || error?.message || 'Failed to update operation')
-    row.operation = originalOperation
-  }
-}
-
 const resetFilters = () => {
   filters.contactNature = []
   filters.rm = []
@@ -367,17 +429,11 @@ const resetFilters = () => {
 }
 
 const handleView = (row: AdminClientRow) => {
-  router.push({
-    path: `/client/${row.id}`,
+  const url = router.resolve({
+    path: `/standalone/client/${row.id}`,
     query: { clientType: row.contactNature }
-  })
-}
-
-const handleEdit = (row: AdminClientRow) => {
-  router.push({
-    path: `/client/${row.id}/edit`,
-    query: { clientType: row.contactNature }
-  })
+  }).href
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 const ownerBadgeKind = (row: AdminClientRow) =>
@@ -410,6 +466,83 @@ const openProgress = (row: AdminClientRow) => {
   progressDialogVisible.value = true
 }
 
+const openExportDialog = () => {
+  exportDialogFilters.contactNature = [...filters.contactNature]
+  exportDialogFilters.rm = [...filters.rm]
+  exportDialogFilters.progress = [...filters.progress]
+  exportDialogSortBy.value = sortBy.value
+  exportSelectedIds.value = new Set()
+  exportDialogVisible.value = true
+}
+
+async function runExportJob(fn: () => void | Promise<void>) {
+  exportLoading.value = true
+  try {
+    await Promise.race([
+      Promise.resolve(fn()),
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error('EXPORT_TIMEOUT')), EXPORT_JOB_MS))
+    ])
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message === 'EXPORT_TIMEOUT') {
+      ElMessage.error('Export timed out. Please try again with fewer rows.')
+    } else {
+      throw e
+    }
+  } finally {
+    exportLoading.value = false
+  }
+}
+
+const downloadText = (filename: string, content: string) => {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+const handleExportList = async () => {
+  if (!exportSelectedCount.value) {
+    ElMessage.warning('Please select at least one client')
+    return
+  }
+  const rows = clientList.value.filter(r => exportSelectedIds.value.has(r.id))
+  await runExportJob(async () => {
+    await new Promise<void>(resolve => setTimeout(resolve, 200))
+    const header = ['Client', 'Contact Nature', 'RM', 'Progress', 'Created Time']
+    const dataRows = rows.map(row => [
+      row.client,
+      row.contactNature,
+      row.rm,
+      row.progressLabel,
+      formatDateTime(row.createdTime)
+    ])
+    const csv = [header, ...dataRows]
+      .map(line => line.map(col => `"${String(col ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    downloadText(`client-list-${Date.now()}.csv`, csv)
+    ElMessage.success('Export completed')
+  })
+}
+
+const handleExportSpec = async () => {
+  if (!exportSelectedCount.value) {
+    ElMessage.warning('Please select at least one client')
+    return
+  }
+  const rows = clientList.value.filter(r => exportSelectedIds.value.has(r.id))
+  await runExportJob(async () => {
+    await new Promise<void>(resolve => setTimeout(resolve, 200))
+    const spec = rows
+      .map((row, index) => `${index + 1}. ${row.client} (${row.contactNature}) | ${row.progressLabel} | ${formatDateTime(row.createdTime)}`)
+      .join('\n')
+    downloadText(`client-spec-${Date.now()}.txt`, spec)
+    ElMessage.success('Export completed')
+  })
+}
+
 const handleProgressUpdated = (progress: ClientProgressData) => {
   const target = clientList.value.find(item => item.id === progress.clientId && item.contactNature === progress.clientType)
   if (!target) return
@@ -421,13 +554,15 @@ const handleProgressUpdated = (progress: ClientProgressData) => {
 
 const handleProgressReview = () => {
   if (!selectedProgressClient.value) return
-  router.push({
-    path: `/client/${selectedProgressClient.value.id}/edit`,
+  const row = selectedProgressClient.value
+  const url = router.resolve({
+    path: `/standalone/client/${row.id}/edit`,
     query: {
-      clientType: selectedProgressClient.value.contactNature,
+      clientType: row.contactNature,
       mode: 'review'
     }
-  })
+  }).href
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 watch(
@@ -461,6 +596,13 @@ onMounted(loadClients)
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 16px;
+  }
+
+  .page-header-left {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
   }
 
   .page-title {
@@ -633,18 +775,12 @@ onMounted(loadClients)
     font-weight: 500;
   }
 
-  .compliance-op-cell {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .export-dialog-inner {
+    min-height: 120px;
   }
 
-  .text-yes {
-    color: #67c23a;
-  }
-
-  .text-no {
-    color: #909399;
+  .export-dialog-toolbar {
+    margin-bottom: 12px;
   }
 
   .empty-state {
@@ -664,5 +800,21 @@ onMounted(loadClients)
   border-radius: 50%;
   background-color: #ff4d4f;
   margin-left: 6px;
+}
+
+:deep(.client-export-dialog .el-dialog__body) {
+  padding-top: 8px;
+}
+
+.export-footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.export-buttons {
+  display: flex;
+  gap: 8px;
 }
 </style>

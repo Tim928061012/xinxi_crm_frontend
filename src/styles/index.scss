@@ -485,6 +485,130 @@ html, body {
 }
 
 // =======================
+// Add Comment：圆点白加号 + 主色文案（与模块标题同行右侧）
+// =======================
+.crm-add-comment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--crm-primary, #025189);
+  line-height: 1.25;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    color: var(--crm-primary-hover, #0369a1);
+
+    .crm-add-comment-btn__icon {
+      background: var(--crm-primary-hover, #0369a1);
+    }
+  }
+
+  &:active {
+    color: #014d73;
+
+    .crm-add-comment-btn__icon {
+      background: #014d73;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--crm-primary, #025189);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  &:disabled,
+  &.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .crm-add-comment-btn__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--crm-primary, #025189);
+    color: #fff;
+    flex-shrink: 0;
+
+    .el-icon {
+      font-size: 12px;
+    }
+  }
+
+  .crm-add-comment-btn__text {
+    white-space: nowrap;
+  }
+}
+
+// 模块标题行：下载图标 + Download 文案（无底色，与 Add Comment 并列，顺序：左 Download 右 Add Comment）
+.crm-bulk-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--crm-primary, #025189);
+  line-height: 1.25;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    color: var(--crm-primary-hover, #0369a1);
+  }
+
+  &:active {
+    color: #014d73;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--crm-primary, #025189);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  &:disabled,
+  &.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .crm-bulk-download-btn__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: currentColor;
+
+    .el-icon {
+      font-size: 16px;
+    }
+  }
+
+  .crm-bulk-download-btn__text {
+    white-space: nowrap;
+  }
+}
+
+// =======================
 // 全局表单样式：禁用 label 的点击聚焦行为
 // =======================
 // 所有表单的 label 禁用点击聚焦，只有点击表单项本体才能激活

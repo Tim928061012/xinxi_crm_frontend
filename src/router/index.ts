@@ -205,6 +205,64 @@ const routes: RouteRecordRaw[] = [
       }
     ]
   },
+  // v2：客户资料编辑/预览/审批在独立标签页打开，无左侧菜单
+  {
+    path: '/standalone',
+    component: () => import('@/layouts/ClientStandaloneLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: 'user/client/new',
+        name: 'StandaloneUserClientNew',
+        component: () => import('@/views/user/ClientDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '新建客户',
+          roles: ['user']
+        }
+      },
+      {
+        path: 'user/client/:id',
+        name: 'StandaloneUserClientView',
+        component: () => import('@/views/user/ClientDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '客户详情',
+          roles: ['user']
+        }
+      },
+      {
+        path: 'user/client/:id/edit',
+        name: 'StandaloneUserClientEdit',
+        component: () => import('@/views/user/ClientDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '编辑客户',
+          roles: ['user']
+        }
+      },
+      {
+        path: 'client/:id',
+        name: 'StandaloneAdminClientView',
+        component: () => import('@/views/user/ClientDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '客户详情',
+          roles: ['admin']
+        }
+      },
+      {
+        path: 'client/:id/edit',
+        name: 'StandaloneAdminClientEdit',
+        component: () => import('@/views/user/ClientDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '客户编辑',
+          roles: ['admin']
+        }
+      }
+    ]
+  },
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
@@ -230,6 +288,30 @@ router.beforeEach((to, from, next) => {
   if (requiresAuth && !isAuthenticated) {
     next({ name: 'Login', query: { redirect: to.fullPath } })
     NProgress.done()
+    return
+  }
+
+  // v2 独立标签页：/standalone/user/* 仅员工；/standalone/client/* 仅管理员
+  if (to.path.startsWith('/standalone')) {
+    if (to.path.startsWith('/standalone/user')) {
+      if (isAdminRole(userRole)) {
+        next({ name: 'Account' })
+        NProgress.done()
+        return
+      }
+      next()
+      return
+    }
+    if (to.path.startsWith('/standalone/client')) {
+      if (!isAdminRole(userRole)) {
+        next({ name: 'UserClient' })
+        NProgress.done()
+        return
+      }
+      next()
+      return
+    }
+    next()
     return
   }
 

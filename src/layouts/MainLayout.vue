@@ -122,6 +122,7 @@ const handleLogout = async () => {
   display: flex;
   height: 100vh;
   overflow: hidden;
+  min-height: 0;
 }
 
 .sidebar {
@@ -189,6 +190,8 @@ const handleLogout = async () => {
 
 .main-content {
   flex: 1;
+  /* 与 #app overflow:hidden + flex 配合：允许在定高区域内出现纵向滚动条 */
+  min-height: 0;
   background-color: #f5f5f5;
   overflow-y: auto;
   overflow-x: hidden;
@@ -196,6 +199,7 @@ const handleLogout = async () => {
   width: 100%;
   margin: 0;
   padding: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .fade-enter-active,

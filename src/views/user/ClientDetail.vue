@@ -1,9 +1,15 @@
 <template>
   <div class="client-detail-page" v-loading="pageLoading" element-loading-text="Loading client data...">
-    <!-- 顶部导航栏 -->
+    <!-- 顶部：左为姓名 +（流程节点），右为操作按钮 -->
     <div class="top-header">
-      <div class="header-left">
-        <el-button :icon="ArrowLeft" circle @click="handleBack" />
+      <div class="top-header__leading">
+        <el-button :icon="ArrowLeft" circle class="top-header__back" @click="handleBack" />
+        <h1 class="top-header__title">
+          {{ headerClientName }}
+          <span v-if="headerWorkflowStatusText" class="top-header__status">({{ headerWorkflowStatusText }})</span>
+        </h1>
+      </div>
+      <div class="top-header__actions">
         <!-- View 模式：普通用户与管理员均显示 Edit -->
         <template v-if="isViewMode">
           <el-button v-if="canShowEditButton" type="primary" @click="handleEdit">
@@ -57,20 +63,24 @@
             Progress
           </el-button>
         </template>
-        <el-tag
-          v-if="progressData"
-          :type="getProgressTagType(progressData.progressStatus, progressData.inactive)"
-          effect="light"
-        >
-          {{ progressData.progressLabel || getProgressLabel(progressData.progressStatus, progressData.inactive) }}
-        </el-tag>
         <span v-if="currentTabLastSaved" class="last-saved">
           {{ currentTabLastSaved }}
         </span>
+        <el-button
+          v-if="clientId"
+          text
+          type="primary"
+          class="header-comments-entry"
+          @click="goToCommentsTab"
+        >
+          Comments
+        </el-button>
       </div>
     </div>
 
-    <!-- Tab 导航 -->
+    <!-- Tab 导航 + 主内容区（General～Fee 时若有评论则显示右侧栏） -->
+    <div class="client-tabs-shell">
+      <div class="client-tabs-shell__main">
     <el-tabs v-model="activeTab" class="client-tabs">
       <el-tab-pane label="General" name="general">
         <div class="tab-content">
@@ -83,7 +93,13 @@
           >
             <!-- Client Information Section -->
             <div class="form-section">
-              <h3 class="section-title">Basic</h3>
+              <div class="section-title-row">
+                <h3 class="section-title">Basic</h3>
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('GENERAL', 'General')"
+                />
+              </div>
 
               <!-- Individual 字段 -->
               <template v-if="clientForm.general.contactNature === 'Individual'">
@@ -1177,9 +1193,19 @@
           <div class="kyc-section">
             <div class="kyc-upload-header">
               <h3 class="kyc-upload-title">Upload Supporting Documents</h3>
-              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')">
-                Upload
-              </el-button>
+              <div class="kyc-upload-actions">
+                <BulkDownloadButton
+                  v-if="canBulkDownloadModule && kycData.documents.length"
+                  @click="bulkDownloadKycList(kycData.documents)"
+                />
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('KYC', 'KYC')"
+                />
+                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')">
+                  Upload
+                </el-button>
+              </div>
             </div>
             <el-table
               v-if="kycData.documents && kycData.documents.length > 0"
@@ -1210,9 +1236,19 @@
           <div class="kyc-section">
             <div class="kyc-upload-header">
               <h3 class="kyc-upload-title">Upload Name Screening Documents</h3>
-              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('NAME_SCREENING')">
-                Upload
-              </el-button>
+              <div class="kyc-upload-actions">
+                <BulkDownloadButton
+                  v-if="canBulkDownloadModule && kycData.nameScreeningDocuments.length"
+                  @click="bulkDownloadKycList(kycData.nameScreeningDocuments)"
+                />
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('KYC', 'KYC')"
+                />
+                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('NAME_SCREENING')">
+                  Upload
+                </el-button>
+              </div>
             </div>
             <el-table
               v-if="kycData.nameScreeningDocuments && kycData.nameScreeningDocuments.length > 0"
@@ -1248,7 +1284,13 @@
           <el-form :model="riskProfileData" label-width="250px" class="risk-profile-form">
             <!-- Overview Section -->
             <div class="form-section">
-              <h3 class="section-title">Overview</h3>
+              <div class="section-title-row">
+                <h3 class="section-title">Overview</h3>
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('RISK', 'Investment Risk Profile')"
+                />
+              </div>
               <div class="form-row">
                 <el-form-item label="Investment Risk Rating">
                   <template v-if="isViewMode">
@@ -1464,9 +1506,19 @@
           <div class="document-section">
             <div class="section-header">
               <h3 class="section-title">Upload Identity Proof</h3>
-              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('identity')">
-                Upload
-              </el-button>
+              <div class="section-header-actions">
+                <BulkDownloadButton
+                  v-if="canBulkDownloadModule && documentsData.identity.length"
+                  @click="bulkDownloadDocumentList(documentsData.identity)"
+                />
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('DOCUMENTS', 'Documents — Identity')"
+                />
+                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('identity')">
+                  Upload
+                </el-button>
+              </div>
             </div>
             <el-table
               v-if="documentsData.identity && documentsData.identity.length > 0"
@@ -1481,16 +1533,17 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <!-- 仅在可编辑模式下展示操作列，且去掉列头文案 -->
-              <el-table-column v-if="!isViewMode" width="200">
+              <el-table-column label="Action" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
                     Open
                   </el-link>
-                  <el-divider direction="vertical" />
-                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
-                    Delete
-                  </el-link>
+                  <template v-if="!isViewMode">
+                    <el-divider direction="vertical" />
+                    <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                      Delete
+                    </el-link>
+                  </template>
                 </template>
               </el-table-column>
             </el-table>
@@ -1500,9 +1553,19 @@
           <div class="document-section">
             <div class="section-header">
               <h3 class="section-title">Upload Address Proof</h3>
-              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('address')">
-                Upload
-              </el-button>
+              <div class="section-header-actions">
+                <BulkDownloadButton
+                  v-if="canBulkDownloadModule && documentsData.address.length"
+                  @click="bulkDownloadDocumentList(documentsData.address)"
+                />
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('DOCUMENTS', 'Documents — Address')"
+                />
+                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('address')">
+                  Upload
+                </el-button>
+              </div>
             </div>
             <el-table
               v-if="documentsData.address && documentsData.address.length > 0"
@@ -1517,16 +1580,17 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <!-- 仅在可编辑模式下展示操作列，且去掉列头文案 -->
-              <el-table-column v-if="!isViewMode" width="200">
+              <el-table-column label="Action" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
                     Open
                   </el-link>
-                  <el-divider direction="vertical" />
-                  <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
-                    Delete
-                  </el-link>
+                  <template v-if="!isViewMode">
+                    <el-divider direction="vertical" />
+                    <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                      Delete
+                    </el-link>
+                  </template>
                 </template>
               </el-table-column>
             </el-table>
@@ -1536,9 +1600,19 @@
           <div class="document-section">
             <div class="section-header">
               <h3 class="section-title">Upload Forms</h3>
-              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('forms')">
-                Upload
-              </el-button>
+              <div class="section-header-actions">
+                <BulkDownloadButton
+                  v-if="canBulkDownloadModule && documentsData.forms.length"
+                  @click="bulkDownloadDocumentList(documentsData.forms)"
+                />
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('DOCUMENTS', 'Documents — Forms')"
+                />
+                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('forms')">
+                  Upload
+                </el-button>
+              </div>
             </div>
             <el-table
               v-if="documentsData.forms && documentsData.forms.length > 0"
@@ -1553,12 +1627,12 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Actions" width="200">
+              <el-table-column label="Action" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
                     Open
                   </el-link>
-                  <el-divider direction="vertical" />
+                  <el-divider v-if="!isViewMode" direction="vertical" />
                   <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
                     Delete
                   </el-link>
@@ -1571,9 +1645,19 @@
           <div class="document-section">
             <div class="section-header">
               <h3 class="section-title">Upload XinXi Statements</h3>
-              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('statements')">
-                Upload
-              </el-button>
+              <div class="section-header-actions">
+                <BulkDownloadButton
+                  v-if="canBulkDownloadModule && documentsData.statements.length"
+                  @click="bulkDownloadDocumentList(documentsData.statements)"
+                />
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('DOCUMENTS', 'Documents — Statements')"
+                />
+                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('statements')">
+                  Upload
+                </el-button>
+              </div>
             </div>
             <el-table
               v-if="documentsData.statements && documentsData.statements.length > 0"
@@ -1588,12 +1672,12 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Actions" width="200">
+              <el-table-column label="Action" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
                     Open
                   </el-link>
-                  <el-divider direction="vertical" />
+                  <el-divider v-if="!isViewMode" direction="vertical" />
                   <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
                     Delete
                   </el-link>
@@ -1606,9 +1690,19 @@
           <div class="document-section">
             <div class="section-header">
               <h3 class="section-title">Upload Others Documents</h3>
-              <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('others')">
-                Upload
-              </el-button>
+              <div class="section-header-actions">
+                <BulkDownloadButton
+                  v-if="canBulkDownloadModule && documentsData.others.length"
+                  @click="bulkDownloadDocumentList(documentsData.others)"
+                />
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('DOCUMENTS', 'Documents — Others')"
+                />
+                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('others')">
+                  Upload
+                </el-button>
+              </div>
             </div>
             <el-table
               v-if="documentsData.others && documentsData.others.length > 0"
@@ -1623,12 +1717,12 @@
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Actions" width="200">
+              <el-table-column label="Action" width="200">
                 <template #default="{ row }">
                   <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
                     Open
                   </el-link>
-                  <el-divider direction="vertical" />
+                  <el-divider v-if="!isViewMode" direction="vertical" />
                   <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
                     Delete
                   </el-link>
@@ -1641,6 +1735,9 @@
 
       <el-tab-pane label="Fee Schedule" name="fee">
         <div class="tab-content" v-loading="tabLoading.fee" element-loading-text="Loading fee schedule data...">
+          <div v-if="showModuleCommentEntry" class="fee-tab-comment-bar">
+            <AddCommentButton @click="openCommentFromModule('FEE', 'Fee Schedule')" />
+          </div>
           <el-form :model="feeScheduleData" label-width="250px" class="fee-schedule-form">
             <div class="form-section">
               <div class="vulnerable-assessment-container">
@@ -1794,19 +1891,35 @@
         </div>
       </el-tab-pane>
 
-      <el-tab-pane label="Comments" name="comments">
+      <el-tab-pane v-if="clientId" label="Comments" name="comments">
         <div class="tab-content">
           <ClientCommentsPanel
-            v-if="clientId"
+            ref="commentsPanelRef"
             :client-id="clientId"
             :client-type="currentClientType"
             :current-user-id="authStore.user?.id"
-            :default-module="currentCommentModule"
+            :default-module="commentsContextModule"
+            @changed="handleCommentsChanged"
           />
-          <el-empty v-else description="Save the client first to manage comments" />
         </div>
       </el-tab-pane>
     </el-tabs>
+      </div>
+      <aside
+        v-if="commentsSideRailVisible"
+        class="client-tabs-shell__rail"
+        :class="{ 'is-narrow': commentsRailCollapsed }"
+      >
+        <ClientCommentsSidebar
+          ref="commentsSidebarRef"
+          v-model:collapsed="commentsRailCollapsed"
+          :client-id="clientId!"
+          :client-type="currentClientType"
+          @open-comments-tab="goToCommentsTab"
+          @count-updated="setCommentTotalCount"
+        />
+      </aside>
+    </div>
 
     <ClientProgressDialog
       v-model="progressDialogVisible"
@@ -1970,11 +2083,21 @@ import { kycApi, type KYCData, type KYCDocument } from '@/api/user/kyc'
 import { documentsApi, type DocumentsData, type Document, type DocumentType } from '@/api/user/documents'
 import { riskProfileApi, type InvestmentRiskProfile, type InvestmentType } from '@/api/user/risk-profile'
 import { feeScheduleApi, type FeeSchedule } from '@/api/user/fee-schedule'
-import { workflowApi, type ClientProgressData, type ClientType } from '@/api/user/workflow'
+import { workflowApi, type ClientProgressData, type ClientType, type ClientComment } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import ClientCommentsPanel from '@/components/client/ClientCommentsPanel.vue'
+import ClientCommentsSidebar from '@/components/client/ClientCommentsSidebar.vue'
+import AddCommentButton from '@/components/common/AddCommentButton.vue'
+import BulkDownloadButton from '@/components/common/BulkDownloadButton.vue'
 import { formatDateTime } from '@/utils/date'
-import { getProgressLabel, getProgressTagType, isClientEditable, mapTabToCommentModule } from '@/utils/client-progress'
+import { formatFileSizeMb } from '@/utils/file-size'
+import {
+  getProgressLabel,
+  isClientEditable,
+  mapTabToCommentModule,
+  type WorkflowModule
+} from '@/utils/client-progress'
+import { getClientBasePath, getClientListPath, isAdminClientRoute, isStandaloneClientRoute } from '@/utils/client-routes'
 import { isAdminRole } from '@/utils/roles'
 
 const route = useRoute()
@@ -1983,7 +2106,7 @@ const authStore = useAuthStore()
 
 const clientId = computed(() => {
   // 如果是新建模式（路由名称为 UserClientNew 或路径包含 /new），返回 null
-  if (route.name === 'UserClientNew' || route.path.includes('/new')) {
+  if (route.name === 'UserClientNew' || route.name === 'StandaloneUserClientNew' || route.path.includes('/new')) {
     return null
   }
   // 否则尝试从路由参数中获取 id
@@ -2012,6 +2135,12 @@ const isViewMode = computed(() => {
   if (routeName === 'UserClientView' || (path.startsWith('/user/client/') && !path.includes('/edit') && !path.includes('/new') && path !== '/user/client')) {
     return true
   }
+  // v2 独立标签页：预览（无 /edit）
+  if (routeName === 'StandaloneUserClientView' || routeName === 'StandaloneAdminClientView') {
+    return true
+  }
+  if (/^\/standalone\/user\/client\/\d+$/.test(path)) return true
+  if (/^\/standalone\/client\/\d+$/.test(path)) return true
   return false
 })
 
@@ -2040,6 +2169,8 @@ const tabLastSaved: Record<string, string> = reactive({
 const currentTabLastSaved = computed(() => tabLastSaved[activeTab.value] || '')
 const currentClientType = computed(() => ((route.query.clientType as ClientType) || (clientForm.contactNature as ClientType) || 'Individual'))
 const isReviewMode = computed(() => route.query.mode === 'review' && !isViewMode.value)
+/** v1.0 遗留：预览/审批视图下可按模块批量下载已上传文件 */
+const canBulkDownloadModule = computed(() => !!clientId.value && (isViewMode.value || isReviewMode.value))
 const canReviewAction = computed(() => progressData.value?.availableActions?.includes('REVIEW') ?? false)
 const canShowEditButton = computed(() => {
   if (!clientId.value || !isViewMode.value) return false
@@ -2047,7 +2178,111 @@ const canShowEditButton = computed(() => {
   if (canReviewAction.value) return true
   return isClientEditable(progressData.value?.progressStatus, progressData.value?.inactive)
 })
-const currentCommentModule = computed(() => mapTabToCommentModule(activeTab.value))
+
+/** 顶栏标题：个人为客户姓名，机构为公司名 */
+const headerClientName = computed(() => {
+  const g = clientForm.general as { contactNature?: string; companyName?: string; firstName?: string; lastName?: string }
+  if (g.contactNature === 'Corporate') {
+    const n = (g.companyName || '').trim()
+    return n || 'Client'
+  }
+  const fn = (g.firstName || '').trim()
+  const ln = (g.lastName || '').trim()
+  const parts = [fn, ln].filter(Boolean)
+  return parts.length ? parts.join(' ') : 'Client'
+})
+
+/** 顶栏括号内：当前流程状态节点 */
+const headerWorkflowStatusText = computed(() => {
+  const p = progressData.value
+  if (!p) return ''
+  return (p.progressLabel || getProgressLabel(p.progressStatus, p.inactive) || '').trim()
+})
+
+/** 非 Comments 标签时记录当前模块，便于 Comments 面板默认模块与「从模块发评论」一致 */
+const lastMainTab = ref('general')
+watch(
+  () => activeTab.value,
+  v => {
+    if (v !== 'comments') lastMainTab.value = v
+  },
+  { immediate: true }
+)
+
+const commentsContextModule = computed(() =>
+  mapTabToCommentModule(activeTab.value === 'comments' ? lastMainTab.value : activeTab.value)
+)
+
+/** 文档：预览/审批视图下各模块可有 Add comment；编辑视图仅能通过 Comments 标签内添加 */
+const showModuleCommentEntry = computed(() => !!clientId.value && (isViewMode.value || isReviewMode.value))
+
+const commentsPanelRef = ref<{ openAddComment: (opts?: Record<string, unknown>) => void } | null>(null)
+const commentsSidebarRef = ref<InstanceType<typeof ClientCommentsSidebar> | null>(null)
+
+/** 含回复的总条数，用于是否显示右侧评论栏（与侧栏内计数一致） */
+const commentTotalCount = ref(0)
+const commentsRailCollapsed = ref(false)
+
+const MAIN_TABS_WITH_COMMENTS_RAIL = ['general', 'kyc', 'risk', 'documents', 'fee'] as const
+
+function countCommentTree(list: ClientComment[]): number {
+  let n = 0
+  for (const c of list) {
+    n += 1
+    if (c.replies?.length) n += c.replies.length
+  }
+  return n
+}
+
+const commentsSideRailVisible = computed(() => {
+  if (!clientId.value || commentTotalCount.value < 1) return false
+  return (MAIN_TABS_WITH_COMMENTS_RAIL as readonly string[]).includes(activeTab.value)
+})
+
+const loadCommentCount = async () => {
+  if (!clientId.value) {
+    commentTotalCount.value = 0
+    return
+  }
+  try {
+    const response = await workflowApi.getComments(clientId.value, currentClientType.value)
+    const raw = (response as { data?: ClientComment[] }).data
+    const list = Array.isArray(raw) ? raw : []
+    commentTotalCount.value = countCommentTree(list)
+  } catch {
+    commentTotalCount.value = 0
+  }
+}
+
+const setCommentTotalCount = (n: number) => {
+  commentTotalCount.value = n
+}
+
+const handleCommentsChanged = () => {
+  void loadCommentCount()
+  commentsSidebarRef.value?.reload()
+}
+
+const goToCommentsTab = () => {
+  activeTab.value = 'comments'
+}
+
+const openCommentFromModule = (module: WorkflowModule, presetTitle: string) => {
+  activeTab.value = 'comments'
+  nextTick(() => {
+    commentsPanelRef.value?.openAddComment({ moduleName: module, presetTitle })
+  })
+}
+
+watch(clientId, id => {
+  if (!id && activeTab.value === 'comments') {
+    activeTab.value = 'general'
+  }
+  if (!id) {
+    commentTotalCount.value = 0
+  }
+})
+
 const clientFormRef = ref<FormInstance>()
 const portfolioFormRef = ref<FormInstance>()
 
@@ -2662,6 +2897,7 @@ const loadClient = async () => {
       })
     }
 
+    await loadCommentCount()
     await loadProgress()
   } catch (error: any) {
     console.error('Failed to load client:', error)
@@ -2811,13 +3047,13 @@ const loadBanks = async () => {
 
 // 处理函数
 const handleBack = () => {
-  // admin 在 /client/* 下查看时，返回 admin 的 Client 列表
-  // 普通用户在 /user/client/* 下查看时，返回 user 的 Client 列表
-  if (route.path.startsWith('/client')) {
-    router.push('/client')
-  } else {
-    router.push('/user/client')
+  const listPath = getClientListPath(route.path)
+  if (isStandaloneClientRoute(route.path)) {
+    window.close()
+    void router.push(listPath)
+    return
   }
+  router.push(listPath)
 }
 
 const openProgressDialog = () => {
@@ -2832,16 +3068,13 @@ const openProgressDialog = () => {
 const handleEdit = () => {
   if (!clientId.value) return
   const clientType = route.query.clientType || clientForm.contactNature || 'Individual'
-  if (route.path.startsWith('/user/client/')) {
-    router.push({ path: `/user/client/${clientId.value}/edit`, query: { clientType } })
-  } else if (route.path.startsWith('/client/')) {
-    router.push({ path: `/client/${clientId.value}/edit`, query: { clientType } })
-  }
+  const base = getClientBasePath(route.path)
+  router.push({ path: `${base}/${clientId.value}/edit`, query: { clientType } })
 }
 
 const enterReviewMode = () => {
   if (!clientId.value) return
-  const basePath = route.path.startsWith('/client/') ? '/client' : '/user/client'
+  const basePath = getClientBasePath(route.path)
   router.push({
     path: `${basePath}/${clientId.value}/edit`,
     query: {
@@ -2986,8 +3219,7 @@ const handleSave = async (closeAfter: boolean = false) => {
           // Save & Close：返回列表（根据当前路由前缀区分 admin 和 user）
           if (closeAfter) {
             await nextTick()
-            const isAdminRoute = route.path.startsWith('/client')
-            await router.push(isAdminRoute ? '/client' : '/user/client')
+            await router.push(getClientListPath(route.path))
           }
         } else {
           // 创建新 Client
@@ -3116,13 +3348,16 @@ const handleSave = async (closeAfter: boolean = false) => {
           // 根据是否 Save & Close 决定跳转逻辑（根据当前路由前缀区分 admin 和 user）
           if (currentClientId) {
             await nextTick()
-            const isAdminRoute = route.path.startsWith('/client')
+            const base = getClientBasePath(route.path)
+            const listPath = getClientListPath(route.path)
             if (closeAfter) {
-              await router.push(isAdminRoute ? '/client' : '/user/client')
+              await router.push(listPath)
             } else {
-              await router.push(
-                isAdminRoute ? `/client/${currentClientId}` : `/user/client/${currentClientId}/edit`
-              )
+              if (isAdminClientRoute(route.path)) {
+                await router.push(`${base}/${currentClientId}`)
+              } else {
+                await router.push(`${base}/${currentClientId}/edit`)
+              }
             }
           } else {
             throw new Error('Client ID is missing after creation')
@@ -3178,7 +3413,7 @@ const handleReviewDecision = async (approve: boolean) => {
     progressData.value = response.data || response
     ElMessage.success(approve ? 'Review approved successfully' : 'Review rejected successfully')
 
-    const basePath = route.path.startsWith('/client/') ? '/client' : '/user/client'
+    const basePath = getClientBasePath(route.path)
     await router.push({
       path: `${basePath}/${clientId.value}`,
       query: { clientType: currentClientType.value }
@@ -3424,6 +3659,65 @@ const handleOpenDocument = async (document: Document) => {
   }
 }
 
+const safeFileBaseName = (name: string, fallback: string) => {
+  const n = String(name || '')
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .trim()
+  return n || fallback
+}
+
+const bulkDownloadDocumentList = async (list: Document[]) => {
+  if (!clientId.value || !list.length) return
+  let ok = 0
+  for (let i = 0; i < list.length; i++) {
+    const doc = list[i]
+    if (!doc.id) continue
+    try {
+      const response = await documentsApi.getDocument(clientId.value, doc.id)
+      const blobData = (response as any).data || response
+      const blob = blobData instanceof Blob ? blobData : new Blob([blobData], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = safeFileBaseName(doc.document, `document-${i + 1}.pdf`)
+      a.click()
+      URL.revokeObjectURL(url)
+      ok++
+      await new Promise<void>(r => setTimeout(r, 400))
+    } catch (error) {
+      console.error(error)
+      ElMessage.error(`Failed to download ${doc.document || 'file'}`)
+    }
+  }
+  if (ok) ElMessage.success(`Downloaded ${ok} file(s)`)
+}
+
+const bulkDownloadKycList = async (list: KYCDocument[]) => {
+  if (!clientId.value || !list.length) return
+  let ok = 0
+  for (let i = 0; i < list.length; i++) {
+    const doc = list[i]
+    if (!doc.id) continue
+    try {
+      const response = await kycApi.getKYCDocument(clientId.value, doc.id)
+      const blobData = (response as any).data || response
+      const blob = blobData instanceof Blob ? blobData : new Blob([blobData], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = safeFileBaseName(doc.document, `document-${i + 1}.pdf`)
+      a.click()
+      URL.revokeObjectURL(url)
+      ok++
+      await new Promise<void>(r => setTimeout(r, 400))
+    } catch (error) {
+      console.error(error)
+      ElMessage.error(`Failed to download ${doc.document || 'file'}`)
+    }
+  }
+  if (ok) ElMessage.success(`Downloaded ${ok} file(s)`)
+}
+
 const handleDeleteDocument = async (document: Document) => {
   if (!clientId.value) {
     ElMessage.warning('Client ID is missing')
@@ -3528,7 +3822,7 @@ const handleSubmitDocumentUpload = async () => {
           targetList.push({
             id: docId,
             document: data.originalFilename || data.document || file?.name || '',
-            size: formatFileSize(file?.size ?? 0),
+            size: formatFileSizeMb(file?.size ?? 0),
             uploadTime: data.uploadTime || data.createdAt || new Date().toISOString()
           })
         })
@@ -3573,7 +3867,7 @@ const handleSubmitDocumentUpload = async () => {
           targetList.push({
             id: docId,
             document: data.originalFilename || data.document || file?.name || '',
-            size: formatFileSize(file?.size ?? 0),
+            size: formatFileSizeMb(file?.size ?? 0),
             uploadTime: data.uploadTime || data.createdAt || new Date().toISOString(),
             type: docTypeKey
           })
@@ -3617,15 +3911,6 @@ const handleSubmitDocumentUpload = async () => {
   } finally {
     uploading.value = false
   }
-}
-
-// 格式化文件大小
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + sizes[i]
 }
 
 // 格式化显示值（用于view模式）
@@ -3677,7 +3962,10 @@ watch(
 onMounted(async () => {
   try {
     // 管理员不能新建客户，若访问新建页则重定向到 admin 客户列表
-    if (isAdminRole(authStore.user?.role) && (route.path === '/user/client/new' || route.path.includes('/new'))) {
+    if (
+      isAdminRole(authStore.user?.role) &&
+      (route.path === '/user/client/new' || route.path === '/standalone/user/client/new')
+    ) {
       router.replace('/client')
       return
     }
@@ -3705,34 +3993,121 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
 
-  /* 顶部返回 + 保存区域，紧凑内边距 */
+  /* 顶栏：左标题 + 右操作 */
   .top-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 24px;
+    gap: 16px;
+    padding: 14px 24px 12px;
     background-color: var(--crm-surface-page);
     border-bottom: none;
 
-    .header-left {
+    .top-header__leading {
       display: flex;
       align-items: center;
       gap: 12px;
-
-      .last-saved {
-        color: #909399;
-        font-size: 14px;
-        margin-left: 8px;
-      }
+      min-width: 0;
+      flex: 1;
     }
 
+    .top-header__back {
+      flex-shrink: 0;
+    }
+
+    .top-header__title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--crm-text-primary, #0f172a);
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .top-header__status {
+      font-weight: 500;
+      color: var(--crm-text-secondary, #475569);
+    }
+
+    .top-header__actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      flex-shrink: 0;
+    }
+
+    .last-saved {
+      color: #909399;
+      font-size: 13px;
+      margin-left: 4px;
+    }
+
+    .header-comments-entry {
+      font-weight: 500;
+    }
   }
 
-  /* 顶部 Tab 与内容区域：无内边距，左右与侧边栏/视口间隔扩大一倍 */
-  .client-tabs {
-    flex: 1;
-    background-color: var(--crm-surface-page);
+  /* General / Risk 等：标题行 + 模块内 Add comment */
+  .section-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    .section-title {
+      margin-bottom: 0;
+    }
+  }
+
+  .fee-tab-comment-bar {
+    margin-bottom: 8px;
+  }
+
+  /* 主内容 + 可选右侧评论栏
+   * 勿对 shell 使用 flex:1 + min-height:0，否则在 UserLayout 的定高 main 内会把中间区锁在视口高度内，
+   * 长表单无法撑开页面，外层 .main-content 也无法滚动。由内容自然撑高，整页滚动交给 layout。 */
+  .client-tabs-shell {
+    flex: 0 1 auto;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
     margin: 4px 24px 12px;
+    gap: 0;
+  }
+
+  .client-tabs-shell__main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .client-tabs-shell__rail {
+    flex-shrink: 0;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    background-color: #fff;
+    border-radius: var(--crm-radius-md);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    margin-left: 10px;
+    overflow: hidden;
+
+    &.is-narrow {
+      width: 44px;
+    }
+  }
+
+  /* 顶部 Tab 与内容区域：无内边距（不 flex:1 撑满视口，避免长页被裁切无法滚动） */
+  .client-tabs {
+    flex: 0 1 auto;
+    width: 100%;
+    background-color: var(--crm-surface-page);
     border-radius: var(--crm-radius-md);
     padding: 0;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
@@ -3753,7 +4128,11 @@ onMounted(async () => {
       }
     }
 
+    /* Element Plus 默认 el-tabs__content 为 overflow:hidden + flex-grow:1，在定高 flex 链下会裁切表单；
+     * 改为随内容增高，由外层 layout 的 main 区域滚动。 */
     :deep(.el-tabs__content) {
+      flex-grow: 0;
+      overflow: visible !important;
       padding-top: 12px;
       background-color: var(--crm-surface-page);
       border: none;
@@ -4047,6 +4426,12 @@ onMounted(async () => {
     color: #303133;
     margin: 0;
   }
+
+  .kyc-upload-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 // Document Section（与 KYC Upload 统一：白底标题条 + 紧凑间距）
@@ -4062,6 +4447,12 @@ onMounted(async () => {
     background-color: #fff;
     border: none;
     border-radius: 4px;
+  }
+
+  .section-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .section-title {
