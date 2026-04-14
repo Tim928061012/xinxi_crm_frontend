@@ -78,6 +78,77 @@ export interface CreateIntroducerParams {
 
 export interface UpdateIntroducerParams extends CreateIntroducerParams {}
 
+/** Introducer General Tab 完整载荷（与后端 IntroducerFullDTO 对齐） */
+export interface IntroducerGeneralSection {
+  contactType?: string
+  contactNature?: 'Individual' | 'Corporate'
+  introducerIdDisplay?: string
+  clientRelationshipStatus?: string
+  rm?: string
+  rmUserId?: number
+  arm?: string
+  armUserId?: number
+  linkedIntroducerId?: number | null
+  companyName?: string
+  corporateType?: string
+  industry?: string
+  stateOwned?: boolean
+  chineseName?: string
+  idType?: string
+  idNo?: string
+  dateOfCompanySearch?: string
+  countryOfRegistration?: string
+  businessDomicile?: string
+  registrationDate?: string
+  gender?: string
+  maritalStatus?: string
+  educationLevel?: string
+  birthday?: string
+  countryOfBirth?: string
+  dualCitizenship?: boolean
+  nationality?: string
+  secondaryNationality?: string
+  title?: string
+  firstName?: string
+  lastName?: string
+  indChineseName?: string
+  indIdType?: string
+  indIdNo?: string
+  indIdExpiry?: string
+}
+
+export interface IntroducerContactSection {
+  title?: string
+  firstName?: string
+  lastName?: string
+  chineseName?: string
+  idType?: string
+  idNo?: string
+  idExpiry?: string
+  mobilePhone?: string
+  homePhone?: string
+  primaryEmail?: string
+  address?: string
+  jurisdictionDiffers?: boolean
+}
+
+export interface IntroducerPortfolioRow {
+  id?: number
+  bank?: string
+  bookingCentre?: string
+  portfolioNo?: string
+  uploadTime?: string
+}
+
+export interface IntroducerFullPayload {
+  introducerId?: number
+  contactNature?: 'Individual' | 'Corporate'
+  general: IntroducerGeneralSection
+  contact: IntroducerContactSection
+  secondaryContact: IntroducerContactSection
+  portfolios: IntroducerPortfolioRow[]
+}
+
 export const introducerApi = {
   // 获取介绍人列表
   getIntroducers(params?: any) {
@@ -92,6 +163,14 @@ export const introducerApi = {
   // 获取介绍人详情
   getIntroducerById(id: number) {
     return request.get(`/crm-introducers/${id}`)
+  },
+
+  getIntroducerFull(id: number) {
+    return request.get(`/crm-introducers/${id}/detail`)
+  },
+
+  saveIntroducerFull(id: number, data: IntroducerFullPayload) {
+    return request.put(`/crm-introducers/${id}/detail`, data)
   },
 
   // 创建介绍人

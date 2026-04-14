@@ -73,6 +73,36 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: 'introducer/new',
+        name: 'IntroducerNew',
+        component: () => import('@/views/admin/IntroducerDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '新建介绍人',
+          roles: ['admin']
+        }
+      },
+      {
+        path: 'introducer/:id(\\d+)/edit',
+        name: 'IntroducerEdit',
+        component: () => import('@/views/admin/IntroducerDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '编辑介绍人',
+          roles: ['admin']
+        }
+      },
+      {
+        path: 'introducer/:id(\\d+)',
+        name: 'IntroducerView',
+        component: () => import('@/views/admin/IntroducerDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '介绍人详情',
+          roles: ['admin']
+        }
+      },
+      {
         path: 'bank-centre',
         name: 'BankCentre',
         component: () => import('@/views/admin/BankCentre.vue'),

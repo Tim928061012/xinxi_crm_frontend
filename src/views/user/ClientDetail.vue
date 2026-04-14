@@ -12,10 +12,22 @@
       <div class="top-header__actions">
         <!-- View 模式：普通用户与管理员均显示 Edit -->
         <template v-if="isViewMode">
+          <el-button
+            v-if="canSubmitAction"
+            type="primary"
+            :loading="workflowLoading"
+            @click="handleHeaderSubmit"
+          >
+            Submit
+          </el-button>
           <el-button v-if="canShowEditButton" type="primary" @click="handleEdit">
             Edit
           </el-button>
-          <el-button v-if="clientId" @click="openProgressDialog">
+          <el-button
+            v-if="clientId"
+            :class="['top-header__btn-progress', { 'top-header__btn-progress--muted': headerProgressMuted }]"
+            @click="openProgressDialog"
+          >
             Progress
           </el-button>
           <el-button v-if="canReviewAction" type="success" @click="enterReviewMode">
@@ -66,15 +78,6 @@
         <span v-if="currentTabLastSaved" class="last-saved">
           {{ currentTabLastSaved }}
         </span>
-        <el-button
-          v-if="clientId"
-          text
-          type="primary"
-          class="header-comments-entry"
-          @click="goToCommentsTab"
-        >
-          Comments
-        </el-button>
       </div>
     </div>
 
@@ -2094,6 +2097,7 @@ import { formatFileSizeMb } from '@/utils/file-size'
 import {
   getProgressLabel,
   isClientEditable,
+  isPendingSubmissionStatus,
   mapTabToCommentModule,
   type WorkflowModule
 } from '@/utils/client-progress'
@@ -2172,6 +2176,15 @@ const isReviewMode = computed(() => route.query.mode === 'review' && !isViewMode
 /** v1.0 遗留：预览/审批视图下可按模块批量下载已上传文件 */
 const canBulkDownloadModule = computed(() => !!clientId.value && (isViewMode.value || isReviewMode.value))
 const canReviewAction = computed(() => progressData.value?.availableActions?.includes('REVIEW') ?? false)
+/** 预览视图：RM 等在 Pending Submission 时后端下发 SUBMIT */
+const canSubmitAction = computed(() => progressData.value?.availableActions?.includes('SUBMIT') ?? false)
+/** Pending Submission 预览稿：Progress 为浅灰次要按钮 */
+const headerProgressMuted = computed(
+  () =>
+    isViewMode.value &&
+    !!clientId.value &&
+    isPendingSubmissionStatus(progressData.value?.progressStatus, progressData.value?.inactive)
+)
 const canShowEditButton = computed(() => {
   if (!clientId.value || !isViewMode.value) return false
   if (isAdminRole(authStore.user?.role)) return true
@@ -3429,6 +3442,22 @@ const handleProgressUpdated = (progress: ClientProgressData) => {
   progressData.value = progress
 }
 
+/** 预览顶栏 Submit（Pending Submission + 后端 availableActions 含 SUBMIT） */
+const handleHeaderSubmit = async () => {
+  if (!clientId.value) return
+  workflowLoading.value = true
+  try {
+    await workflowApi.submit(clientId.value, currentClientType.value)
+    await loadProgress()
+    ElMessage.success('Submitted successfully')
+  } catch (error: unknown) {
+    const err = error as { message?: string; response?: { data?: { message?: string } } }
+    ElMessage.error(err.response?.data?.message || err.message || 'Submit failed')
+  } finally {
+    workflowLoading.value = false
+  }
+}
+
 const handleNewPortfolio = () => {
   if (!clientId.value) {
     ElMessage.warning('Please save the client first')
@@ -4044,8 +4073,17 @@ onMounted(async () => {
       margin-left: 4px;
     }
 
-    .header-comments-entry {
-      font-weight: 500;
+    /* Pending Submission 预览：Progress 浅灰底深字，与主色 Submit/Edit 区分 */
+    .top-header__btn-progress--muted {
+      background-color: #eceff1;
+      border-color: #dcdfe6;
+      color: #606266;
+
+      &:hover {
+        background-color: #e4e7ed;
+        border-color: #c0c4cc;
+        color: #303133;
+      }
     }
   }
 
