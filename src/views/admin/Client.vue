@@ -179,7 +179,7 @@
           </el-select>
           <el-button text @click="resetExportDialogFilters">Reset</el-button>
         </div>
-        <el-table :data="exportDisplayList" row-key="id" size="small" border class="export-client-table">
+        <el-table :data="exportDisplayList" :row-key="exportTableRowKey" size="small" border class="export-client-table">
           <el-table-column width="52" align="center">
             <template #header>
               <el-checkbox
@@ -191,8 +191,9 @@
             </template>
             <template #default="{ row }">
               <el-checkbox
-                :model-value="exportSelectedIds.has(row.id)"
-                @change="(val: string | number | boolean) => toggleExportRow(row.id, !!val)"
+                :key="clientExportRowKey(row)"
+                :model-value="exportSelectedIds.has(clientExportRowKey(row))"
+                @change="(val: string | number | boolean) => toggleExportRow(clientExportRowKey(row), !!val)"
               />
             </template>
           </el-table-column>
@@ -241,9 +242,16 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { adminClientApi } from '@/api/client'
+import { userClientApi, type Client } from '@/api/user/client'
+import { kycApi } from '@/api/user/kyc'
+import { riskProfileApi } from '@/api/user/risk-profile'
+import { feeScheduleApi } from '@/api/user/fee-schedule'
 import type { ClientProgressData, ClientType } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import { formatDateTime } from '@/utils/date'
+import { buildClientListCsv } from '@/utils/client-list-csv-export'
+import { buildMultiClientSpecCsv, fillClientSpecExportRows } from '@/utils/client-spec-csv-export'
+import { clientExportRowKey } from '@/utils/client-export-row-key'
 import {
   getProgressLabel,
   getProgressOwnerBadgeKind,
@@ -282,7 +290,8 @@ const exportDialogFilters = reactive({
   progress: [] as string[]
 })
 const exportDialogSortBy = ref<'created-desc' | 'created-asc' | 'rm' | 'progress'>('created-desc')
-const exportSelectedIds = shallowRef(new Set<number>())
+const exportSelectedIds = shallowRef(new Set<string>())
+const exportTableRowKey = (row: AdminClientRow) => clientExportRowKey(row)
 const EXPORT_JOB_MS = 120_000
 const sortBy = ref<'created-desc' | 'created-asc' | 'rm' | 'progress'>('created-desc')
 const filters = reactive({
@@ -331,19 +340,19 @@ const exportSelectedCount = computed(() => exportSelectedIds.value.size)
 const exportHeaderAllChecked = computed(() => {
   const rows = exportDisplayList.value
   if (!rows.length) return false
-  return rows.every(r => exportSelectedIds.value.has(r.id))
+  return rows.every(r => exportSelectedIds.value.has(clientExportRowKey(r)))
 })
 
 const exportHeaderIndeterminate = computed(() => {
   const rows = exportDisplayList.value
-  const n = rows.filter(r => exportSelectedIds.value.has(r.id)).length
+  const n = rows.filter(r => exportSelectedIds.value.has(clientExportRowKey(r))).length
   return n > 0 && n < rows.length
 })
 
-function toggleExportRow(id: number, checked: boolean) {
+function toggleExportRow(key: string, checked: boolean) {
   const next = new Set(exportSelectedIds.value)
-  if (checked) next.add(id)
-  else next.delete(id)
+  if (checked) next.add(key)
+  else next.delete(key)
   exportSelectedIds.value = next
 }
 
@@ -352,9 +361,9 @@ function onExportToggleAll(val: string | number | boolean) {
   const rows = exportDisplayList.value
   const next = new Set(exportSelectedIds.value)
   if (checked) {
-    rows.forEach(r => next.add(r.id))
+    rows.forEach(r => next.add(clientExportRowKey(r)))
   } else {
-    rows.forEach(r => next.delete(r.id))
+    rows.forEach(r => next.delete(clientExportRowKey(r)))
   }
   exportSelectedIds.value = next
 }
@@ -493,8 +502,8 @@ async function runExportJob(fn: () => void | Promise<void>) {
   }
 }
 
-const downloadText = (filename: string, content: string) => {
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' })
+const downloadCsv = (filename: string, content: string) => {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
@@ -508,21 +517,20 @@ const handleExportList = async () => {
     ElMessage.warning('Please select at least one client')
     return
   }
-  const rows = clientList.value.filter(r => exportSelectedIds.value.has(r.id))
+  const rows = exportDisplayList.value.filter(r => exportSelectedIds.value.has(clientExportRowKey(r)))
   await runExportJob(async () => {
     await new Promise<void>(resolve => setTimeout(resolve, 200))
-    const header = ['Client', 'Contact Nature', 'RM', 'Progress', 'Created Time']
-    const dataRows = rows.map(row => [
-      row.client,
-      row.contactNature,
-      row.rm,
-      row.progressLabel,
-      formatDateTime(row.createdTime)
-    ])
-    const csv = [header, ...dataRows]
-      .map(line => line.map(col => `"${String(col ?? '').replace(/"/g, '""')}"`).join(','))
-      .join('\n')
-    downloadText(`client-list-${Date.now()}.csv`, csv)
+    const csv = buildClientListCsv(
+      rows.map(row => ({
+        client: row.client,
+        contactNature: row.contactNature,
+        rm: row.rm,
+        progressLabel: row.progressLabel,
+        createdTime: row.createdTime
+      })),
+      { includeSpecLine: false }
+    )
+    downloadCsv(`client-list-${Date.now()}.csv`, csv)
     ElMessage.success('Export completed')
   })
 }
@@ -532,13 +540,22 @@ const handleExportSpec = async () => {
     ElMessage.warning('Please select at least one client')
     return
   }
-  const rows = clientList.value.filter(r => exportSelectedIds.value.has(r.id))
+  const rows = exportDisplayList.value.filter(r => exportSelectedIds.value.has(clientExportRowKey(r)))
   await runExportJob(async () => {
+    const blocks = []
+    for (const listRow of rows) {
+      const res = await userClientApi.getClientById(listRow.id, listRow.contactNature)
+      const client = ((res as { data?: Client }).data ?? res) as Client
+      const [kyc, risk, fee] = await Promise.all([
+        kycApi.getKycInfo(listRow.id, listRow.contactNature),
+        riskProfileApi.getRiskProfile(listRow.id, listRow.contactNature),
+        feeScheduleApi.getFeeSchedule(listRow.id, listRow.contactNature)
+      ])
+      blocks.push(fillClientSpecExportRows(client, kyc, risk, fee))
+    }
     await new Promise<void>(resolve => setTimeout(resolve, 200))
-    const spec = rows
-      .map((row, index) => `${index + 1}. ${row.client} (${row.contactNature}) | ${row.progressLabel} | ${formatDateTime(row.createdTime)}`)
-      .join('\n')
-    downloadText(`client-spec-${Date.now()}.txt`, spec)
+    const csv = buildMultiClientSpecCsv(blocks)
+    downloadCsv(`client-spec-${Date.now()}.csv`, csv)
     ElMessage.success('Export completed')
   })
 }
