@@ -188,8 +188,9 @@
           <div class="tab-content" v-loading="tabLoading.fee" element-loading-text="Loading fee schedule...">
             <el-form :model="feeScheduleData" label-width="250px" class="fee-schedule-form">
               <div class="form-section">
-                <div class="vulnerable-assessment-container">
-                  <div class="vulnerable-questions">
+                <!-- 2×2 网格：行1 Management | Referral，行2 Retrocessions | Others（与示意一致） -->
+                <div class="fee-schedule-grid">
+                  <div class="fee-schedule-cell">
                     <div class="vulnerable-question-item">
                       <div class="question-label">Management Fee</div>
                       <div class="question-control">
@@ -198,7 +199,7 @@
                         </template>
                         <template v-else>
                           <el-switch v-model="feeScheduleData.managementFee.enabled" :active-value="true" :inactive-value="false" />
-                          <span style="margin-left: 8px">{{ feeScheduleData.managementFee.enabled ? 'Yes' : 'No' }}</span>
+                          <span class="fee-switch-yesno">{{ feeScheduleData.managementFee.enabled ? 'Yes' : 'No' }}</span>
                         </template>
                       </div>
                       <template v-if="feeScheduleData.managementFee.enabled">
@@ -230,20 +231,9 @@
                         </div>
                       </template>
                     </div>
-                    <div class="vulnerable-question-item">
-                      <div class="question-label">Retrocession</div>
-                      <div class="question-control">
-                        <template v-if="isViewMode">
-                          <span class="view-mode-text">{{ formatDisplayValue(feeScheduleData.retrocession.enabled) }}</span>
-                        </template>
-                        <template v-else>
-                          <el-switch v-model="feeScheduleData.retrocession.enabled" :active-value="true" :inactive-value="false" />
-                          <span style="margin-left: 8px">{{ feeScheduleData.retrocession.enabled ? 'Yes' : 'No' }}</span>
-                        </template>
-                      </div>
-                    </div>
                   </div>
-                  <div class="vulnerable-client-info">
+
+                  <div class="fee-schedule-cell">
                     <div class="vulnerable-question-item">
                       <div class="question-label">Referral Fee</div>
                       <div class="question-control">
@@ -252,7 +242,7 @@
                         </template>
                         <template v-else>
                           <el-switch v-model="feeScheduleData.referralFee.enabled" :active-value="true" :inactive-value="false" />
-                          <span style="margin-left: 8px">{{ feeScheduleData.referralFee.enabled ? 'Yes' : 'No' }}</span>
+                          <span class="fee-switch-yesno">{{ feeScheduleData.referralFee.enabled ? 'Yes' : 'No' }}</span>
                         </template>
                       </div>
                       <template v-if="feeScheduleData.referralFee.enabled">
@@ -284,6 +274,24 @@
                         </div>
                       </template>
                     </div>
+                  </div>
+
+                  <div class="fee-schedule-cell">
+                    <div class="vulnerable-question-item">
+                      <div class="question-label">Retrocessions</div>
+                      <div class="question-control">
+                        <template v-if="isViewMode">
+                          <span class="view-mode-text">{{ formatDisplayValue(feeScheduleData.retrocession.enabled) }}</span>
+                        </template>
+                        <template v-else>
+                          <el-switch v-model="feeScheduleData.retrocession.enabled" :active-value="true" :inactive-value="false" />
+                          <span class="fee-switch-yesno">{{ feeScheduleData.retrocession.enabled ? 'Yes' : 'No' }}</span>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="fee-schedule-cell">
                     <div class="vulnerable-question-item">
                       <div class="question-label">Others</div>
                       <div class="question-control">
@@ -292,7 +300,7 @@
                         </template>
                         <template v-else>
                           <el-switch v-model="feeScheduleData.others.enabled" :active-value="true" :inactive-value="false" />
-                          <span style="margin-left: 8px">{{ feeScheduleData.others.enabled ? 'Yes' : 'No' }}</span>
+                          <span class="fee-switch-yesno">{{ feeScheduleData.others.enabled ? 'Yes' : 'No' }}</span>
                         </template>
                       </div>
                       <template v-if="feeScheduleData.others.enabled">
@@ -346,21 +354,47 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="portfolioDialogVisible" title="Portfolio" width="520px" :close-on-click-modal="false">
-      <el-form label-width="160px">
-        <el-form-item label="Bank" required>
-          <el-input v-model="portfolioForm.bank" placeholder="Bank name" />
+    <!-- Portfolio 对话框（与 Client 详情页一致） -->
+    <el-dialog
+      v-model="portfolioDialogVisible"
+      :title="editingPortfolioIndex !== null ? 'Edit Portfolio' : 'New Portfolio'"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="portfolioFormRef"
+        :model="portfolioForm"
+        :rules="portfolioFormRules"
+        label-width="140px"
+      >
+        <el-form-item label="Bank" prop="bank" required>
+          <el-select
+            v-model="portfolioForm.bank"
+            placeholder="Please select bank"
+            style="width: 100%"
+            filterable
+            @focus="loadBanksIfNeeded()"
+          >
+            <el-option
+              v-for="bank in visibleBanks"
+              :key="bank.id"
+              :label="bank.bank"
+              :value="bank.bank"
+            />
+          </el-select>
         </el-form-item>
-        <el-form-item label="Booking Centre">
-          <el-input v-model="portfolioForm.bookingCentre" placeholder="Booking centre" />
+        <el-form-item label="Booking Centre" prop="bookingCentre" required>
+          <el-select v-model="portfolioForm.bookingCentre" placeholder="Please select booking centre" style="width: 100%" filterable>
+            <el-option v-for="centre in availableBookingCentres" :key="centre" :label="centre" :value="centre" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="Portfolio No." required>
-          <el-input v-model="portfolioForm.portfolioNo" placeholder="Portfolio number" />
+        <el-form-item label="Portfolio No." prop="portfolioNo" required>
+          <el-input v-model="portfolioForm.portfolioNo" placeholder="Please enter portfolio number" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="portfolioDialogVisible = false">Cancel</el-button>
-        <el-button type="primary" @click="confirmPortfolio">OK</el-button>
+        <el-button type="primary" @click="handleSubmitPortfolio">Submit</el-button>
       </template>
     </el-dialog>
 
@@ -393,7 +427,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Plus, UploadFilled } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import IntroducerDetailGeneral from './IntroducerDetailGeneral.vue'
 import {
   introducerApi,
@@ -411,6 +445,7 @@ import {
   type IntroducerDocumentsData
 } from '@/api/introducer-documents'
 import { introducerFeeScheduleApi, type IntroducerFeeSchedule } from '@/api/introducer-fee-schedule'
+import { bankApi, type BankCentre } from '@/api/bank'
 import { formatDateTime } from '@/utils/date'
 import { formatFileSizeMb } from '@/utils/file-size'
 import { isAdminRole } from '@/utils/roles'
@@ -430,7 +465,32 @@ const introducerLoading = ref(false)
 
 const portfolioDialogVisible = ref(false)
 const editingPortfolioIndex = ref<number | null>(null)
+const portfolioFormRef = ref<FormInstance>()
 const portfolioForm = reactive({ bank: '', bookingCentre: '', portfolioNo: '' })
+
+const bankList = ref<BankCentre[]>([])
+
+const visibleBanks = computed(() => {
+  const currentBank = portfolioForm.bank
+  return (bankList.value || []).filter((bank: BankCentre) => {
+    if (!bank) return false
+    return bank.isActive || bank.bank === currentBank
+  })
+})
+
+const availableBookingCentres = computed(() => {
+  const selectedBank = bankList.value.find(b => b.bank === portfolioForm.bank)
+  if (selectedBank) {
+    return selectedBank.bookingCentres.filter(c => c.isActive).map(c => c.name)
+  }
+  return []
+})
+
+const portfolioFormRules = computed<FormRules>(() => ({
+  bank: [{ required: true, message: 'Please select bank', trigger: 'change' }],
+  bookingCentre: [{ required: true, message: 'Please select booking centre', trigger: 'change' }],
+  portfolioNo: [{ required: true, message: 'Please enter portfolio number', trigger: 'blur' }]
+}))
 
 const introducerNumericId = computed(() => {
   const raw = route.params.id as string | undefined
@@ -940,44 +1000,123 @@ function onSelectArm(row: Account) {
   armDialogVisible.value = false
 }
 
+async function loadBanks() {
+  try {
+    const response = await bankApi.getBanks()
+    const data = response.data || response || []
+    bankList.value = data.map((item: Record<string, unknown>) => {
+      const bankId = item.bankId || item.id
+      const bankName = item.bankName || item.bank || ''
+      const centres = (item.centres || item.bookingCentres || []) as unknown[]
+      const isEnabled =
+        item.isEnabled === true || item.isEnabled === 'true' || item.isActive === true
+
+      return {
+        id: bankId as number,
+        bank: bankName as string,
+        bookingCentres: centres.map((centre: unknown) => {
+          const c = centre as Record<string, unknown>
+          return {
+            name: typeof centre === 'string' ? centre : String(c.name || ''),
+            isActive:
+              typeof centre === 'string'
+                ? true
+                : c.isEnabled === true || c.isEnabled === 'true' || c.isActive === true
+          }
+        }),
+        bookingCentresDisplay: centres.map((c: unknown) => (typeof c === 'string' ? c : (c as { name?: string }).name)).join(', '),
+        status: isEnabled ? ('enabled' as const) : ('disabled' as const),
+        isActive: isEnabled as boolean,
+        createdTime: String(item.createdAt || item.created_at || '')
+      } as BankCentre
+    })
+  } catch (error) {
+    console.error('Failed to load banks:', error)
+  }
+}
+
+function loadBanksIfNeeded() {
+  if (bankList.value.length === 0) {
+    void loadBanks()
+  }
+}
+
 function handleNewPortfolio() {
   editingPortfolioIndex.value = null
   portfolioForm.bank = ''
   portfolioForm.bookingCentre = ''
   portfolioForm.portfolioNo = ''
   portfolioDialogVisible.value = true
+  nextTick(() => portfolioFormRef.value?.clearValidate())
 }
 
-function handleEditPortfolio(row: Record<string, unknown>, index: number) {
+async function handleEditPortfolio(row: Record<string, unknown>, index: number) {
   editingPortfolioIndex.value = index
+
+  portfolioForm.bank = ''
+  portfolioForm.bookingCentre = ''
+  portfolioForm.portfolioNo = ''
+
+  if (bankList.value.length === 0) {
+    await loadBanks()
+  }
+
   portfolioForm.bank = (row.bank as string) || ''
+  await nextTick()
   portfolioForm.bookingCentre = (row.bookingCentre as string) || ''
   portfolioForm.portfolioNo = (row.portfolioNo as string) || ''
   portfolioDialogVisible.value = true
+  nextTick(() => portfolioFormRef.value?.clearValidate())
 }
 
-function handleDeletePortfolio(index: number) {
-  fullForm.portfolios.splice(index, 1)
+async function handleDeletePortfolio(index: number) {
+  try {
+    await ElMessageBox.confirm(
+      'This action cannot be undone. Are you sure you want to delete this?',
+      '',
+      {
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        type: 'warning',
+        center: true,
+        customClass: 'kyc-delete-confirm-dialog',
+        confirmButtonClass: 'kyc-delete-confirm-btn',
+        showClose: false
+      }
+    )
+    fullForm.portfolios.splice(index, 1)
+    ElMessage.success('Portfolio deleted successfully')
+  } catch (error: unknown) {
+    if (error !== 'cancel') {
+      console.error('Failed to delete portfolio:', error)
+    }
+  }
 }
 
-function confirmPortfolio() {
-  if (!portfolioForm.bank?.trim() || !portfolioForm.portfolioNo?.trim()) {
-    ElMessage.warning('Please fill Bank and Portfolio No.')
-    return
-  }
-  const row = {
-    bank: portfolioForm.bank.trim(),
-    bookingCentre: portfolioForm.bookingCentre?.trim() || '',
-    portfolioNo: portfolioForm.portfolioNo.trim(),
-    uploadTime: new Date().toISOString().slice(0, 19).replace('T', ' ')
-  }
-  if (editingPortfolioIndex.value != null) {
-    const prev = fullForm.portfolios[editingPortfolioIndex.value]
-    fullForm.portfolios[editingPortfolioIndex.value] = { ...prev, ...row }
-  } else {
-    fullForm.portfolios.push(row)
-  }
-  portfolioDialogVisible.value = false
+function handleSubmitPortfolio() {
+  const form = portfolioFormRef.value
+  if (!form) return
+
+  void form.validate(valid => {
+    if (!valid) return
+
+    const row = {
+      bank: portfolioForm.bank.trim(),
+      bookingCentre: portfolioForm.bookingCentre?.trim() || '',
+      portfolioNo: portfolioForm.portfolioNo.trim(),
+      uploadTime: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    }
+
+    if (editingPortfolioIndex.value != null) {
+      const prev = fullForm.portfolios[editingPortfolioIndex.value]
+      fullForm.portfolios[editingPortfolioIndex.value] = { ...prev, ...row }
+      ElMessage.success('Portfolio updated successfully')
+    } else {
+      fullForm.portfolios.push(row)
+      ElMessage.success('Portfolio added successfully')
+    }
+    portfolioDialogVisible.value = false
+  })
 }
 
 function validateUploadFile(file: File): string | null {
@@ -1485,29 +1624,50 @@ onMounted(() => {
   }
 }
 
-.vulnerable-assessment-container {
-  padding: 16px 20px;
+/* Fee Schedule：2×2 网格，标签在上、开关在下左对齐 */
+.fee-schedule-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 56px;
+  row-gap: 36px;
+  padding: 24px 28px;
   background: #fff;
-  border-radius: 4px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  align-items: start;
 }
 
-.vulnerable-questions,
-.vulnerable-client-info {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.fee-schedule-cell {
+  min-width: 0;
 }
 
 .vulnerable-question-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+
   .question-label {
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
     color: #303133;
-    margin-bottom: 8px;
+    line-height: 1.5;
+    margin: 0;
   }
 
   .question-control {
-    margin-bottom: 8px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
   }
+}
+
+.fee-switch-yesno {
+  font-size: 14px;
+  color: #606266;
 }
 
 .fee-form-items {
@@ -1525,7 +1685,8 @@ onMounted(() => {
   }
 }
 
-.fee-input {
-  max-width: 320px;
+.fee-schedule-cell .fee-input {
+  width: 100%;
+  max-width: 360px;
 }
 </style>

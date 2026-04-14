@@ -14,7 +14,12 @@
       <template v-if="fullForm.contactNature === 'Individual'">
         <div class="form-row">
           <el-form-item label="Contact Type">
-            <el-input model-value="Introducer" disabled />
+            <template v-if="isViewMode">
+              <span class="view-mode-text">Introducer</span>
+            </template>
+            <template v-else>
+              <el-input model-value="Introducer" disabled class="crm-input-grey" style="width: 100%" />
+            </template>
           </el-form-item>
           <el-form-item label="RM" prop="general.rm" required>
             <template v-if="isViewMode">
@@ -309,7 +314,12 @@
         <!-- Corporate Basic（与 Client Corporate 对齐） -->
         <div class="form-row">
           <el-form-item label="Contact Type">
-            <el-input model-value="Introducer" disabled />
+            <template v-if="isViewMode">
+              <span class="view-mode-text">Introducer</span>
+            </template>
+            <template v-else>
+              <el-input model-value="Introducer" disabled class="crm-input-grey" style="width: 100%" />
+            </template>
           </el-form-item>
           <el-form-item label="RM" prop="general.rm" required>
             <template v-if="isViewMode">
@@ -615,7 +625,7 @@
             <span v-if="isViewMode" class="view-mode-text">{{ formatDisplayValue(fullForm.contact.chineseName) }}</span>
             <el-input v-else v-model="fullForm.contact.chineseName" placeholder="Please enter Chinese name" />
           </el-form-item>
-          <el-form-item label="Address">
+          <el-form-item label="Address" style="width: 100%;">
             <span v-if="isViewMode" class="view-mode-text" style="white-space: pre-wrap">{{ formatDisplayValue(fullForm.contact.address) }}</span>
             <el-input v-else v-model="fullForm.contact.address" type="textarea" :rows="3" placeholder="Please enter address" />
           </el-form-item>
@@ -645,7 +655,7 @@
           </el-form-item>
           <el-form-item />
         </div>
-        <div class="form-row">
+        <div class="form-row" style="margin-bottom: 20px">
           <el-form-item label="Id Expiry (dd/mm/yyyy)">
             <span v-if="isViewMode" class="view-mode-text">{{ formatDisplayValue(fullForm.contact.idExpiry) }}</span>
             <el-date-picker
@@ -678,19 +688,19 @@
             </el-input>
           </el-form-item>
         </div>
-        <div class="form-row">
-          <el-form-item label="Home Phone">
+        <div class="form-row" style="margin-bottom: 10px">
+          <el-form-item label="Home Phone" style="align-self: flex-start">
             <span v-if="isViewMode" class="view-mode-text">{{ formatDisplayValue(fullForm.contact.homePhone) }}</span>
             <el-input v-else v-model="fullForm.contact.homePhone" placeholder="Please enter home phone">
               <template #suffix><el-icon><Phone /></el-icon></template>
             </el-input>
           </el-form-item>
-          <el-form-item label="Address">
+          <el-form-item label="Address" style="width: 100%">
             <span v-if="isViewMode" class="view-mode-text" style="white-space: pre-wrap">{{ formatDisplayValue(fullForm.contact.address) }}</span>
             <el-input v-else v-model="fullForm.contact.address" type="textarea" :rows="3" placeholder="Please enter address" />
           </el-form-item>
         </div>
-        <div class="form-row">
+        <div class="form-row" style="margin-top: 0; margin-bottom: 20px">
           <el-form-item label="Jurisdiction of Contact No. and Address Differs">
             <span v-if="isViewMode" class="view-mode-text">{{ formatDisplayValue(fullForm.contact.jurisdictionDiffers) }}</span>
             <template v-else>
@@ -753,7 +763,7 @@
             <span v-if="isViewMode" class="view-mode-text">{{ formatDisplayValue(fullForm.secondaryContact.chineseName) }}</span>
             <el-input v-else v-model="fullForm.secondaryContact.chineseName" placeholder="Please enter Chinese name" />
           </el-form-item>
-          <el-form-item label="Address">
+          <el-form-item label="Address" style="width: 100%;">
             <span v-if="isViewMode" class="view-mode-text" style="white-space: pre-wrap">{{ formatDisplayValue(fullForm.secondaryContact.address) }}</span>
             <el-input v-else v-model="fullForm.secondaryContact.address" type="textarea" :rows="3" placeholder="Please enter address" />
           </el-form-item>
@@ -783,7 +793,7 @@
           </el-form-item>
           <el-form-item />
         </div>
-        <div class="form-row">
+        <div class="form-row" style="margin-bottom: 20px">
           <el-form-item label="Id Expiry (dd/mm/yyyy)">
             <span v-if="isViewMode" class="view-mode-text">{{ formatDisplayValue(fullForm.secondaryContact.idExpiry) }}</span>
             <el-date-picker
@@ -816,19 +826,19 @@
             </el-input>
           </el-form-item>
         </div>
-        <div class="form-row">
-          <el-form-item label="Home Phone">
+        <div class="form-row" style="margin-bottom: 10px">
+          <el-form-item label="Home Phone" style="align-self: flex-start">
             <span v-if="isViewMode" class="view-mode-text">{{ formatDisplayValue(fullForm.secondaryContact.homePhone) }}</span>
             <el-input v-else v-model="fullForm.secondaryContact.homePhone" placeholder="Please enter home phone">
               <template #suffix><el-icon><Phone /></el-icon></template>
             </el-input>
           </el-form-item>
-          <el-form-item label="Address">
+          <el-form-item label="Address" style="width: 100%">
             <span v-if="isViewMode" class="view-mode-text" style="white-space: pre-wrap">{{ formatDisplayValue(fullForm.secondaryContact.address) }}</span>
             <el-input v-else v-model="fullForm.secondaryContact.address" type="textarea" :rows="3" placeholder="Please enter address" />
           </el-form-item>
         </div>
-        <div class="form-row">
+        <div class="form-row" style="margin-top: 0; margin-bottom: 20px">
           <el-form-item label="Jurisdiction of Contact No. and Address Differs">
             <span v-if="isViewMode" class="view-mode-text">{{ formatDisplayValue(fullForm.secondaryContact.jurisdictionDiffers) }}</span>
             <template v-else>
@@ -845,15 +855,8 @@
     <div class="form-section portfolio-section">
       <div class="section-header">
         <h3 class="section-title">Portfolio</h3>
-        <el-button
-          v-if="!isViewMode"
-          type="primary"
-          link
-          :icon="Plus"
-          class="portfolio-new-btn"
-          @click="emit('new-portfolio')"
-        >
-          + New Portfolio
+        <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="emit('new-portfolio')">
+          New Portfolio
         </el-button>
       </div>
       <el-table v-if="fullForm.portfolios.length > 0" :data="fullForm.portfolios" class="portfolio-table" border>
@@ -939,10 +942,40 @@ function formatDisplayValue(value: unknown): string {
 .introducer-general-form {
   max-width: 1200px;
 
+  /* 标签与控件垂直居中对齐（与 Element Plus 默认行高 32px 一致） */
+  :deep(.el-form-item) {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
+  }
+
   :deep(.el-form-item__label) {
     color: #606266;
     font-weight: 500;
-    line-height: 1.4;
+    line-height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: auto;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  /* 多行输入：标签与内容顶部对齐，避免与 textarea 错位 */
+  :deep(.el-form-item:has(.el-textarea)) {
+    align-items: flex-start;
+
+    .el-form-item__label {
+      padding-top: 6px;
+    }
+  }
+
+  :deep(.el-radio-group) {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    min-height: 32px;
   }
 
   .crm-input-grey {
@@ -976,11 +1009,6 @@ function formatDisplayValue(value: unknown): string {
     font-size: 16px;
   }
 
-  .portfolio-new-btn {
-    font-weight: 600;
-    padding: 0;
-  }
-
   .form-section {
     background: #fff;
     padding: 20px 24px;
@@ -1010,7 +1038,7 @@ function formatDisplayValue(value: unknown): string {
   .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 16px 24px;
     margin-bottom: 16px;
     align-items: start;
 
@@ -1019,17 +1047,27 @@ function formatDisplayValue(value: unknown): string {
     }
   }
 
+  /* 只读文本与单行输入、选择器视觉高度一致 */
   .view-mode-text {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    min-height: 32px;
+    padding: 0;
+    box-sizing: border-box;
     color: #303133;
     font-size: 14px;
-    line-height: 32px;
-    min-height: 32px;
+    line-height: 1.5;
+    word-break: break-word;
   }
 
   .id-placeholder {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
     color: #909399;
     font-size: 14px;
+    line-height: 1.5;
   }
 
   .empty-portfolio {
@@ -1039,8 +1077,36 @@ function formatDisplayValue(value: unknown): string {
     font-size: 14px;
   }
 
-  .portfolio-section .portfolio-table {
-    width: 100%;
+  .portfolio-section {
+    margin-bottom: 16px;
+
+    .portfolio-table {
+      margin-left: 0;
+      margin-top: 8px;
+      width: 100%;
+
+      :deep(.el-table__header-wrapper) {
+        background-color: #f5f7fa;
+
+        th {
+          background-color: #f5f7fa !important;
+          color: #606266;
+          font-weight: 600;
+          text-align: left;
+          border-bottom: 1px solid #ebeef5;
+        }
+      }
+
+      :deep(.el-table__body-wrapper) td {
+        border-bottom: 1px solid #ebeef5;
+        color: #303133;
+      }
+
+      :deep(.el-table__body tr:hover > td),
+      :deep(.el-table__body tr.current-row > td) {
+        background-color: #ffffff !important;
+      }
+    }
   }
 }
 </style>
