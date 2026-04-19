@@ -48,12 +48,13 @@ export const useAuthStore = defineStore('auth', () => {
         email: responseData.email || '',
         avatar: responseData.avatar || ''
       }
+      const normalized = normalizeRole((rawUserData as any).role || role)
       const userData: User = {
         ...rawUserData,
         id: String((rawUserData as any).id || (rawUserData as any).userId || ''),
         account: rawUserData.account || rawUserData.username,
-        role: normalizeRole(rawUserData.role || role),
-        roleDisplayName: (rawUserData as any).roleDisplayName || roleDisplayName(rawUserData.role || role),
+        role: normalized,
+        roleDisplayName: roleDisplayName(normalized),
         name:
           rawUserData.name ||
           [rawUserData.lastName, rawUserData.firstName].filter(Boolean).join(', ') ||
@@ -139,10 +140,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (storedToken && storedUser) {
       token.value = storedToken
       const parsed = JSON.parse(storedUser)
+      const nr = normalizeRole(parsed.role)
       user.value = {
         ...parsed,
-        role: normalizeRole(parsed.role),
-        roleDisplayName: parsed.roleDisplayName || roleDisplayName(parsed.role)
+        role: nr,
+        roleDisplayName: roleDisplayName(nr)
       }
       // 验证token有效性（可选）
       // fetchUserInfo()

@@ -4,7 +4,7 @@ export const normalizeRole = (role?: string | null): string => {
   if (!role) return ''
   const normalized = role.trim().toUpperCase().replace(/[-/\s]+/g, '_')
   if (['USER', 'RM', 'ARM', 'RMARM', 'RM_ARM'].includes(normalized)) {
-    return 'RM_ARM'
+    return 'RM/ARM'
   }
   return normalized
 }
@@ -20,7 +20,7 @@ export const roleDisplayName = (role?: string | null): string => {
   switch (normalizeRole(role)) {
     case 'ADMIN':
       return 'Admin'
-    case 'RM_ARM':
+    case 'RM/ARM':
       return 'RM/ARM'
     case 'OPERATION':
       return 'Operation'

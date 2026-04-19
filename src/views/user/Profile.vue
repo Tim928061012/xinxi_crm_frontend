@@ -84,7 +84,7 @@ const userInfo = ref<UserInfo>({
   id: '',
   username: '',
   name: '',
-  role: 'RM_ARM',
+  role: 'RM/ARM',
   email: '',
   account: '',
   firstName: '',

@@ -25,7 +25,11 @@
       >
       <el-table-column prop="account" label="Account" width="180" />
       <el-table-column prop="name" label="Name" width="200" />
-      <el-table-column prop="roleDisplayName" label="Role" width="140" />
+      <el-table-column label="Role" width="140">
+        <template #default="{ row }">
+          {{ roleDisplayName(row.role) }}
+        </template>
+      </el-table-column>
       <el-table-column label="Created Time" width="200">
         <template #default="{ row }">
           {{ formatDateTime(row.createdTime) }}
@@ -98,7 +102,7 @@
         </el-form-item>
         <el-form-item label="Role" prop="role" required>
           <el-select v-model="newAccountForm.role" placeholder="Please select role" style="width: 100%">
-            <el-option label="RM/ARM" value="RM_ARM" />
+            <el-option label="RM/ARM" value="RM/ARM" />
             <el-option label="Operation" value="OPERATION" />
             <el-option label="Compliance" value="COMPLIANCE" />
             <el-option label="RO" value="RO" />
@@ -168,7 +172,7 @@ const newAccountForm = reactive<CreateAccountParams>({
   account: '',
   firstName: '',
   lastName: '',
-  role: 'RM_ARM'
+  role: 'RM/ARM'
 })
 
 const editAccountForm = reactive<UpdateAccountParams & { account: string; id?: number; roleDisplayName?: string }>({
@@ -221,7 +225,7 @@ const loadAccounts = async () => {
         // 其他账号：两个都有 -> "firstName, lastName"，只有一个 -> 只显示该字段，避免多余逗号
         name: isAdmin ? 'System Administrator' : (firstName && lastName ? `${firstName}, ${lastName}` : (firstName || lastName || '')),
         role: item.role || item.userRole || '', // 后端返回的角色，用于判断是否为 admin
-        roleDisplayName: item.roleDisplayName || roleDisplayName(item.role || item.userRole || ''),
+        roleDisplayName: roleDisplayName(item.role || item.userRole || ''),
         isActive: isActive, // 后端返回的 isActive 字段
         status: isActive ? 'enabled' : 'disabled', // 前端显示用的状态
         createdTime: item.createdAt || item.created_at || item.createdTime || item.created_time || item.createTime || ''
@@ -242,7 +246,7 @@ const handleNewAccount = () => {
   newAccountForm.account = ''
   newAccountForm.firstName = ''
   newAccountForm.lastName = ''
-  newAccountForm.role = 'RM_ARM'
+  newAccountForm.role = 'RM/ARM'
   newAccountDialogVisible.value = true
 }
 
@@ -276,7 +280,7 @@ const handleEdit = (row: Account) => {
   editAccountForm.firstName = row.firstName
   editAccountForm.lastName = row.lastName
   editAccountForm.role = row.role
-  editAccountForm.roleDisplayName = row.roleDisplayName || roleDisplayName(row.role)
+  editAccountForm.roleDisplayName = roleDisplayName(row.role)
   editAccountDialogVisible.value = true
 }
 

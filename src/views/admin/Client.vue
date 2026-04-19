@@ -78,10 +78,7 @@
                 @click.stop="openProgress(row)"
                 @keydown.enter.prevent="openProgress(row)"
               >
-                <span
-                  class="progress-label"
-                  :class="{ 'progress-label--pending-link': isPendingSubmissionStatus(row.progressStatus, row.inactive) }"
-                >
+                <span class="progress-label">
                   {{ row.progressLabel }}
                 </span>
                 <span
@@ -256,7 +253,6 @@ import {
   getProgressLabel,
   getProgressOwnerBadgeKind,
   getProgressSortWeight,
-  isPendingSubmissionStatus
 } from '@/utils/client-progress'
 import { roleDisplayName } from '@/utils/roles'
 
@@ -727,6 +723,14 @@ onMounted(loadClients)
       &:hover {
         background: rgba(0, 64, 128, 0.06);
       }
+
+      &:hover .progress-label,
+      &:focus-visible .progress-label {
+        color: #0b63c5;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        font-weight: 500;
+      }
     }
   }
 
@@ -734,13 +738,7 @@ onMounted(loadClients)
     font-size: 14px;
     color: #303133;
     line-height: 1.4;
-  }
-
-  .progress-label--pending-link {
-    color: #0b63c5;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    font-weight: 500;
+    text-decoration: none;
   }
 
   .progress-owner-pill {
