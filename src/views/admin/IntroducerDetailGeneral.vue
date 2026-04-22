@@ -100,7 +100,6 @@
                 style="width: 100%"
                 filterable
                 clearable
-                :loading="introducerSelectLoading"
                 @focus="emit('load-introducers')"
               >
                 <el-option
@@ -392,7 +391,6 @@
                 style="width: 100%"
                 filterable
                 clearable
-                :loading="introducerSelectLoading"
                 @focus="emit('load-introducers')"
               >
                 <el-option v-for="intro in visibleIntroducers" :key="intro.id" :label="intro.introducer" :value="intro.id" />
@@ -898,7 +896,6 @@ const props = defineProps({
   introducerNumericId: { type: Number as PropType<number | null>, default: null },
   lockContactNature: { type: Boolean, default: false },
   introducerList: { type: Array as PropType<Introducer[]>, default: () => [] },
-  introducerSelectLoading: { type: Boolean, default: false },
   formRules: { type: Object as PropType<FormRules>, required: true }
 })
 

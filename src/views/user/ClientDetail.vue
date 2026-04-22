@@ -1,5 +1,5 @@
 <template>
-  <div class="client-detail-page" v-loading="pageLoading" element-loading-text="Loading client data...">
+  <div class="client-detail-page" v-loading.fullscreen="pageLoading" element-loading-text="Loading client data...">
     <!-- 顶部：左为姓名 +（流程节点），右为操作按钮 -->
     <div class="top-header">
       <div class="top-header__leading">
@@ -15,7 +15,7 @@
           <el-button
             v-if="canSubmitAction"
             type="primary"
-            :loading="workflowLoading"
+            :disabled="workflowLoading"
             @click="handleHeaderSubmit"
           >
             Submit
@@ -38,8 +38,7 @@
           <el-button
             type="success"
             @click="handleReviewDecision(true)"
-            :loading="workflowLoading"
-            :disabled="saving"
+            :disabled="saving || workflowLoading"
           >
             Approve
           </el-button>
@@ -47,8 +46,7 @@
             type="danger"
             plain
             @click="handleReviewDecision(false)"
-            :loading="workflowLoading"
-            :disabled="saving"
+            :disabled="saving || workflowLoading"
           >
             Reject
           </el-button>
@@ -91,7 +89,6 @@
           :client-id="clientId"
           :client-type="currentClientType"
           :context-default-module="commentsContextModule"
-          :toolbar-module="commentsToolbarSelectedModule"
           @changed="handleAddCommentDialogSuccess"
         />
     <el-tabs v-model="activeTab" class="client-tabs">
@@ -140,8 +137,7 @@
                         :style="isViewMode ? '' : 'cursor: pointer;'"
                       >
                         <template #suffix>
-                          <el-icon v-if="rmLoading" class="is-loading"><Loading /></el-icon>
-                          <el-icon v-else><User /></el-icon>
+                          <el-icon><User /></el-icon>
                         </template>
                       </el-input>
                     </template>
@@ -210,7 +206,6 @@
                         placeholder="Please select"
                         style="width: 100%"
                         :disabled="isViewMode || introducerLoading"
-                        :loading="introducerLoading"
                         filterable
                         clearable
                         @focus="!isViewMode && loadIntroducersIfNeeded()"
@@ -515,8 +510,7 @@
                         :style="isViewMode ? '' : 'cursor: pointer;'"
                       >
                         <template #suffix>
-                          <el-icon v-if="rmLoading" class="is-loading"><Loading /></el-icon>
-                          <el-icon v-else><User /></el-icon>
+                          <el-icon><User /></el-icon>
                         </template>
                       </el-input>
                     </template>
@@ -585,7 +579,6 @@
                         placeholder="Please select"
                         style="width: 100%"
                         :disabled="isViewMode || introducerLoading"
-                        :loading="introducerLoading"
                         filterable
                         clearable
                         @focus="!isViewMode && loadIntroducersIfNeeded()"
@@ -1158,7 +1151,7 @@
       </el-tab-pane>
 
       <el-tab-pane label="KYC" name="kyc">
-        <div class="tab-content" v-loading="tabLoading.kyc" element-loading-text="Loading KYC data...">
+        <div class="tab-content" v-loading.fullscreen="tabLoading.kyc" element-loading-text="Loading KYC data...">
           <!-- Information：白卡片，左列 KYC Date / Next Review Date，右列 KYC Status，与图一致 -->
           <div class="kyc-information-card">
             <div class="kyc-information-header">
@@ -1239,8 +1232,8 @@
                   v-if="showModuleCommentEntry"
                   @click="openCommentFromModule('KYC_SUPPORTING_DOCUMENTS', 'Supporting Documents')"
                 />
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')">
-                  Upload
+                <el-button v-if="!isViewMode" class="crm-upload-action crm-upload-action--asset" type="primary" link aria-label="Upload" @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')">
+                  <img class="crm-upload-action__asset" :src="crmUploadActionImg" alt="" />
                 </el-button>
               </div>
             </div>
@@ -1282,8 +1275,8 @@
                   v-if="showModuleCommentEntry"
                   @click="openCommentFromModule('KYC_NAME_SCREENING', 'Name Screening Documents')"
                 />
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('NAME_SCREENING')">
-                  Upload
+                <el-button v-if="!isViewMode" class="crm-upload-action crm-upload-action--asset" type="primary" link aria-label="Upload" @click="handleUploadKYCDocument('NAME_SCREENING')">
+                  <img class="crm-upload-action__asset" :src="crmUploadActionImg" alt="" />
                 </el-button>
               </div>
             </div>
@@ -1317,7 +1310,7 @@
       </el-tab-pane>
 
       <el-tab-pane label="Investment Risk Profile" name="risk">
-        <div class="tab-content" v-loading="tabLoading.risk" element-loading-text="Loading risk profile data...">
+        <div class="tab-content" v-loading.fullscreen="tabLoading.risk" element-loading-text="Loading risk profile data...">
           <el-form :model="riskProfileData" label-width="250px" class="risk-profile-form">
             <!-- Overview Section -->
             <div class="form-section">
@@ -1508,7 +1501,7 @@
               </div>
               <div class="investment-table-wrapper">
                 <el-table :data="riskProfileData.investmentKnowledgeExperience.types" stripe class="investment-table">
-                <el-table-column prop="type" label="Type" min-width="400" align="right" class-name="type-column">
+                <el-table-column prop="type" label="Type" min-width="220" align="left" class-name="type-column">
                   <template #header>
                     <span class="table-header-bold">Type</span>
                   </template>
@@ -1550,46 +1543,49 @@
       </el-tab-pane>
 
       <el-tab-pane label="Documents" name="documents">
-        <div class="tab-content" v-loading="tabLoading.documents" element-loading-text="Loading documents...">
+        <div class="tab-content" v-loading.fullscreen="tabLoading.documents" element-loading-text="Loading documents...">
           <!-- Identity Proof -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Identity Proof</h3>
+              <h3 class="section-title">Upload Identity Proof</h3>
               <div class="section-header-actions">
+                <DocumentUploadLinkButton
+                  v-if="!isViewMode"
+                  aria-label="Upload"
+                  @click="handleUploadDocument('identity')"
+                />
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.identity.length"
                   @click="bulkDownloadDocumentList(documentsData.identity)"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCS_IDENTITY', 'Identity Proof')"
+                  @click="openCommentFromModule('DOCS_IDENTITY', 'Upload Identity Proof')"
                 />
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('identity')">
-                  Upload
-                </el-button>
               </div>
             </div>
             <el-table
               v-if="documentsData.identity && documentsData.identity.length > 0"
               :data="documentsData.identity"
-              stripe
+              border
+              class="document-section-table"
               style="width: 100%"
             >
-              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="document" label="Document" min-width="200" />
               <el-table-column prop="size" label="Size" width="150" />
               <el-table-column label="Upload Time" width="200">
                 <template #default="{ row }">
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Action" width="200">
+              <el-table-column label="Action" width="200" align="right" header-align="right">
                 <template #default="{ row }">
-                  <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
+                  <el-link type="primary" underline="hover" @click="handleOpenDocument(row)">
                     Open
                   </el-link>
                   <template v-if="!isViewMode">
                     <el-divider direction="vertical" />
-                    <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                    <el-link type="primary" underline="hover" @click="handleDeleteDocument(row)">
                       Delete
                     </el-link>
                   </template>
@@ -1601,42 +1597,45 @@
           <!-- Address Proof -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Address Proof</h3>
+              <h3 class="section-title">Upload Address Proof</h3>
               <div class="section-header-actions">
+                <DocumentUploadLinkButton
+                  v-if="!isViewMode"
+                  aria-label="Upload"
+                  @click="handleUploadDocument('address')"
+                />
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.address.length"
                   @click="bulkDownloadDocumentList(documentsData.address)"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCS_ADDRESS', 'Address Proof')"
+                  @click="openCommentFromModule('DOCS_ADDRESS', 'Upload Address Proof')"
                 />
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('address')">
-                  Upload
-                </el-button>
               </div>
             </div>
             <el-table
               v-if="documentsData.address && documentsData.address.length > 0"
               :data="documentsData.address"
-              stripe
+              border
+              class="document-section-table"
               style="width: 100%"
             >
-              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="document" label="Document" min-width="200" />
               <el-table-column prop="size" label="Size" width="150" />
               <el-table-column label="Upload Time" width="200">
                 <template #default="{ row }">
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Action" width="200">
+              <el-table-column label="Action" width="200" align="right" header-align="right">
                 <template #default="{ row }">
-                  <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
+                  <el-link type="primary" underline="hover" @click="handleOpenDocument(row)">
                     Open
                   </el-link>
                   <template v-if="!isViewMode">
                     <el-divider direction="vertical" />
-                    <el-link type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                    <el-link type="primary" underline="hover" @click="handleDeleteDocument(row)">
                       Delete
                     </el-link>
                   </template>
@@ -1648,50 +1647,48 @@
           <!-- Forms -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Forms</h3>
+              <h3 class="section-title">Upload Forms</h3>
               <div class="section-header-actions">
+                <DocumentUploadLinkButton
+                  v-if="!isViewMode || canOperationUploadFormsPendingSignature"
+                  aria-label="Upload"
+                  @click="handleUploadDocument('forms')"
+                />
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.forms.length"
                   @click="bulkDownloadDocumentList(documentsData.forms)"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCS_FORMS', 'Forms')"
+                  @click="openCommentFromModule('DOCS_FORMS', 'Upload Forms')"
                 />
-                <el-button
-                  v-if="!isViewMode || canOperationUploadFormsPendingSignature"
-                  type="primary"
-                  :icon="Plus"
-                  @click="handleUploadDocument('forms')"
-                >
-                  Upload
-                </el-button>
               </div>
             </div>
             <el-table
               v-if="documentsData.forms && documentsData.forms.length > 0"
               :data="documentsData.forms"
-              stripe
+              border
+              class="document-section-table"
               style="width: 100%"
             >
-              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="document" label="Document" min-width="200" />
               <el-table-column prop="size" label="Size" width="150" />
               <el-table-column label="Upload Time" width="200">
                 <template #default="{ row }">
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Action" width="200">
+              <el-table-column label="Action" width="200" align="right" header-align="right">
                 <template #default="{ row }">
-                  <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
+                  <el-link type="primary" underline="hover" @click="handleOpenDocument(row)">
                     Open
                   </el-link>
                   <el-divider v-if="!isViewMode || canOperationUploadFormsPendingSignature" direction="vertical" />
                   <el-link
                     v-if="!isViewMode || canOperationUploadFormsPendingSignature"
                     type="primary"
+                    underline="hover"
                     @click="handleDeleteDocument(row)"
-                    :underline="false"
                   >
                     Delete
                   </el-link>
@@ -1703,41 +1700,44 @@
           <!-- XinXi Statements -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">XinXi Statements</h3>
+              <h3 class="section-title">Upload XinXi Statements</h3>
               <div class="section-header-actions">
+                <DocumentUploadLinkButton
+                  v-if="!isViewMode"
+                  aria-label="Upload"
+                  @click="handleUploadDocument('statements')"
+                />
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.statements.length"
                   @click="bulkDownloadDocumentList(documentsData.statements)"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCS_STATEMENTS', 'XinXi Statements')"
+                  @click="openCommentFromModule('DOCS_STATEMENTS', 'Upload XinXi Statements')"
                 />
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('statements')">
-                  Upload
-                </el-button>
               </div>
             </div>
             <el-table
               v-if="documentsData.statements && documentsData.statements.length > 0"
               :data="documentsData.statements"
-              stripe
+              border
+              class="document-section-table"
               style="width: 100%"
             >
-              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="document" label="Document" min-width="200" />
               <el-table-column prop="size" label="Size" width="150" />
               <el-table-column label="Upload Time" width="200">
                 <template #default="{ row }">
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Action" width="200">
+              <el-table-column label="Action" width="200" align="right" header-align="right">
                 <template #default="{ row }">
-                  <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
+                  <el-link type="primary" underline="hover" @click="handleOpenDocument(row)">
                     Open
                   </el-link>
                   <el-divider v-if="!isViewMode" direction="vertical" />
-                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                  <el-link v-if="!isViewMode" type="primary" underline="hover" @click="handleDeleteDocument(row)">
                     Delete
                   </el-link>
                 </template>
@@ -1748,41 +1748,44 @@
           <!-- Others Documents -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Others Documents</h3>
+              <h3 class="section-title">Upload Others Documents</h3>
               <div class="section-header-actions">
+                <DocumentUploadLinkButton
+                  v-if="!isViewMode"
+                  aria-label="Upload"
+                  @click="handleUploadDocument('others')"
+                />
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.others.length"
                   @click="bulkDownloadDocumentList(documentsData.others)"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCS_OTHERS', 'Others Documents')"
+                  @click="openCommentFromModule('DOCS_OTHERS', 'Upload Others Documents')"
                 />
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('others')">
-                  Upload
-                </el-button>
               </div>
             </div>
             <el-table
               v-if="documentsData.others && documentsData.others.length > 0"
               :data="documentsData.others"
-              stripe
+              border
+              class="document-section-table"
               style="width: 100%"
             >
-              <el-table-column prop="document" label="Document" />
+              <el-table-column prop="document" label="Document" min-width="200" />
               <el-table-column prop="size" label="Size" width="150" />
               <el-table-column label="Upload Time" width="200">
                 <template #default="{ row }">
                   {{ formatDateTime(row.uploadTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="Action" width="200">
+              <el-table-column label="Action" width="200" align="right" header-align="right">
                 <template #default="{ row }">
-                  <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
+                  <el-link type="primary" underline="hover" @click="handleOpenDocument(row)">
                     Open
                   </el-link>
                   <el-divider v-if="!isViewMode" direction="vertical" />
-                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                  <el-link v-if="!isViewMode" type="primary" underline="hover" @click="handleDeleteDocument(row)">
                     Delete
                   </el-link>
                 </template>
@@ -1793,12 +1796,12 @@
       </el-tab-pane>
 
       <el-tab-pane label="Fee Schedule" name="fee">
-        <div class="tab-content" v-loading="tabLoading.fee" element-loading-text="Loading fee schedule data...">
-          <div v-if="showModuleCommentEntry" class="fee-tab-comment-bar">
-            <AddCommentButton @click="openCommentFromModule('FEE_SCHEDULE', 'Fee Schedule')" />
-          </div>
+        <div class="tab-content" v-loading.fullscreen="tabLoading.fee" element-loading-text="Loading fee schedule data...">
           <el-form :model="feeScheduleData" label-width="250px" class="fee-schedule-form">
             <div class="form-section">
+              <div v-if="showModuleCommentEntry" class="fee-schedule-comment-row">
+                <AddCommentButton @click="openCommentFromModule('FEE_SCHEDULE', 'Fee Schedule')" />
+              </div>
               <div class="vulnerable-assessment-container">
                 <div class="vulnerable-questions">
                   <!-- Management Fee -->
@@ -1957,8 +1960,6 @@
             :client-id="clientId"
             :client-type="currentClientType"
             :current-user-id="authStore.user?.id"
-            :default-module="commentsContextModule"
-            @toolbar-module-change="commentsToolbarSelectedModule = $event"
             @changed="handleCommentsChanged"
           />
         </div>
@@ -1975,8 +1976,11 @@
           v-model:collapsed="commentsRailCollapsed"
           :client-id="clientId!"
           :client-type="currentClientType"
+          :current-user-id="authStore.user?.id"
+          :default-module="commentsContextModule"
           @open-comments-tab="goToCommentsTab"
           @count-updated="setCommentTotalCount"
+          @changed="handleSidebarCommentsChanged"
         />
       </aside>
     </div>
@@ -2099,8 +2103,10 @@
     <!-- 文档上传对话框 -->
     <el-dialog
       v-model="documentUploadDialogVisible"
+      class="document-upload-dialog"
       :title="documentUploadTitle"
       width="500px"
+      align-center
       :close-on-click-modal="false"
     >
       <el-upload
@@ -2115,7 +2121,7 @@
         :limit="10"
         accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
       >
-        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+        <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
         <div class="el-upload__text">
           Drag & drop files here, or <em>click to upload</em>
         </div>
@@ -2137,7 +2143,8 @@
 import { ref, reactive, computed, onMounted, watch, nextTick, provide } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
-import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled, Loading, Place } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled, Place } from '@element-plus/icons-vue'
+import crmUploadActionImg from '@/assets/crm-upload-action.png'
 import { useAuthStore } from '@/stores/auth'
 import { userClientApi, type Client, type ContactInfo, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
 import { portfolioApi, type Portfolio, type CreatePortfolioParams } from '@/api/user/portfolio'
@@ -2156,6 +2163,7 @@ import ClientCommentsSidebar from '@/components/client/ClientCommentsSidebar.vue
 import { CLIENT_COMMENT_DIALOG_INJECT_KEY } from '@/components/client/client-comment-dialog-key'
 import AddCommentButton from '@/components/common/AddCommentButton.vue'
 import BulkDownloadButton from '@/components/common/BulkDownloadButton.vue'
+import DocumentUploadLinkButton from '@/components/common/DocumentUploadLinkButton.vue'
 import { formatDateTime } from '@/utils/date'
 import { formatFileSizeMb } from '@/utils/file-size'
 import { getProgressLabel, isClientEditable, isPendingSubmissionStatus, normalizeProgressStatus } from '@/utils/client-progress'
@@ -2330,12 +2338,11 @@ const commentsContextModule = computed(() =>
 /** 文档：预览/审批视图下各模块可有 Add comment；编辑视图仅能通过 Comments 标签内添加 */
 const showModuleCommentEntry = computed(() => !!clientId.value && (isViewMode.value || isReviewMode.value))
 
-/** Comments 页工具栏「按模块筛选」，供添加评论弹窗在未指定模块时兜底 */
-const commentsToolbarSelectedModule = ref('')
 const addCommentDialogRef = ref<InstanceType<typeof ClientAddCommentDialog> | null>(null)
 
 provide(CLIENT_COMMENT_DIALOG_INJECT_KEY, {
-  openNewComment: () => addCommentDialogRef.value?.openNewComment()
+  openNewComment: () => addCommentDialogRef.value?.openNewComment(),
+  openAddComment: options => addCommentDialogRef.value?.openAddComment(options)
 })
 
 const commentsPanelRef = ref<{ loadComments: () => Promise<void> } | null>(null)
@@ -2357,7 +2364,7 @@ function countCommentTree(list: ClientComment[]): number {
 }
 
 const commentsSideRailVisible = computed(() => {
-  if (!clientId.value || commentTotalCount.value < 1) return false
+  if (!clientId.value || !showModuleCommentEntry.value) return false
   return (MAIN_TABS_WITH_COMMENTS_RAIL as readonly string[]).includes(activeTab.value)
 })
 
@@ -2383,6 +2390,12 @@ const setCommentTotalCount = (n: number) => {
 const handleCommentsChanged = () => {
   void loadCommentCount()
   commentsSidebarRef.value?.reload()
+}
+
+/** 边栏内回复/删除后刷新：侧栏已有最新数据，只需同步总数与 Comments 标签页列表 */
+const handleSidebarCommentsChanged = () => {
+  void loadCommentCount()
+  void commentsPanelRef.value?.loadComments()
 }
 
 /** 从全局弹窗提交新评论后刷新列表（Comments 页签可能未挂载过） */
@@ -2442,7 +2455,6 @@ watch(clientId, id => {
   if (!id) {
     commentTotalCount.value = 0
     clientDetailLoaded.value = false
-    commentsToolbarSelectedModule.value = ''
   }
 })
 
@@ -2706,11 +2718,11 @@ const documentUploadTitle = computed(() => {
     return kycUploadDocumentType.value === 'NAME_SCREENING' ? 'Name Screening Documents' : 'Supporting Documents'
   }
   const titles: Record<DocumentType, string> = {
-    identity: 'Identity Proof',
-    address: 'Address Proof',
-    forms: 'Forms',
-    statements: 'XinXi Statements',
-    others: 'Others Documents'
+    identity: 'Upload Identity Proof',
+    address: 'Upload Address Proof',
+    forms: 'Upload Forms',
+    statements: 'Upload XinXi Statements',
+    others: 'Upload Others Documents'
   }
   return titles[documentUploadType.value]
 })
@@ -4269,10 +4281,6 @@ onMounted(() => {
     }
   }
 
-  .fee-tab-comment-bar {
-    margin-bottom: 8px;
-  }
-
   /* 主内容 + 可选右侧评论栏
    * 勿对 shell 使用 flex:1 + min-height:0，否则在 UserLayout 的定高 main 内会把中间区锁在视口高度内，
    * 长表单无法撑开页面，外层 .main-content 也无法滚动。由内容自然撑高，整页滚动交给 layout。 */
@@ -4300,6 +4308,8 @@ onMounted(() => {
     align-self: stretch;
     background-color: #fff;
     border-radius: var(--crm-radius-md);
+    /* Comments 侧栏设计稿：细蓝边框 + 轻阴影 */
+    border: 1px solid rgba(2, 81, 137, 0.32);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
     margin-left: 10px;
     overflow: hidden;
@@ -4359,20 +4369,6 @@ onMounted(() => {
     background-color: var(--crm-surface-page);
     padding: 12px 0;
     border-radius: 0 0 4px 4px;
-  }
-
-  // Loading 图标旋转动画
-  .is-loading {
-    animation: rotating 2s linear infinite;
-  }
-
-  @keyframes rotating {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
   }
 
   /* 与 KYC 统一：白底卡片、无边框、紧凑间距 */
@@ -4653,25 +4649,32 @@ onMounted(() => {
   }
 }
 
-// Document Section（与 KYC Upload 统一：白底标题条 + 紧凑间距）
+// Document Section：单层白卡片（标题 + 可选表格），与浅灰 tab 底分层
 .document-section {
   margin-bottom: 16px;
+  padding: 16px 20px;
+  background-color: #fff;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
 
   .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 14px;
-    padding: 12px 16px;
-    background-color: #fff;
+    margin-bottom: 0;
+    padding: 0;
+    background-color: transparent;
     border: none;
-    border-radius: 4px;
+    border-radius: 0;
   }
 
   .section-header-actions {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
   }
 
   .section-title {
@@ -4680,6 +4683,43 @@ onMounted(() => {
     color: #303133;
     margin: 0;
     padding: 0;
+    padding-right: 12px;
+    min-width: 0;
+  }
+
+  :deep(.crm-add-comment-btn) {
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+
+    .crm-add-comment-btn__icon {
+      width: 15px;
+      height: 15px;
+
+      .el-icon {
+        font-size: 10px;
+      }
+    }
+  }
+
+  :deep(.document-section-table) {
+    margin-top: 16px;
+    --el-table-border-color: #ebeef5;
+    --el-table-header-bg-color: #f5f7fa;
+    --el-table-bg-color: #fff;
+    --el-table-tr-bg-color: #fff;
+    border-radius: 4px;
+    overflow: hidden;
+
+    .el-table__header-wrapper th.el-table__cell {
+      font-weight: 500;
+      font-size: 13px;
+      color: #606266;
+    }
+
+    .el-table__body-wrapper .el-table__row td.el-table__cell {
+      background-color: #fff !important;
+    }
   }
 }
 
@@ -4785,13 +4825,10 @@ onMounted(() => {
     .investment-knowledge-section {
       overflow: visible !important;
       position: relative;
-      
+
       .investment-table-wrapper {
-        // 将 Type、Knowledge、Experience 三个表头及其对应数据项整体向左移动 185px (300px - 35px - 50px - 30px)
         width: 100%;
         overflow: visible !important;
-        margin-left: -185px !important;
-        padding-right: 185px;
       }
     }
   }
@@ -4800,10 +4837,7 @@ onMounted(() => {
   .investment-table {
     width: 100% !important;
     max-width: none !important;
-    transform: translateX(-185px) !important;
-    -webkit-transform: translateX(-185px) !important;
-    margin-left: -185px !important;
-    
+
     :deep(.el-table__header) {
       th {
         .table-header-bold {
@@ -4815,11 +4849,10 @@ onMounted(() => {
     
     :deep(.el-table__body) {
       td.type-column {
-        text-align: right;
-        padding-right: 20px;
-        
+        text-align: left;
+
         .type-text {
-          text-align: right;
+          text-align: left;
           display: block;
           width: 100%;
         }
@@ -4834,6 +4867,7 @@ onMounted(() => {
           padding-right: 20px;
           
           &.type-column {
+            padding-left: 20px;
             padding-right: 20px;
           }
         }
@@ -4866,6 +4900,14 @@ onMounted(() => {
       pointer-events: none;
       cursor: default;
     }
+  }
+
+  /* Add Comment 放在白底模块内、字段网格上方（与其它 Tab 灰底→白卡分层一致） */
+  .fee-schedule-comment-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 16px;
   }
 
   .vulnerable-assessment-container {
@@ -4989,48 +5031,6 @@ onMounted(() => {
         }
       }
     }
-  }
-}
-
-// Upload Dialog
-.upload-demo {
-  :deep(.el-upload) {
-    width: 100%;
-  }
-
-  :deep(.el-upload-dragger) {
-    width: 100%;
-    height: 180px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .el-icon--upload {
-    font-size: 67px;
-    color: #c0c4cc;
-    margin-bottom: 16px;
-  }
-
-  .el-upload__text {
-    color: #606266;
-    font-size: 14px;
-    text-align: center;
-    margin-bottom: 8px;
-
-    em {
-      color: #025189;
-      font-style: normal;
-    }
-  }
-
-  .el-upload__tip {
-    color: #909399;
-    font-size: 12px;
-    text-align: center;
-    margin-top: 7px;
-    text-align: center;
   }
 }
 

@@ -1,6 +1,5 @@
 <template>
   <div class="comments-sidebar" :class="{ 'comments-sidebar--collapsed': collapsed }">
-    <!-- 收起态：窄条，点击展开（文档：评论为 0 时不出现展开入口 — 由父级 v-if 控制是否渲染本组件） -->
     <button
       v-if="collapsed"
       type="button"
@@ -9,71 +8,134 @@
       @click="emit('update:collapsed', false)"
     >
       <el-icon class="chev"><DArrowLeft /></el-icon>
-      <span class="v-label">Comments</span>
+      <span class="v-label">Comments<span v-if="threadCount > 0" class="v-label__count"> ({{ threadCount }})</span></span>
     </button>
 
     <div v-else class="comments-sidebar__expanded">
       <div class="comments-sidebar__head">
-        <span class="head-title">Comments</span>
-        <el-button text circle type="primary" aria-label="Collapse comments" @click="emit('update:collapsed', true)">
-          <el-icon><DArrowRight /></el-icon>
-        </el-button>
+        <h2 class="head-title">
+          Comments
+          <span class="head-title__count">({{ threadCount }})</span>
+        </h2>
+        <div class="head-actions">
+          <button type="button" class="head-icon-btn" aria-label="Add comment" @click="onAddComment">
+            <el-icon><Plus /></el-icon>
+          </button>
+          <button type="button" class="head-icon-btn" aria-label="Collapse comments" @click="emit('update:collapsed', true)">
+            <el-icon><ArrowRight /></el-icon>
+          </button>
+        </div>
       </div>
 
-      <div v-loading="loading" class="comments-sidebar__scroll-wrap">
+      <div v-loading.fullscreen="loading" class="comments-sidebar__scroll-wrap">
         <el-scrollbar class="comments-sidebar__scrollbar">
           <div v-if="!comments.length" class="empty-mini">No comments yet</div>
-          <div v-else class="sidebar-comment-list">
-            <div v-for="comment in comments" :key="comment.commentId" class="sidebar-card">
-              <div class="sidebar-card__title">{{ comment.title || 'Comment' }}</div>
-              <div class="sidebar-card__meta">
-                <span>{{ comment.createdByName || '-' }}</span>
-                <el-tag v-if="comment.moduleName" size="small" effect="plain">{{ commentModuleLabel(comment.moduleName) }}</el-tag>
-              </div>
-              <div class="sidebar-card__body">{{ comment.description }}</div>
-              <div v-if="comment.replies?.length" class="sidebar-replies">
-                <div v-for="reply in comment.replies" :key="reply.commentId" class="sidebar-reply">
-                  <div class="sidebar-reply__meta">
-                    {{ reply.createdByName || '-' }} · {{ formatDateTime(reply.createdAt) }}
+          <div v-else class="sidebar-thread-list">
+            <article v-for="comment in comments" :key="comment.commentId" class="sidebar-thread">
+              <div class="sidebar-thread__block">
+                <h3 class="sidebar-thread__title">{{ threadTitle(comment) }}</h3>
+                <p class="sidebar-thread__text">{{ comment.description }}</p>
+                <div class="sidebar-thread__footer">
+                  <span class="sidebar-thread__meta">{{ authorAtLine(comment) }}</span>
+                  <div class="sidebar-thread__actions">
+                    <button
+                      type="button"
+                      class="thread-action-btn"
+                      aria-label="Reply"
+                      @click="toggleReply(comment.commentId)"
+                    >
+                      <el-icon class="thread-action-btn__icon"><ChatLineRound /></el-icon>
+                    </button>
+                    <button
+                      v-if="canDelete(comment)"
+                      type="button"
+                      class="thread-action-btn"
+                      aria-label="Delete"
+                      @click="deleteComment(comment.commentId)"
+                    >
+                      <el-icon class="thread-action-btn__icon"><Delete /></el-icon>
+                    </button>
                   </div>
-                  <div class="sidebar-reply__body">{{ reply.description }}</div>
                 </div>
               </div>
-            </div>
+
+              <div v-if="replyTargetId === comment.commentId" class="sidebar-reply-editor">
+                <el-input
+                  v-model="replyText"
+                  type="textarea"
+                  :rows="2"
+                  maxlength="1000"
+                  show-word-limit
+                  placeholder="Write a reply…"
+                />
+                <div class="sidebar-reply-editor__actions">
+                  <el-button size="small" @click="cancelReply">Cancel</el-button>
+                  <el-button type="primary" size="small" @click="submitReply(comment.commentId)">Send</el-button>
+                </div>
+              </div>
+
+              <div v-if="comment.replies?.length" class="sidebar-thread__replies">
+                <div v-for="reply in comment.replies" :key="reply.commentId" class="sidebar-reply">
+                  <p class="sidebar-reply__text">{{ reply.description }}</p>
+                  <div class="sidebar-thread__footer">
+                    <span class="sidebar-thread__meta">{{ authorAtLine(reply) }}</span>
+                    <div class="sidebar-thread__actions">
+                      <button
+                        v-if="canDelete(reply)"
+                        type="button"
+                        class="thread-action-btn"
+                        aria-label="Delete"
+                        @click="deleteComment(reply.commentId)"
+                      >
+                        <el-icon class="thread-action-btn__icon"><Delete /></el-icon>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
           </div>
         </el-scrollbar>
       </div>
 
       <div class="comments-sidebar__foot">
-        <el-button type="primary" link @click="emit('open-comments-tab')"> Open full Comments tab </el-button>
+        <button type="button" class="foot-link" @click="emit('open-comments-tab')">Open full Comments tab</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { DArrowLeft, DArrowRight } from '@element-plus/icons-vue'
+import { computed, inject, ref, watch } from 'vue'
+import { ArrowRight, ChatLineRound, DArrowLeft, Delete, Plus } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
 import { getCommentModuleLabel } from '@/utils/comment-modules'
+import { CLIENT_COMMENT_DIALOG_INJECT_KEY } from '@/components/client/client-comment-dialog-key'
 import { formatDateTime } from '@/utils/date'
-
-const commentModuleLabel = getCommentModuleLabel
 
 const props = defineProps<{
   clientId: number
   clientType: ClientType
   collapsed: boolean
+  /** 当前主 Tab 映射的模块，用于侧栏「添加评论」默认归属 */
+  defaultModule?: string
+  currentUserId?: string | number
 }>()
 
 const emit = defineEmits<{
   (e: 'update:collapsed', value: boolean): void
   (e: 'open-comments-tab'): void
   (e: 'count-updated', total: number): void
+  (e: 'changed'): void
 }>()
+
+const commentDialog = inject(CLIENT_COMMENT_DIALOG_INJECT_KEY, null)
 
 const loading = ref(false)
 const comments = ref<ClientComment[]>([])
+const replyTargetId = ref<number | null>(null)
+const replyText = ref('')
 
 function countTotal(list: ClientComment[]): number {
   let n = 0
@@ -84,13 +146,40 @@ function countTotal(list: ClientComment[]): number {
   return n
 }
 
+const threadCount = computed(() => countTotal(comments.value))
+
+/** 设计稿：27/11/2025 19:00 */
+function formatSidebarDateTime(value?: string | null): string {
+  const t = formatDateTime(value || '')
+  if (!t || t === '-') return '-'
+  const m = t.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/)
+  if (m) {
+    const [, y, mo, d, hm] = m
+    return `${d}/${mo}/${y} ${hm}`
+  }
+  return t
+}
+
+function authorAtLine(c: ClientComment): string {
+  const name = c.createdByName || '-'
+  const when = formatSidebarDateTime(c.createdAt)
+  return `${name} at ${when}`
+}
+
+function threadTitle(c: ClientComment): string {
+  const raw = (c.title || '').trim()
+  if (raw) return raw
+  const mod = c.moduleName ? getCommentModuleLabel(c.moduleName) : ''
+  return mod || 'Comment'
+}
+
 const loadComments = async () => {
   loading.value = true
   try {
     const response = await workflowApi.getComments(props.clientId, props.clientType)
-    const list = (response as any).data || response || []
-    comments.value = list
-    emit('count-updated', countTotal(list))
+    const list = (response as { data?: ClientComment[] }).data || (response as unknown as ClientComment[]) || []
+    comments.value = Array.isArray(list) ? list : []
+    emit('count-updated', countTotal(comments.value))
   } catch {
     comments.value = []
     emit('count-updated', 0)
@@ -98,6 +187,67 @@ const loadComments = async () => {
     loading.value = false
   }
 }
+
+function onAddComment() {
+  const mod = (props.defaultModule || 'BASIC').trim() || 'BASIC'
+  if (commentDialog?.openAddComment) {
+    commentDialog.openAddComment({
+      moduleName: mod,
+      presetTitle: getCommentModuleLabel(mod) || mod
+    })
+  } else {
+    commentDialog?.openNewComment()
+  }
+}
+
+const toggleReply = (commentId: number) => {
+  replyTargetId.value = replyTargetId.value === commentId ? null : commentId
+  replyText.value = ''
+}
+
+const cancelReply = () => {
+  replyTargetId.value = null
+  replyText.value = ''
+}
+
+const submitReply = async (commentId: number) => {
+  if (!replyText.value.trim()) {
+    ElMessage.warning('Please enter reply')
+    return
+  }
+  if (replyText.value.trim().length > 1000) {
+    ElMessage.warning('Reply max 1000 characters')
+    return
+  }
+  try {
+    await workflowApi.replyComment(props.clientId, props.clientType, commentId, {
+      description: replyText.value.trim()
+    })
+    ElMessage.success('Reply added')
+    cancelReply()
+    await loadComments()
+    emit('changed')
+  } catch (error: unknown) {
+    const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message) : ''
+    ElMessage.error(msg || 'Failed to create reply')
+  }
+}
+
+const deleteComment = async (commentId: number) => {
+  try {
+    await ElMessageBox.confirm('Are you sure you want to delete this comment?', 'Confirm', { type: 'warning' })
+    await workflowApi.deleteComment(props.clientId, props.clientType, commentId)
+    ElMessage.success('Comment deleted')
+    await loadComments()
+    emit('changed')
+  } catch (error: unknown) {
+    if (error === 'cancel') return
+    const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message) : ''
+    ElMessage.error(msg || 'Failed to delete comment')
+  }
+}
+
+const canDelete = (comment: ClientComment) => String(comment.createdByUserId ?? '') === String(props.currentUserId ?? '')
 
 watch(
   () => [props.clientId, props.clientType],
@@ -113,6 +263,12 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
+$crm-primary: #025189;
+$crm-primary-hover: #0369a1;
+$meta-grey: #909399;
+$text-body: #303133;
+$divider: #ebeef5;
+
 .comments-sidebar {
   height: 100%;
   min-height: 320px;
@@ -120,6 +276,8 @@ defineExpose({
   flex-direction: column;
   background: #fff;
   box-sizing: border-box;
+  /* 与设计稿一致：内区与外层细线框由父级 rail 提供，此处保证圆角内铺满 */
+  border-radius: inherit;
 }
 
 .comments-sidebar--collapsed {
@@ -141,7 +299,7 @@ defineExpose({
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  color: #025189;
+  color: $crm-primary;
   border-radius: 0 4px 4px 0;
 
   &:hover {
@@ -158,6 +316,10 @@ defineExpose({
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.04em;
+
+    &__count {
+      font-weight: 700;
+    }
   }
 }
 
@@ -172,14 +334,69 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 10px 8px 14px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  gap: 10px;
+  padding: 14px 12px 12px 14px;
+  border-bottom: 1px solid $divider;
   flex-shrink: 0;
 
   .head-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #303133;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: $crm-primary;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+
+    &__count {
+      font-weight: 700;
+      color: $crm-primary;
+    }
+  }
+
+  .head-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+}
+
+/* 头部：实心主色圆钮 + 白图标（稿图红框 1） */
+.head-icon-btn {
+  $size: 36px;
+  width: $size;
+  height: $size;
+  min-width: $size;
+  min-height: $size;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: $crm-primary;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  .el-icon {
+    font-size: 18px;
+  }
+
+  &:hover {
+    background: $crm-primary-hover;
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(2, 81, 137, 0.45);
+    outline-offset: 2px;
   }
 }
 
@@ -191,7 +408,7 @@ defineExpose({
 
 .comments-sidebar__scrollbar {
   height: 100%;
-  padding: 0 8px 8px;
+  padding: 0 6px 0 12px;
   box-sizing: border-box;
 }
 
@@ -200,85 +417,177 @@ defineExpose({
 }
 
 .empty-mini {
-  padding: 24px 12px;
+  padding: 28px 14px;
   text-align: center;
-  color: #909399;
+  color: $meta-grey;
   font-size: 13px;
 }
 
-.sidebar-comment-list {
+.sidebar-thread-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-bottom: 8px;
+  padding: 4px 4px 12px 0;
 }
 
-.sidebar-card {
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: #fafbfc;
+.sidebar-thread {
+  padding: 14px 0;
+  border-bottom: 1px solid $divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
-.sidebar-card__title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 6px;
+.sidebar-thread__block {
+  min-width: 0;
+}
+
+.sidebar-thread__title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: $text-body;
   line-height: 1.35;
 }
 
-.sidebar-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  font-size: 11px;
-  color: #909399;
-  margin-bottom: 6px;
-}
-
-.sidebar-card__body {
-  font-size: 12px;
-  color: #606266;
-  line-height: 1.5;
+.sidebar-thread__text {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 400;
+  color: $text-body;
+  line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.sidebar-replies {
-  margin-top: 8px;
-  padding-top: 8px;
+.sidebar-thread__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 24px;
+}
+
+.sidebar-thread__meta {
+  font-size: 12px;
+  color: $meta-grey;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-thread__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 列表行内：主色描边圆 + 线型图标，无填充（稿图红框 2） */
+.thread-action-btn {
+  $size: 26px;
+  width: $size;
+  height: $size;
+  min-width: $size;
+  min-height: $size;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  border: 1px solid $crm-primary;
+  border-radius: 50%;
+  background: transparent;
+  color: $crm-primary;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease,
+    transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  .thread-action-btn__icon {
+    font-size: 14px;
+  }
+
+  &:hover {
+    background: rgba(2, 81, 137, 0.06);
+    border-color: $crm-primary-hover;
+    color: $crm-primary-hover;
+  }
+
+  &:active {
+    transform: scale(0.94);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(2, 81, 137, 0.35);
+    outline-offset: 2px;
+  }
+}
+
+.sidebar-reply-editor {
+  margin-top: 12px;
+  padding: 12px 0 0;
   border-top: 1px dashed #e4e7ed;
+}
+
+.sidebar-reply-editor__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sidebar-thread__replies {
+  margin-top: 12px;
+  padding-left: 14px;
+  border-left: 2px solid #e8ecf1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .sidebar-reply {
-  padding: 6px 8px;
-  background: #fff;
-  border-radius: 6px;
-  border: 1px solid #f0f2f5;
+  min-width: 0;
+
+  .sidebar-thread__footer {
+    margin-top: 6px;
+  }
 }
 
-.sidebar-reply__meta {
-  font-size: 10px;
-  color: #a0a4aa;
-  margin-bottom: 4px;
-}
-
-.sidebar-reply__body {
-  font-size: 11px;
-  color: #606266;
+.sidebar-reply__text {
+  margin: 0;
+  font-size: 12px;
+  color: $text-body;
+  line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .comments-sidebar__foot {
   flex-shrink: 0;
-  padding: 8px 12px 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  padding: 10px 12px 14px;
+  border-top: 1px solid $divider;
   text-align: center;
+}
+
+.foot-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: $crm-primary;
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    color: $crm-primary-hover;
+    text-decoration: underline;
+  }
 }
 </style>

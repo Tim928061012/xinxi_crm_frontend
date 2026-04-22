@@ -38,16 +38,28 @@ export const useAuthStore = defineStore('auth', () => {
         authToken = responseData.token || responseData.data?.token
       }
       
-      // 获取用户信息
-      const responseData = response.data || response
-      const rawUserData: User = responseData.user || responseData.data?.user || {
-        id: responseData.id || '',
-        username: loginForm.username,
-        name: responseData.name || loginForm.username,
-        role: role,
-        email: responseData.email || '',
-        avatar: responseData.avatar || ''
-      }
+      // 获取用户信息（登录接口 body 为 ApiResponse，data 为 AuthSession：含 userId / username，无嵌套 user）
+      const responseData = (response as any).data || response
+      const payload = (responseData as any)?.data?.userId != null || (responseData as any)?.data?.username != null
+        ? (responseData as any).data
+        : responseData
+      const rawUserData: User =
+        (payload as any).user ||
+        (payload as any).data?.user ||
+        ((payload as any).userId != null || (payload as any).id != null
+          ? {
+              ...(payload as User),
+              username: (payload as any).username || loginForm.username,
+              role: (payload as any).role || role
+            }
+          : {
+              id: '',
+              username: loginForm.username,
+              name: loginForm.username,
+              role: role,
+              email: '',
+              avatar: ''
+            })
       const normalized = normalizeRole((rawUserData as any).role || role)
       const userData: User = {
         ...rawUserData,

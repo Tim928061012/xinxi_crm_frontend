@@ -59,7 +59,7 @@
       <el-button text @click="resetFilters">Reset</el-button>
     </div>
 
-    <div v-loading="loading" class="table-wrapper">
+    <div v-loading.fullscreen="loading" class="table-wrapper">
       <template v-if="displayList.length">
         <el-table :data="displayList" class="client-table client-table--crm" style="width: 100%">
           <el-table-column prop="client" label="Client" min-width="220" />
@@ -162,7 +162,7 @@
       :show-close="!exportLoading"
       @closed="exportLoading = false"
     >
-      <div v-loading="exportLoading" class="export-dialog-inner">
+      <div v-loading.fullscreen="exportLoading" class="export-dialog-inner">
         <div class="toolbar-card export-dialog-toolbar">
           <el-select
             v-model="exportDialogFilters.contactNature"
@@ -237,10 +237,10 @@
         <div class="export-footer">
           <span>{{ exportSelectedCount }} items selected</span>
           <div class="export-buttons">
-            <el-button type="primary" :disabled="!exportSelectedCount || exportLoading" :loading="exportLoading" @click="handleExportList">
+            <el-button type="primary" :disabled="!exportSelectedCount || exportLoading" @click="handleExportList">
               Export List
             </el-button>
-            <el-button type="primary" :disabled="!exportSelectedCount || exportLoading" :loading="exportLoading" @click="handleExportSpec">
+            <el-button type="primary" :disabled="!exportSelectedCount || exportLoading" @click="handleExportSpec">
               Export Spec
             </el-button>
           </div>

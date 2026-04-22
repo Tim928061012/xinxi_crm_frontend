@@ -1,14 +1,10 @@
 <template>
   <div class="comments-panel">
     <div class="comments-toolbar">
-      <el-select v-model="selectedModule" placeholder="All Modules" clearable style="width: 220px" @change="loadComments">
-        <el-option label="All Modules" value="" />
-        <el-option v-for="module in modules" :key="module.value" :label="module.label" :value="module.value" />
-      </el-select>
       <AddCommentButton @click="onToolbarAddComment" />
     </div>
 
-    <div v-loading="loading">
+    <div v-loading.fullscreen="loading">
       <el-empty v-if="!comments.length" description="No comments yet" />
       <div v-else class="comment-list">
         <div v-for="comment in comments" :key="comment.commentId" class="comment-card">
@@ -72,40 +68,35 @@
 import { inject, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
-import { COMMENT_MODULE_OPTIONS, getCommentModuleLabel } from '@/utils/comment-modules'
+import { getCommentModuleLabel } from '@/utils/comment-modules'
 import { CLIENT_COMMENT_DIALOG_INJECT_KEY } from '@/components/client/client-comment-dialog-key'
 import { formatDateTime } from '@/utils/date'
 import AddCommentButton from '@/components/common/AddCommentButton.vue'
 
 const commentModuleLabel = getCommentModuleLabel
-const modules = COMMENT_MODULE_OPTIONS
 
 const props = defineProps<{
   clientId: number
   clientType: ClientType
   currentUserId?: string | number
-  defaultModule?: string
 }>()
 
 const emit = defineEmits<{
   /** 列表变化（含加载完成），供详情页同步右侧评论栏数量 */
   (e: 'changed'): void
-  /** 同步工具栏「按模块筛选」供全局添加评论弹窗作默认值 */
-  (e: 'toolbar-module-change', value: string): void
 }>()
 
 const commentDialog = inject(CLIENT_COMMENT_DIALOG_INJECT_KEY, null)
 
 const loading = ref(false)
 const comments = ref<ClientComment[]>([])
-const selectedModule = ref('')
 const replyTargetId = ref<number | null>(null)
 const replyText = ref('')
 
 const loadComments = async () => {
   loading.value = true
   try {
-    const response = await workflowApi.getComments(props.clientId, props.clientType, selectedModule.value || undefined)
+    const response = await workflowApi.getComments(props.clientId, props.clientType)
     comments.value = response.data || response || []
     emit('changed')
   } catch (error: any) {
@@ -178,23 +169,6 @@ watch(
   { immediate: true }
 )
 
-watch(
-  () => props.defaultModule,
-  (value) => {
-    if (!selectedModule.value && value) {
-      selectedModule.value = value
-      loadComments()
-    }
-  }
-)
-
-watch(
-  selectedModule,
-  v => {
-    emit('toolbar-module-change', v)
-  },
-  { immediate: true }
-)
 </script>
 
 <style scoped lang="scss">
@@ -206,7 +180,7 @@ watch(
 
 .comments-toolbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
 }
 

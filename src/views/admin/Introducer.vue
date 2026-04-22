@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <div v-loading="loading" class="table-wrapper" v-if="loading">
+    <div v-loading.fullscreen="loading" class="table-wrapper" v-if="loading">
       <div style="min-height: 400px"></div>
     </div>
 

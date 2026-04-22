@@ -60,7 +60,7 @@
             <el-button
               type="primary"
               size="large"
-              :loading="loading"
+              :disabled="loading"
               class="login-button"
               @click="handleLogin"
             >

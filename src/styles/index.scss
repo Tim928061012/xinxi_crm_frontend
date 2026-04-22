@@ -14,6 +14,10 @@
   --crm-radius-lg: 12px;
   --crm-radius-md: 8px;
   --crm-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  /* 文档 Upload 文本按钮（设计稿深蓝、无底色） */
+  --crm-upload-action-color: #004b8d;
+  --crm-upload-action-hover: #003d73;
+  --crm-upload-action-active: #002f59;
 }
 
 * {
@@ -98,6 +102,249 @@ html, body {
     background-color: #a0c4d3 !important;
     border-color: #a0c4d3 !important;
   }
+}
+
+// primary 上的 !important 会压过 link 的透明底，需单独恢复文本链式按钮
+.el-button--primary.is-link {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: #025189 !important;
+
+  &:hover {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    color: #0369a1 !important;
+  }
+
+  &:active {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    color: #014d73 !important;
+  }
+
+  &:focus,
+  &:focus-visible {
+    background-color: transparent !important;
+    border-color: transparent !important;
+  }
+
+  &.is-disabled {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    color: #a0c4d3 !important;
+  }
+}
+
+// 文档/KYC「Upload」：左图标 + 文案、深蓝、无底色、字重正常（与设计稿一致）
+.el-button.crm-upload-action.el-button--primary.is-link {
+  color: var(--crm-upload-action-color) !important;
+  font-weight: 400;
+  font-size: 14px;
+  padding: 2px 0;
+  height: auto;
+  line-height: 1.5;
+
+  .el-icon {
+    color: inherit;
+    font-size: 16px;
+  }
+
+  &:hover {
+    color: var(--crm-upload-action-hover) !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
+  }
+
+  &:active {
+    color: var(--crm-upload-action-active) !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
+  }
+
+  &.is-disabled {
+    color: var(--crm-text-muted) !important;
+    opacity: 0.65;
+  }
+}
+
+// Upload 使用设计导出的整图（168×44 PNG，含图标与 Upload 文案）
+.el-button.crm-upload-action.el-button--primary.is-link.crm-upload-action--asset {
+  padding: 0 !important;
+  line-height: 0;
+  font-size: 0;
+  min-height: 0;
+  height: auto;
+
+  .crm-upload-action__asset {
+    display: block;
+    height: 16px;
+    width: auto;
+    vertical-align: top;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  &:hover {
+    background-color: transparent !important;
+    border-color: transparent !important;
+
+    .crm-upload-action__asset {
+      opacity: 0.82;
+    }
+  }
+
+  &:active {
+    background-color: transparent !important;
+    border-color: transparent !important;
+
+    .crm-upload-action__asset {
+      opacity: 0.72;
+    }
+  }
+
+  &.is-disabled {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    opacity: 1;
+
+    .crm-upload-action__asset {
+      opacity: 0.38;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--crm-upload-action-color);
+    outline-offset: 2px;
+  }
+}
+
+// 文档上传弹窗（标准稿：白底、圆角、浅灰边、轻阴影、虚线拖拽区、云上传图标、页脚靠右）
+.document-upload-dialog.el-dialog {
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.1),
+    0 0 1px rgba(15, 23, 42, 0.06);
+
+  .el-dialog__header {
+    padding: 18px 20px 10px;
+    margin-right: 0;
+  }
+
+  .el-dialog__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+    line-height: 1.4;
+  }
+
+  .el-dialog__headerbtn {
+    top: 14px;
+    right: 14px;
+
+    .el-dialog__close {
+      color: #909399;
+      font-size: 18px;
+
+      &:hover {
+        color: #606266;
+      }
+    }
+  }
+
+  .el-dialog__body {
+    padding: 6px 20px 12px;
+  }
+
+  .el-dialog__footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px 18px;
+    border-top: none;
+  }
+}
+
+.document-upload-dialog .upload-demo {
+  :deep(.el-upload) {
+    width: 100%;
+  }
+
+  :deep(.el-upload-dragger) {
+    width: 100%;
+    min-height: 180px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 28px 20px;
+    box-sizing: border-box;
+    border: 2px dashed #dcdfe6 !important;
+    border-radius: 8px;
+    background-color: #fafbfc !important;
+    transition:
+      border-color 0.2s,
+      background-color 0.2s;
+
+    &:hover {
+      border-color: #c0c4cc !important;
+      background-color: #f5f7fa !important;
+    }
+  }
+
+  .el-icon--upload {
+    font-size: 67px;
+    color: #c0c4cc;
+    margin-bottom: 16px;
+  }
+
+  .el-upload__text {
+    color: #606266;
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 8px;
+    line-height: 1.5;
+
+    em {
+      color: #025189;
+      font-style: normal;
+      font-weight: 500;
+      cursor: pointer;
+    }
+  }
+
+  .el-upload__tip {
+    color: #909399;
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+    margin-top: 4px;
+    max-width: 440px;
+  }
+}
+
+// 全局去掉按钮 loading 的旋转图标与半透明遮罩（仍保留 is-loading：不可点击）
+.el-button.is-loading {
+  &::before {
+    display: none !important;
+  }
+
+  .el-icon.is-loading {
+    display: none !important;
+  }
+
+  .el-icon.is-loading + span {
+    margin-left: 0 !important;
+  }
+}
+
+// 所有按钮内的图标禁止旋转动画（含将来使用 loading 属性、或槽位内放置 Loading 图标等情况）
+.el-button .el-icon {
+  animation: none !important;
 }
 
 // Element Plus Link 颜色统一
@@ -553,7 +800,7 @@ html, body {
   }
 }
 
-// 模块标题行：下载图标 + Download 文案（无底色，与 Add Comment 并列，顺序：左 Download 右 Add Comment）
+// 模块标题行：下载图标 + Download 文案（Documents 区顺序由页面模板控制：Upload → Download → Add Comment）
 .crm-bulk-download-btn {
   display: inline-flex;
   align-items: center;
@@ -604,6 +851,61 @@ html, body {
   }
 
   .crm-bulk-download-btn__text {
+    white-space: nowrap;
+  }
+}
+
+// Documents 区块标题行：上传图标 + Upload 文案（与 Bulk Download 同款线型图标风格）
+.crm-document-upload-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--crm-primary, #025189);
+  line-height: 1.25;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    color: var(--crm-primary-hover, #0369a1);
+  }
+
+  &:active {
+    color: #014d73;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--crm-primary, #025189);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  &:disabled,
+  &.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .crm-document-upload-link-btn__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: currentColor;
+
+    .el-icon {
+      font-size: 16px;
+    }
+  }
+
+  .crm-document-upload-link-btn__text {
     white-space: nowrap;
   }
 }

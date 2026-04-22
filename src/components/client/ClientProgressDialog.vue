@@ -16,7 +16,7 @@
       </div>
     </template>
 
-    <div v-loading="loading" class="progress-dialog">
+    <div v-loading.fullscreen="loading" class="progress-dialog">
       <p v-if="progress?.inactive" class="inactive-banner">This client is inactive.</p>
 
       <!-- 信息区：两列网格，标签灰、值深色，单行展示 -->
@@ -84,8 +84,14 @@
         </button>
       </div>
 
-      <!-- Flowchart：纵向步骤（已完成=勾选+蓝连线；当前=蓝底序号；待办=灰圈） -->
-      <div v-show="activeTab === 'flowchart'" class="flowchart-panel">
+      <!-- Flowchart / Timeline 同格叠放：隐藏项 visibility:hidden 仍占位，行高=max(二者)，切换 Tab 时弹窗不会突然变矮 -->
+      <div class="progress-tab-panels" role="presentation">
+        <!-- Flowchart：纵向步骤（已完成=勾选+蓝连线；当前=蓝底序号；待办=灰圈） -->
+        <div
+          class="flowchart-panel"
+          :class="{ 'tab-panel--inactive': activeTab !== 'flowchart' }"
+          :aria-hidden="activeTab !== 'flowchart'"
+        >
         <div v-for="(step, index) in workflowSteps" :key="step.status" class="step-row">
           <div class="step-track">
             <div
@@ -142,15 +148,20 @@
             </div>
           </div>
         </div>
-      </div>
+        </div>
 
-      <!-- Timeline：时间 | 描述，左对齐、易扫读 -->
-      <div v-show="activeTab === 'timeline'" class="timeline-panel">
-        <el-empty v-if="!sortedLogs.length" description="No progress logs yet" />
-        <div v-else class="timeline-list">
-          <div v-for="log in sortedLogs" :key="log.logId" class="timeline-item">
-            <span class="timeline-time">{{ toDisplayDate(log.createdAt) }}</span>
-            <span class="timeline-text">{{ formatLogLine(log) }}</span>
+        <!-- Timeline：时间 | 描述，左对齐、易扫读 -->
+        <div
+          class="timeline-panel"
+          :class="{ 'tab-panel--inactive': activeTab !== 'timeline' }"
+          :aria-hidden="activeTab !== 'timeline'"
+        >
+          <el-empty v-if="!sortedLogs.length" description="No progress logs yet" />
+          <div v-else class="timeline-list">
+            <div v-for="log in sortedLogs" :key="log.logId" class="timeline-item">
+              <span class="timeline-time">{{ toDisplayDate(log.createdAt) }}</span>
+              <span class="timeline-text">{{ formatLogLine(log) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -621,6 +632,23 @@ const toDisplayDate = (value?: string | null) => {
   user-select: none;
 }
 
+/* 两 Tab 叠在同一 grid 格内，隐藏面板仍参与排版，容器高度 = max(flowchart, timeline)，避免切 Tab 弹窗高度抖动 */
+.progress-tab-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.flowchart-panel,
+.timeline-panel {
+  grid-area: 1 / 1;
+}
+
+.tab-panel--inactive {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .flowchart-panel {
   padding: 4px 0 8px 4px;
 }
@@ -628,7 +656,6 @@ const toDisplayDate = (value?: string | null) => {
 .timeline-panel {
   padding: 8px 0;
   padding-left: var(--progress-track-indent);
-  min-height: 120px;
   box-sizing: border-box;
 }
 
@@ -648,6 +675,7 @@ const toDisplayDate = (value?: string | null) => {
 }
 
 .step-circle {
+  position: relative;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -683,8 +711,13 @@ const toDisplayDate = (value?: string | null) => {
   font-size: 16px;
 }
 
+/* 数字用绝对居中，避免行高/基线在 flex 圆里视觉上偏下 */
 .step-num {
-  transform: translateY(0.5px);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 1;
 }
 
 .step-connector {

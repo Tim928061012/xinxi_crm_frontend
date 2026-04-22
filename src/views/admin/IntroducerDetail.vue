@@ -1,5 +1,5 @@
 <template>
-  <div class="introducer-detail-page" v-loading="pageLoading" element-loading-text="Loading...">
+  <div class="introducer-detail-page" v-loading.fullscreen="pageLoading" element-loading-text="Loading...">
     <div class="top-header">
       <div class="top-header__leading">
         <el-button :icon="ArrowLeft" circle class="top-header__back" @click="handleBack" />
@@ -10,8 +10,8 @@
           <el-button type="primary" @click="goEdit" v-if="introducerNumericId">Edit</el-button>
         </template>
         <template v-else>
-          <el-button type="primary" :loading="saving" @click="() => handleSave(false)">Save</el-button>
-          <el-button :loading="saving" @click="() => handleSave(true)">Save & Close</el-button>
+          <el-button type="primary" :disabled="saving" @click="() => handleSave(false)">Save</el-button>
+          <el-button :disabled="saving" @click="() => handleSave(true)">Save & Close</el-button>
         </template>
       </div>
     </div>
@@ -27,7 +27,6 @@
               :introducer-numeric-id="introducerNumericId"
               :lock-contact-nature="!!introducerNumericId"
               :introducer-list="introducerList"
-              :introducer-select-loading="introducerLoading"
               :form-rules="formRules"
               @open-rm="openRmDialog"
               @open-arm="openArmDialog"
@@ -41,7 +40,7 @@
         </el-tab-pane>
 
         <el-tab-pane label="KYC" name="kyc">
-          <div class="tab-content" v-loading="tabLoading.kyc" element-loading-text="Loading KYC data...">
+          <div class="tab-content" v-loading.fullscreen="tabLoading.kyc" element-loading-text="Loading KYC data...">
             <div class="kyc-information-card">
               <h3 class="kyc-information-title">Information</h3>
               <el-form label-width="200px" class="kyc-information-form">
@@ -100,8 +99,8 @@
             <div class="kyc-section">
               <div class="kyc-upload-header">
                 <h3 class="kyc-upload-title">Supporting Documents</h3>
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')">
-                  Upload
+                <el-button v-if="!isViewMode" class="crm-upload-action crm-upload-action--asset" type="primary" link aria-label="Upload" @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')">
+                  <img class="crm-upload-action__asset" :src="crmUploadActionImg" alt="" />
                 </el-button>
               </div>
               <el-table v-if="kycData.documents?.length" :data="kycData.documents" stripe style="width: 100%">
@@ -124,8 +123,8 @@
             <div class="kyc-section">
               <div class="kyc-upload-header">
                 <h3 class="kyc-upload-title">Name Screening Documents</h3>
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('NAME_SCREENING')">
-                  Upload
+                <el-button v-if="!isViewMode" class="crm-upload-action crm-upload-action--asset" type="primary" link aria-label="Upload" @click="handleUploadKYCDocument('NAME_SCREENING')">
+                  <img class="crm-upload-action__asset" :src="crmUploadActionImg" alt="" />
                 </el-button>
               </div>
               <el-table
@@ -158,11 +157,13 @@
         </el-tab-pane>
 
         <el-tab-pane label="Documents" name="documents">
-          <div class="tab-content" v-loading="tabLoading.documents" element-loading-text="Loading documents...">
+          <div class="tab-content" v-loading.fullscreen="tabLoading.documents" element-loading-text="Loading documents...">
             <div v-for="sec in documentSections" :key="sec.key" class="document-section">
               <div class="section-header">
                 <h3 class="section-title">{{ sec.title }}</h3>
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument(sec.key)">Upload</el-button>
+                <el-button v-if="!isViewMode" class="crm-upload-action crm-upload-action--asset" type="primary" link aria-label="Upload" @click="handleUploadDocument(sec.key)">
+                  <img class="crm-upload-action__asset" :src="crmUploadActionImg" alt="" />
+                </el-button>
               </div>
               <el-table v-if="documentsData[sec.key]?.length" :data="documentsData[sec.key]" stripe style="width: 100%">
                 <el-table-column prop="document" label="Document" />
@@ -185,7 +186,7 @@
         </el-tab-pane>
 
         <el-tab-pane label="Fee Schedule" name="fee">
-          <div class="tab-content" v-loading="tabLoading.fee" element-loading-text="Loading fee schedule...">
+          <div class="tab-content" v-loading.fullscreen="tabLoading.fee" element-loading-text="Loading fee schedule...">
             <el-form :model="feeScheduleData" label-width="250px" class="fee-schedule-form">
               <div class="form-section">
                 <!-- 2×2 网格：行1 Management | Referral，行2 Retrocessions | Others（与示意一致） -->
@@ -398,7 +399,14 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="documentUploadDialogVisible" :title="documentUploadTitle" width="500px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="documentUploadDialogVisible"
+      class="document-upload-dialog"
+      :title="documentUploadTitle"
+      width="500px"
+      align-center
+      :close-on-click-modal="false"
+    >
       <el-upload
         ref="uploadRef"
         class="upload-demo"
@@ -427,6 +435,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Plus, UploadFilled } from '@element-plus/icons-vue'
+import crmUploadActionImg from '@/assets/crm-upload-action.png'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import IntroducerDetailGeneral from './IntroducerDetailGeneral.vue'
 import {
@@ -461,7 +470,6 @@ const rmDialogVisible = ref(false)
 const armDialogVisible = ref(false)
 const accountList = ref<Account[]>([])
 const introducerList = ref<Introducer[]>([])
-const introducerLoading = ref(false)
 
 const portfolioDialogVisible = ref(false)
 const editingPortfolioIndex = ref<number | null>(null)
@@ -837,32 +845,27 @@ async function loadAccountsForRM() {
 
 async function loadIntroducersIfNeeded() {
   if (introducerList.value.length > 0) return
-  introducerLoading.value = true
-  try {
-    const res = await introducerApi.getIntroducers()
-    const raw = (res as { data?: unknown }).data ?? res
-    const list = Array.isArray(raw) ? raw : []
-    introducerList.value = list.map((row: Record<string, unknown>) => {
-      const id = (row.introducerId ?? row.id) as number
-      const nature = (row.contactNature || row.contact_nature || 'Individual') as string
-      const fn = (row.firstName || row.first_name || '') as string
-      const ln = (row.lastName || row.last_name || '') as string
-      const company = (row.companyName || row.company_name || '') as string
-      let label = ''
-      if (nature === 'Corporate' || company) label = company || `${fn} ${ln}`.trim()
-      else label = [fn, ln].filter(Boolean).join(' ') || company || `Introducer #${id}`
-      return {
-        id,
-        introducer: label,
-        contactNature: nature as 'Individual' | 'Corporate',
-        rm: '',
-        status: (row.isActive === false ? 'disabled' : 'enabled') as 'enabled' | 'disabled',
-        isActive: row.isActive !== false
-      } as Introducer
-    })
-  } finally {
-    introducerLoading.value = false
-  }
+  const res = await introducerApi.getIntroducers()
+  const raw = (res as { data?: unknown }).data ?? res
+  const list = Array.isArray(raw) ? raw : []
+  introducerList.value = list.map((row: Record<string, unknown>) => {
+    const id = (row.introducerId ?? row.id) as number
+    const nature = (row.contactNature || row.contact_nature || 'Individual') as string
+    const fn = (row.firstName || row.first_name || '') as string
+    const ln = (row.lastName || row.last_name || '') as string
+    const company = (row.companyName || row.company_name || '') as string
+    let label = ''
+    if (nature === 'Corporate' || company) label = company || `${fn} ${ln}`.trim()
+    else label = [fn, ln].filter(Boolean).join(' ') || company || `Introducer #${id}`
+    return {
+      id,
+      introducer: label,
+      contactNature: nature as 'Individual' | 'Corporate',
+      rm: '',
+      status: (row.isActive === false ? 'disabled' : 'enabled') as 'enabled' | 'disabled',
+      isActive: row.isActive !== false
+    } as Introducer
+  })
 }
 
 async function loadIntroducerTabsData() {

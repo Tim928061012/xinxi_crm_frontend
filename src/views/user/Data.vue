@@ -30,7 +30,7 @@
       </el-form>
 
       <el-table
-        v-loading="loading"
+        v-loading.fullscreen="loading"
         :data="tableData"
         style="width: 100%"
         stripe

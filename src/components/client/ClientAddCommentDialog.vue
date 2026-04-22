@@ -44,10 +44,8 @@ const modules = COMMENT_MODULE_OPTIONS
 const props = defineProps<{
   clientId: number
   clientType: ClientType
-  /** Comments 页筛选为「全部」时用于默认模块，或从主 Tab 进入 Comments 时的语境 */
+  /** 从主 Tab 语境带入的默认模块（未在 openAddComment 中指定 moduleName 时使用） */
   contextDefaultModule?: string
-  /** Comments 工具栏当前选中的模块筛选（空=All） */
-  toolbarModule?: string
 }>()
 
 const emit = defineEmits<{
@@ -67,10 +65,7 @@ function openNewComment() {
 }
 
 function openAddComment(options?: { moduleName?: string; presetTitle?: string; freeForm?: boolean }) {
-  const mod = (options?.moduleName ||
-    (props.toolbarModule && props.toolbarModule.trim() ? props.toolbarModule : undefined) ||
-    props.contextDefaultModule ||
-    'BASIC') as string
+  const mod = (options?.moduleName || props.contextDefaultModule || 'BASIC') as string
   commentForm.moduleName = mod
   if (options?.freeForm) {
     commentForm.title = ''
