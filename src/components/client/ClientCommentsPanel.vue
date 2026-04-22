@@ -5,7 +5,7 @@
         <el-option label="All Modules" value="" />
         <el-option v-for="module in modules" :key="module.value" :label="module.label" :value="module.value" />
       </el-select>
-      <AddCommentButton @click="openNewComment" />
+      <AddCommentButton @click="onToolbarAddComment" />
     </div>
 
     <div v-loading="loading">
@@ -19,7 +19,7 @@
                 <span>{{ comment.createdByName || '-' }}</span>
                 <span>{{ comment.createdByRoleLabel || comment.createdByRole || '-' }}</span>
                 <span>{{ formatDateTime(comment.createdAt) }}</span>
-                <el-tag v-if="comment.moduleName" size="small">{{ comment.moduleName }}</el-tag>
+                <el-tag v-if="comment.moduleName" size="small">{{ commentModuleLabel(comment.moduleName) }}</el-tag>
               </div>
             </div>
             <div class="comment-actions">
@@ -65,51 +65,20 @@
         </div>
       </div>
     </div>
-
-    <el-dialog :model-value="commentDialogVisible" title="Add Comment" width="560px" @close="closeNewComment">
-      <el-form :model="commentForm" label-width="110px">
-        <el-form-item label="Module">
-          <el-select v-model="commentForm.moduleName" style="width: 100%">
-            <el-option v-for="module in modules" :key="module.value" :label="module.label" :value="module.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Title">
-          <el-input v-model="commentForm.title" maxlength="50" show-word-limit placeholder="Please enter title" />
-        </el-form-item>
-        <el-form-item label="Description">
-          <el-input
-            v-model="commentForm.description"
-            type="textarea"
-            :rows="4"
-            maxlength="1000"
-            show-word-limit
-            placeholder="Please enter description"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="closeNewComment">Cancel</el-button>
-        <el-button type="primary" @click="submitComment">Submit</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { inject, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
-import type { WorkflowModule } from '@/utils/client-progress'
+import { COMMENT_MODULE_OPTIONS, getCommentModuleLabel } from '@/utils/comment-modules'
+import { CLIENT_COMMENT_DIALOG_INJECT_KEY } from '@/components/client/client-comment-dialog-key'
 import { formatDateTime } from '@/utils/date'
 import AddCommentButton from '@/components/common/AddCommentButton.vue'
 
-const MODULE_PRESET_TITLE: Record<string, string> = {
-  GENERAL: 'General',
-  KYC: 'KYC',
-  RISK: 'Investment Risk Profile',
-  DOCUMENTS: 'Documents',
-  FEE: 'Fee Schedule'
-}
+const commentModuleLabel = getCommentModuleLabel
+const modules = COMMENT_MODULE_OPTIONS
 
 const props = defineProps<{
   clientId: number
@@ -121,27 +90,17 @@ const props = defineProps<{
 const emit = defineEmits<{
   /** 列表变化（含加载完成），供详情页同步右侧评论栏数量 */
   (e: 'changed'): void
+  /** 同步工具栏「按模块筛选」供全局添加评论弹窗作默认值 */
+  (e: 'toolbar-module-change', value: string): void
 }>()
 
-const modules = [
-  { label: 'General', value: 'GENERAL' },
-  { label: 'KYC', value: 'KYC' },
-  { label: 'Investment Risk Profile', value: 'RISK' },
-  { label: 'Documents', value: 'DOCUMENTS' },
-  { label: 'Fee Schedule', value: 'FEE' }
-]
+const commentDialog = inject(CLIENT_COMMENT_DIALOG_INJECT_KEY, null)
 
 const loading = ref(false)
 const comments = ref<ClientComment[]>([])
 const selectedModule = ref('')
-const commentDialogVisible = ref(false)
 const replyTargetId = ref<number | null>(null)
 const replyText = ref('')
-const commentForm = reactive({
-  moduleName: 'GENERAL',
-  title: '',
-  description: ''
-})
 
 const loadComments = async () => {
   loading.value = true
@@ -156,58 +115,13 @@ const loadComments = async () => {
   }
 }
 
-/** 自由添加：title 初始为空（Comments 标签内「Add Comment」） */
-const openNewComment = () => {
-  openAddComment({ freeForm: true })
-}
-
-/** 模块添加：可带模块名与标题初值（预览/审批视图模块角标 Add） */
-function openAddComment(options?: {
-  moduleName?: WorkflowModule | string
-  presetTitle?: string
-  freeForm?: boolean
-}) {
-  const mod = (options?.moduleName || selectedModule.value || props.defaultModule || 'GENERAL') as string
-  commentForm.moduleName = mod
-  if (options?.freeForm) {
-    commentForm.title = ''
-  } else {
-    commentForm.title = options?.presetTitle ?? MODULE_PRESET_TITLE[mod] ?? mod
-  }
-  commentForm.description = ''
-  commentDialogVisible.value = true
+function onToolbarAddComment() {
+  commentDialog?.openNewComment()
 }
 
 defineExpose({
-  openAddComment
+  loadComments
 })
-
-const closeNewComment = () => {
-  commentDialogVisible.value = false
-}
-
-const submitComment = async () => {
-  if (!commentForm.title.trim() || !commentForm.description.trim()) {
-    ElMessage.warning('Please complete title and description')
-    return
-  }
-  if (commentForm.title.trim().length > 50 || commentForm.description.trim().length > 1000) {
-    ElMessage.warning('Title max 50 characters, description max 1000')
-    return
-  }
-  try {
-    await workflowApi.createComment(props.clientId, props.clientType, {
-      moduleName: commentForm.moduleName,
-      title: commentForm.title.trim(),
-      description: commentForm.description.trim()
-    })
-    ElMessage.success('Comment added')
-    commentDialogVisible.value = false
-    await loadComments()
-  } catch (error: any) {
-    ElMessage.error(error.message || 'Failed to create comment')
-  }
-}
 
 const toggleReply = (commentId: number) => {
   replyTargetId.value = replyTargetId.value === commentId ? null : commentId
@@ -272,6 +186,14 @@ watch(
       loadComments()
     }
   }
+)
+
+watch(
+  selectedModule,
+  v => {
+    emit('toolbar-module-change', v)
+  },
+  { immediate: true }
 )
 </script>
 

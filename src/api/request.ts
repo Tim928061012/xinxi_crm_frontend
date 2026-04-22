@@ -115,6 +115,7 @@ request.interceptors.response.use(
   },
   (error) => {
     const { response, config } = error
+    const skipErrorToast = Boolean((config as { skipErrorToast?: boolean })?.skipErrorToast)
     // 检查是否是登录接口，如果是登录接口，不在这里显示错误，让调用方处理
     const isLoginRequest = config?.url?.includes('/auth/') && (config?.url?.includes('/login') || config?.method === 'post')
 
@@ -197,14 +198,29 @@ request.interceptors.response.use(
         return Promise.reject(error)
       }
       
-      // 服务器错误（500+）：显示错误
+      // 服务器错误（500+）：显示错误（详情页等会并行多请求，合并短时重复提示）
       if (status >= 500) {
-        ElMessage.error(response.data?.message || 'Server error')
+        if (skipErrorToast) {
+          return Promise.reject(error)
+        }
+        const now = Date.now()
+        const w = window as unknown as { __crmLastServerErrorToast?: number }
+        if (!w.__crmLastServerErrorToast || now - w.__crmLastServerErrorToast > 1200) {
+          w.__crmLastServerErrorToast = now
+          const isGateway = status === 502 || status === 503 || status === 504
+          ElMessage.error(
+            isGateway
+              ? 'Service temporarily unavailable. Please try again.'
+              : response.data?.message || 'Server error'
+          )
+        }
         return Promise.reject(error)
       }
     } else {
-      // 网络错误：显示错误
-      ElMessage.error('Network connection failed')
+      // 网络错误：显示错误（skipErrorToast 时由业务方重试，避免重试多次连弹）
+      if (!skipErrorToast) {
+        ElMessage.error('Network connection failed')
+      }
     }
 
     return Promise.reject(error)

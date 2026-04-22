@@ -7,8 +7,6 @@ export const WORKFLOW_STATUS_ORDER = [
   'ACTIVE'
 ] as const
 
-export type WorkflowModule = 'GENERAL' | 'KYC' | 'RISK' | 'DOCUMENTS' | 'FEE'
-
 const STATUS_LABEL_MAP: Record<string, string> = {
   PENDING_SUBMISSION: 'Pending Submission',
   OPERATIONAL_REVIEW: 'Operational Review',
@@ -95,17 +93,3 @@ export const getProgressOwnerBadgeKind = (
   }
 }
 
-export const mapTabToCommentModule = (tab: string): WorkflowModule => {
-  switch (tab) {
-    case 'kyc':
-      return 'KYC'
-    case 'risk':
-      return 'RISK'
-    case 'documents':
-      return 'DOCUMENTS'
-    case 'fee':
-      return 'FEE'
-    default:
-      return 'GENERAL'
-  }
-}

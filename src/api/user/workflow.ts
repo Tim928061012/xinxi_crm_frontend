@@ -62,8 +62,14 @@ export interface WorkflowActionPayload {
 const clientParams = (clientType: ClientType) => ({ clientType })
 
 export const workflowApi = {
-  getProgress(clientId: number, clientType: ClientType) {
-    return request.get(`/user/clients/${clientId}/progress`, { params: clientParams(clientType) })
+  /**
+   * @param opts.skipErrorToast 为 true 时不触发全局 5xx/网络 Toast（供 Progress 等场景做重试）
+   */
+  getProgress(clientId: number, clientType: ClientType, opts?: { skipErrorToast?: boolean }) {
+    return request.get(`/user/clients/${clientId}/progress`, {
+      params: clientParams(clientType),
+      ...(opts?.skipErrorToast ? { skipErrorToast: true as const } : {})
+    } as Parameters<typeof request.get>[1])
   },
 
   submit(clientId: number, clientType: ClientType) {

@@ -228,6 +228,7 @@
       :created-time="selectedProgressClient?.createdTime || ''"
       @updated="handleProgressUpdated"
       @review="handleProgressReview"
+      @open-documents-forms="handleOpenDocumentsFormsFromProgress"
     />
   </div>
 </template>
@@ -574,6 +575,17 @@ const handleProgressReview = () => {
       clientType: row.contactNature,
       mode: 'review'
     }
+  }).href
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+const handleOpenDocumentsFormsFromProgress = () => {
+  if (!selectedProgressClient.value) return
+  const row = selectedProgressClient.value
+  progressDialogVisible.value = false
+  const url = router.resolve({
+    path: `/standalone/client/${row.id}`,
+    query: { clientType: row.contactNature, tab: 'documents' }
   }).href
   window.open(url, '_blank', 'noopener,noreferrer')
 }

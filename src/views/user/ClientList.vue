@@ -103,7 +103,7 @@
                   type="primary"
                   class="action-link"
                   :underline="false"
-                  :class="{ 'action-link--disabled': !canEditDeleteInList(row) }"
+                  :class="{ 'action-link--disabled': !canEditInList(row) }"
                   @click.prevent="onActionEdit(row)"
                 >
                   Edit
@@ -117,7 +117,7 @@
                   type="primary"
                   class="action-link"
                   :underline="false"
-                  :class="{ 'action-link--disabled': !canEditDeleteInList(row) }"
+                  :class="{ 'action-link--disabled': !canDeleteInList(row) }"
                   @click.prevent="onActionDelete(row)"
                 >
                   Delete
@@ -148,6 +148,7 @@
       :created-time="selectedProgressClient?.createdTime || ''"
       @updated="handleProgressUpdated"
       @review="handleProgressReview"
+      @open-documents-forms="handleOpenDocumentsFormsFromProgress"
     />
 
     <el-dialog
@@ -271,6 +272,7 @@ import {
   getProgressOwnerBadgeKind,
   getProgressSortWeight,
 } from '@/utils/client-progress'
+import { isReviewerOnlyEditInReviewRole } from '@/utils/roles'
 
 interface ClientListRow {
   id: number
@@ -466,18 +468,27 @@ const handleEdit = (row: ClientListRow) => {
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
-const canEditDeleteInList = (row: ClientListRow) => canEditDeleteInClientList(row.progressStatus, row.inactive)
+/** 列表「Delete」：仍仅 Pending Submission；与角色无关 */
+const canDeleteInList = (row: ClientListRow) =>
+  canEditDeleteInClientList(row.progressStatus, row.inactive)
+
+/** 列表「Edit」：RM 等可改草稿；Operation/Compliance/RO 不在列表走普通编辑 */
+const canEditInList = (row: ClientListRow) => {
+  if (!canEditDeleteInClientList(row.progressStatus, row.inactive)) return false
+  if (isReviewerOnlyEditInReviewRole(authStore.user?.role)) return false
+  return true
+}
 
 const ownerBadgeKind = (row: ClientListRow) =>
   getProgressOwnerBadgeKind(row.progressOwnerRoleLabel, row.progressStatus, row.inactive)
 
 const onActionEdit = (row: ClientListRow) => {
-  if (!canEditDeleteInList(row)) return
+  if (!canEditInList(row)) return
   handleEdit(row)
 }
 
 const onActionDelete = (row: ClientListRow) => {
-  if (!canEditDeleteInList(row)) return
+  if (!canDeleteInList(row)) return
   handleDelete(row)
 }
 
@@ -614,6 +625,17 @@ const handleProgressReview = () => {
       clientType: row.contactNature,
       mode: 'review'
     }
+  }).href
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+const handleOpenDocumentsFormsFromProgress = () => {
+  if (!selectedProgressClient.value) return
+  const row = selectedProgressClient.value
+  progressDialogVisible.value = false
+  const url = router.resolve({
+    path: `/standalone/user/client/${row.id}`,
+    query: { clientType: row.contactNature, tab: 'documents' }
   }).href
   window.open(url, '_blank', 'noopener,noreferrer')
 }

@@ -42,3 +42,11 @@ export const matchesRouteRole = (userRole: string | undefined, requiredRole: str
   }
   return normalizeRole(userRole) === normalizeRole(requiredRole)
 }
+
+/** Operation / Compliance / RO：客户资料仅在 Review 流程（mode=review）中编辑，不使用预览页「Edit」进入普通编辑 */
+export const isReviewerOnlyEditInReviewRole = (role?: string | null): boolean => {
+  const n = normalizeRole(role)
+  return n === 'OPERATION' || n === 'COMPLIANCE' || n === 'RO'
+}
+
+export const isOperationRole = (role?: string | null): boolean => normalizeRole(role) === 'OPERATION'

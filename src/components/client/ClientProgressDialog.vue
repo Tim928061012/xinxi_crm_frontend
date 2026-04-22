@@ -180,6 +180,8 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'updated', progress: ClientProgressData): void
   (e: 'review'): void
+  /** 跳转客户页 Documents → Forms，用于待签署前上传签字件 */
+  (e: 'open-documents-forms'): void
 }>()
 
 const loading = ref(false)
@@ -358,17 +360,73 @@ function detailEntriesForStep(
   return []
 }
 
+/** 网关瞬时 502/503/504 或网络抖动：重试；全程 skipErrorToast，避免与组件内统一提示重复 */
+let progressLoadGeneration = 0
+
+function showProgressLoadFailed(e: unknown) {
+  const ax = e as { response?: { status?: number; data?: { message?: string } }; message?: string }
+  const status = ax?.response?.status
+  if (status != null && status >= 500) {
+    const isGateway = status === 502 || status === 503 || status === 504
+    ElMessage.error(
+      isGateway
+        ? 'Service temporarily unavailable. Please try again.'
+        : ax.response?.data?.message || 'Server error'
+    )
+    return
+  }
+  if (ax?.response === undefined) {
+    ElMessage.error('Network connection failed')
+    return
+  }
+  if (status != null && status >= 400 && status < 500) {
+    ElMessage.error(ax.message || 'Failed to load progress')
+  }
+}
+
+async function fetchProgressWithRetry(clientId: number, clientType: ClientType) {
+  const maxAttempts = 3
+  let lastErr: unknown
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await workflowApi.getProgress(clientId, clientType, { skipErrorToast: true })
+      return response
+    } catch (e: unknown) {
+      lastErr = e
+      const ax = e as { response?: { status?: number }; isAuthError?: boolean }
+      const st = ax?.response?.status
+      if (st === 401 || ax.isAuthError) {
+        throw e
+      }
+      const noResponse = ax?.response === undefined
+      const retryable = noResponse || st === 502 || st === 503 || st === 504
+      if (retryable && attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, 280 * attempt))
+        continue
+      }
+      showProgressLoadFailed(e)
+      throw e
+    }
+  }
+  throw lastErr
+}
+
 const loadProgress = async () => {
   if (!props.clientId || !props.clientType) return
+  const gen = ++progressLoadGeneration
   loading.value = true
   activeTab.value = 'flowchart'
   try {
-    const response = await workflowApi.getProgress(props.clientId, props.clientType)
+    const response = await fetchProgressWithRetry(props.clientId, props.clientType)
+    if (gen !== progressLoadGeneration) return
     progress.value = response.data || response
-  } catch (error: any) {
-    ElMessage.error(error.message || 'Failed to load progress')
+  } catch {
+    if (gen !== progressLoadGeneration) return
+    // 错误提示已在 fetchProgressWithRetry 内统一处理
   } finally {
-    loading.value = false
+    if (gen === progressLoadGeneration) {
+      loading.value = false
+    }
   }
 }
 
@@ -378,6 +436,26 @@ const handleAction = async (action: string) => {
     emit('review')
     emit('update:modelValue', false)
     return
+  }
+
+  if (action === 'SUBMIT_SIGNATURE') {
+    try {
+      await ElMessageBox.confirm(
+        'Signed files must be uploaded under the client’s Documents tab → Forms section (backend checks document type Forms). If you have not uploaded yet, open that section first; otherwise choose Submit now.',
+        'Submit Signature',
+        {
+          confirmButtonText: 'Go to Documents · Forms',
+          cancelButtonText: 'Submit now',
+          distinguishCancelAndClose: true,
+          type: 'info'
+        }
+      )
+      emit('open-documents-forms')
+      emit('update:modelValue', false)
+      return
+    } catch (e) {
+      if (e !== 'cancel') return
+    }
   }
 
   const runner = async () => {
@@ -412,7 +490,12 @@ const handleAction = async (action: string) => {
     emit('updated', progress.value)
   } catch (error: any) {
     if (error === 'cancel') return
-    ElMessage.error(error.message || 'Action failed')
+    const msg =
+      error?.response?.data?.message ||
+      error?.response?.data?.msg ||
+      error?.message ||
+      'Action failed'
+    ElMessage.error(msg)
   }
 }
 

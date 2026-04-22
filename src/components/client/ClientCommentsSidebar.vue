@@ -28,7 +28,7 @@
               <div class="sidebar-card__title">{{ comment.title || 'Comment' }}</div>
               <div class="sidebar-card__meta">
                 <span>{{ comment.createdByName || '-' }}</span>
-                <el-tag v-if="comment.moduleName" size="small" effect="plain">{{ comment.moduleName }}</el-tag>
+                <el-tag v-if="comment.moduleName" size="small" effect="plain">{{ commentModuleLabel(comment.moduleName) }}</el-tag>
               </div>
               <div class="sidebar-card__body">{{ comment.description }}</div>
               <div v-if="comment.replies?.length" class="sidebar-replies">
@@ -55,7 +55,10 @@
 import { ref, watch } from 'vue'
 import { DArrowLeft, DArrowRight } from '@element-plus/icons-vue'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
+import { getCommentModuleLabel } from '@/utils/comment-modules'
 import { formatDateTime } from '@/utils/date'
+
+const commentModuleLabel = getCommentModuleLabel
 
 const props = defineProps<{
   clientId: number

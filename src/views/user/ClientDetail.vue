@@ -84,6 +84,16 @@
     <!-- Tab 导航 + 主内容区（General～Fee 时若有评论则显示右侧栏） -->
     <div class="client-tabs-shell">
       <div class="client-tabs-shell__main">
+        <!-- 挂载在 tab 外，避免未进入 Comments 标签时 ref 为空导致「Add comment」无响应 -->
+        <ClientAddCommentDialog
+          v-if="clientId"
+          ref="addCommentDialogRef"
+          :client-id="clientId"
+          :client-type="currentClientType"
+          :context-default-module="commentsContextModule"
+          :toolbar-module="commentsToolbarSelectedModule"
+          @changed="handleAddCommentDialogSuccess"
+        />
     <el-tabs v-model="activeTab" class="client-tabs">
       <el-tab-pane label="General" name="general">
         <div class="tab-content">
@@ -100,7 +110,7 @@
                 <h3 class="section-title">Basic</h3>
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('GENERAL', 'General')"
+                  @click="openCommentFromModule('BASIC', 'Basic')"
                 />
               </div>
 
@@ -795,7 +805,13 @@
 
             <!-- Contact Section：公司类型为双列（左 7 个联系人字段 + 右 5 个原字段），个人类型保持原布局 -->
             <div class="form-section">
-              <h3 class="section-title">Contact</h3>
+              <div class="section-title-row">
+                <h3 class="section-title">Contact</h3>
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('CONTACT', 'Contact')"
+                />
+              </div>
               <!-- 公司类型：左列 7 个联系人字段，右列 5 个原字段，全部非必填 -->
               <template v-if="clientForm.general.contactNature === 'Corporate'">
                 <div class="form-row">
@@ -942,7 +958,13 @@
 
             <!-- Secondary Contact Section：字段与 Contact 相同，公司类型双列、个人类型单列，全部非必填 -->
             <div class="form-section">
-              <h3 class="section-title">Secondary Contact</h3>
+              <div class="section-title-row">
+                <h3 class="section-title">Secondary Contact</h3>
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('SECONDARY_CONTACT', 'Secondary Contact')"
+                />
+              </div>
               <template v-if="clientForm.general.contactNature === 'Corporate'">
                 <div class="form-row">
                   <el-form-item label="Title">
@@ -1089,9 +1111,15 @@
             <div class="form-section portfolio-section">
               <div class="section-header">
                 <h3 class="section-title">Portfolio</h3>
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleNewPortfolio">
-                  New Portfolio
-                </el-button>
+                <div class="portfolio-header-actions">
+                  <AddCommentButton
+                    v-if="showModuleCommentEntry"
+                    @click="openCommentFromModule('PORTFOLIO', 'Portfolio')"
+                  />
+                  <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleNewPortfolio">
+                    New Portfolio
+                  </el-button>
+                </div>
               </div>
 
               <el-table
@@ -1133,7 +1161,13 @@
         <div class="tab-content" v-loading="tabLoading.kyc" element-loading-text="Loading KYC data...">
           <!-- Information：白卡片，左列 KYC Date / Next Review Date，右列 KYC Status，与图一致 -->
           <div class="kyc-information-card">
-            <h3 class="kyc-information-title">Information</h3>
+            <div class="kyc-information-header">
+              <h3 class="kyc-information-title">Information</h3>
+              <AddCommentButton
+                v-if="showModuleCommentEntry"
+                @click="openCommentFromModule('KYC_INFORMATION', 'Information')"
+              />
+            </div>
             <el-form label-width="200px" class="kyc-information-form">
               <div class="kyc-info-rows">
                 <div class="kyc-info-row">
@@ -1195,7 +1229,7 @@
           </div>
           <div class="kyc-section">
             <div class="kyc-upload-header">
-              <h3 class="kyc-upload-title">Upload Supporting Documents</h3>
+              <h3 class="kyc-upload-title">Supporting Documents</h3>
               <div class="kyc-upload-actions">
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && kycData.documents.length"
@@ -1203,7 +1237,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('KYC', 'KYC')"
+                  @click="openCommentFromModule('KYC_SUPPORTING_DOCUMENTS', 'Supporting Documents')"
                 />
                 <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')">
                   Upload
@@ -1238,7 +1272,7 @@
           </div>
           <div class="kyc-section">
             <div class="kyc-upload-header">
-              <h3 class="kyc-upload-title">Upload Name Screening Documents</h3>
+              <h3 class="kyc-upload-title">Name Screening Documents</h3>
               <div class="kyc-upload-actions">
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && kycData.nameScreeningDocuments.length"
@@ -1246,7 +1280,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('KYC', 'KYC')"
+                  @click="openCommentFromModule('KYC_NAME_SCREENING', 'Name Screening Documents')"
                 />
                 <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('NAME_SCREENING')">
                   Upload
@@ -1291,7 +1325,7 @@
                 <h3 class="section-title">Overview</h3>
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('RISK', 'Investment Risk Profile')"
+                  @click="openCommentFromModule('RISK_OVERVIEW', 'Overview')"
                 />
               </div>
               <div class="form-row">
@@ -1344,7 +1378,13 @@
 
             <!-- Vulnerable Client Assessment Section -->
             <div class="form-section">
-              <h3 class="section-title">Vulnerable Client Assessment</h3>
+              <div class="section-title-row">
+                <h3 class="section-title">Vulnerable Client Assessment</h3>
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('RISK_VULNERABLE_CLIENT', 'Vulnerable Client Assessment')"
+                />
+              </div>
               <div class="vulnerable-assessment-container">
                 <div class="vulnerable-questions">
                   <div class="vulnerable-question-item">
@@ -1459,7 +1499,13 @@
 
             <!-- Investment Knowledge & Experience Section -->
             <div class="form-section investment-knowledge-section">
-              <h3 class="section-title">Investment Knowledge & Experience</h3>
+              <div class="section-title-row">
+                <h3 class="section-title">Investment Knowledge & Experience</h3>
+                <AddCommentButton
+                  v-if="showModuleCommentEntry"
+                  @click="openCommentFromModule('RISK_INVESTMENT_KNOWLEDGE', 'Investment Knowledge & Experience')"
+                />
+              </div>
               <div class="investment-table-wrapper">
                 <el-table :data="riskProfileData.investmentKnowledgeExperience.types" stripe class="investment-table">
                 <el-table-column prop="type" label="Type" min-width="400" align="right" class-name="type-column">
@@ -1505,10 +1551,10 @@
 
       <el-tab-pane label="Documents" name="documents">
         <div class="tab-content" v-loading="tabLoading.documents" element-loading-text="Loading documents...">
-          <!-- Upload Identity Proof -->
+          <!-- Identity Proof -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Upload Identity Proof</h3>
+              <h3 class="section-title">Identity Proof</h3>
               <div class="section-header-actions">
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.identity.length"
@@ -1516,7 +1562,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCUMENTS', 'Documents — Identity')"
+                  @click="openCommentFromModule('DOCS_IDENTITY', 'Identity Proof')"
                 />
                 <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('identity')">
                   Upload
@@ -1552,10 +1598,10 @@
             </el-table>
           </div>
 
-          <!-- Upload Address Proof -->
+          <!-- Address Proof -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Upload Address Proof</h3>
+              <h3 class="section-title">Address Proof</h3>
               <div class="section-header-actions">
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.address.length"
@@ -1563,7 +1609,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCUMENTS', 'Documents — Address')"
+                  @click="openCommentFromModule('DOCS_ADDRESS', 'Address Proof')"
                 />
                 <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('address')">
                   Upload
@@ -1599,10 +1645,10 @@
             </el-table>
           </div>
 
-          <!-- Upload Forms -->
+          <!-- Forms -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Upload Forms</h3>
+              <h3 class="section-title">Forms</h3>
               <div class="section-header-actions">
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.forms.length"
@@ -1610,9 +1656,14 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCUMENTS', 'Documents — Forms')"
+                  @click="openCommentFromModule('DOCS_FORMS', 'Forms')"
                 />
-                <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('forms')">
+                <el-button
+                  v-if="!isViewMode || canOperationUploadFormsPendingSignature"
+                  type="primary"
+                  :icon="Plus"
+                  @click="handleUploadDocument('forms')"
+                >
                   Upload
                 </el-button>
               </div>
@@ -1635,8 +1686,13 @@
                   <el-link type="primary" @click="handleOpenDocument(row)" :underline="false">
                     Open
                   </el-link>
-                  <el-divider v-if="!isViewMode" direction="vertical" />
-                  <el-link v-if="!isViewMode" type="primary" @click="handleDeleteDocument(row)" :underline="false">
+                  <el-divider v-if="!isViewMode || canOperationUploadFormsPendingSignature" direction="vertical" />
+                  <el-link
+                    v-if="!isViewMode || canOperationUploadFormsPendingSignature"
+                    type="primary"
+                    @click="handleDeleteDocument(row)"
+                    :underline="false"
+                  >
                     Delete
                   </el-link>
                 </template>
@@ -1644,10 +1700,10 @@
             </el-table>
           </div>
 
-          <!-- Upload XinXi Statements -->
+          <!-- XinXi Statements -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Upload XinXi Statements</h3>
+              <h3 class="section-title">XinXi Statements</h3>
               <div class="section-header-actions">
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.statements.length"
@@ -1655,7 +1711,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCUMENTS', 'Documents — Statements')"
+                  @click="openCommentFromModule('DOCS_STATEMENTS', 'XinXi Statements')"
                 />
                 <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('statements')">
                   Upload
@@ -1689,10 +1745,10 @@
             </el-table>
           </div>
 
-          <!-- Upload Others Documents -->
+          <!-- Others Documents -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Upload Others Documents</h3>
+              <h3 class="section-title">Others Documents</h3>
               <div class="section-header-actions">
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.others.length"
@@ -1700,7 +1756,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCUMENTS', 'Documents — Others')"
+                  @click="openCommentFromModule('DOCS_OTHERS', 'Others Documents')"
                 />
                 <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadDocument('others')">
                   Upload
@@ -1739,7 +1795,7 @@
       <el-tab-pane label="Fee Schedule" name="fee">
         <div class="tab-content" v-loading="tabLoading.fee" element-loading-text="Loading fee schedule data...">
           <div v-if="showModuleCommentEntry" class="fee-tab-comment-bar">
-            <AddCommentButton @click="openCommentFromModule('FEE', 'Fee Schedule')" />
+            <AddCommentButton @click="openCommentFromModule('FEE_SCHEDULE', 'Fee Schedule')" />
           </div>
           <el-form :model="feeScheduleData" label-width="250px" class="fee-schedule-form">
             <div class="form-section">
@@ -1902,6 +1958,7 @@
             :client-type="currentClientType"
             :current-user-id="authStore.user?.id"
             :default-module="commentsContextModule"
+            @toolbar-module-change="commentsToolbarSelectedModule = $event"
             @changed="handleCommentsChanged"
           />
         </div>
@@ -1928,8 +1985,13 @@
       v-model="progressDialogVisible"
       :client-id="clientId"
       :client-type="clientId ? currentClientType : null"
+      :client-name="headerClientName"
+      :client-business-id="progressDialogClientBusinessId"
+      :rm-name="progressDialogRmName"
+      :created-time="clientRecordCreatedAt"
       @updated="handleProgressUpdated"
       @review="enterReviewMode"
+      @open-documents-forms="handleOpenDocumentsFormsFromProgress"
     />
 
     <!-- RM 选择对话框 -->
@@ -2072,7 +2134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick, provide } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled, Loading, Place } from '@element-plus/icons-vue'
@@ -2088,21 +2150,18 @@ import { riskProfileApi, type InvestmentRiskProfile, type InvestmentType } from 
 import { feeScheduleApi, type FeeSchedule } from '@/api/user/fee-schedule'
 import { workflowApi, type ClientProgressData, type ClientType, type ClientComment } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
+import ClientAddCommentDialog from '@/components/client/ClientAddCommentDialog.vue'
 import ClientCommentsPanel from '@/components/client/ClientCommentsPanel.vue'
 import ClientCommentsSidebar from '@/components/client/ClientCommentsSidebar.vue'
+import { CLIENT_COMMENT_DIALOG_INJECT_KEY } from '@/components/client/client-comment-dialog-key'
 import AddCommentButton from '@/components/common/AddCommentButton.vue'
 import BulkDownloadButton from '@/components/common/BulkDownloadButton.vue'
 import { formatDateTime } from '@/utils/date'
 import { formatFileSizeMb } from '@/utils/file-size'
-import {
-  getProgressLabel,
-  isClientEditable,
-  isPendingSubmissionStatus,
-  mapTabToCommentModule,
-  type WorkflowModule
-} from '@/utils/client-progress'
-import { getClientBasePath, getClientListPath, isAdminClientRoute, isStandaloneClientRoute } from '@/utils/client-routes'
-import { isAdminRole } from '@/utils/roles'
+import { getProgressLabel, isClientEditable, isPendingSubmissionStatus, normalizeProgressStatus } from '@/utils/client-progress'
+import { mapTabToCommentModule } from '@/utils/comment-modules'
+import { getClientBasePath, getClientListPath, isStandaloneClientRoute } from '@/utils/client-routes'
+import { isAdminRole, isOperationRole, isReviewerOnlyEditInReviewRole } from '@/utils/roles'
 
 const route = useRoute()
 const router = useRouter()
@@ -2154,8 +2213,19 @@ const pageLoading = ref(false)
 const rmLoading = ref(false)
 const introducerLoading = ref(false)
 const progressDialogVisible = ref(false)
+/** Progress 弹窗信息区：与列表 openProgress 传入字段一致（createdTime 来自后端 ClientDetailDTO） */
+const clientRecordCreatedAt = ref<string>('')
 const workflowLoading = ref(false)
 const progressData = ref<ClientProgressData | null>(null)
+
+/** Pending Signature 下 Operation 在预览页也需能上传/删除 Forms 区签字件（后端 submit-signature 校验 FORMS） */
+const canOperationUploadFormsPendingSignature = computed(
+  () =>
+    !!clientId.value &&
+    isViewMode.value &&
+    isOperationRole(authStore.user?.role) &&
+    normalizeProgressStatus(progressData.value?.progressStatus) === 'PENDING_SIGNATURE'
+)
 const tabLoading: Record<string, boolean> = reactive({
   kyc: false,
   risk: false,
@@ -2171,7 +2241,23 @@ const tabLastSaved: Record<string, string> = reactive({
   fee: ''
 })
 const currentTabLastSaved = computed(() => tabLastSaved[activeTab.value] || '')
-const currentClientType = computed(() => ((route.query.clientType as ClientType) || (clientForm.contactNature as ClientType) || 'Individual'))
+
+/** 主详情是否已从后端加载成功（用于类型与 URL 不一致时以库为准，避免 workflow/KYC 等用错 clientType） */
+const clientDetailLoaded = ref(false)
+
+/**
+ * 工作流与各 Tab API 用的客户类型：
+ * - 详情未就绪前：优先用 URL 上 clientType（列表进入一般正确）
+ * - 详情加载后：以表单/后端为准，避免 URL 错写 Individual/Corporate 导致间歇性 500
+ */
+const currentClientType = computed((): ClientType => {
+  const fromQuery = route.query.clientType as ClientType | undefined
+  const fromForm = clientForm.contactNature as ClientType | undefined
+  if (clientDetailLoaded.value && clientId.value) {
+    return fromForm || fromQuery || 'Individual'
+  }
+  return fromQuery || fromForm || 'Individual'
+})
 const isReviewMode = computed(() => route.query.mode === 'review' && !isViewMode.value)
 /** v1.0 遗留：预览/审批视图下可按模块批量下载已上传文件 */
 const canBulkDownloadModule = computed(() => !!clientId.value && (isViewMode.value || isReviewMode.value))
@@ -2188,6 +2274,8 @@ const headerProgressMuted = computed(
 const canShowEditButton = computed(() => {
   if (!clientId.value || !isViewMode.value) return false
   if (isAdminRole(authStore.user?.role)) return true
+  // Operation / Compliance / RO：不在预览页提供「无限编辑」入口，仅在 Review 流程（mode=review）中改资料，随通过/驳回一并提交
+  if (isReviewerOnlyEditInReviewRole(authStore.user?.role)) return false
   if (canReviewAction.value) return true
   return isClientEditable(progressData.value?.progressStatus, progressData.value?.inactive)
 })
@@ -2203,6 +2291,19 @@ const headerClientName = computed(() => {
   const ln = (g.lastName || '').trim()
   const parts = [fn, ln].filter(Boolean)
   return parts.length ? parts.join(' ') : 'Client'
+})
+
+/** Progress 弹窗 Client Id：与列表列 clientId（业务编号 CLI/CLC）一致 */
+const progressDialogClientBusinessId = computed(() => {
+  const g = clientForm.general as { clientId?: string }
+  const v = g?.clientId
+  return v != null && String(v).trim() !== '' ? String(v) : ''
+})
+
+/** Progress 弹窗 RM / Created By：与列表 rm 列一致（产品侧 Created By 同展示为 RM） */
+const progressDialogRmName = computed(() => {
+  const g = clientForm.general as { rm?: string }
+  return (g?.rm || '').trim() || ''
 })
 
 /** 顶栏括号内：当前流程状态节点 */
@@ -2229,7 +2330,15 @@ const commentsContextModule = computed(() =>
 /** 文档：预览/审批视图下各模块可有 Add comment；编辑视图仅能通过 Comments 标签内添加 */
 const showModuleCommentEntry = computed(() => !!clientId.value && (isViewMode.value || isReviewMode.value))
 
-const commentsPanelRef = ref<{ openAddComment: (opts?: Record<string, unknown>) => void } | null>(null)
+/** Comments 页工具栏「按模块筛选」，供添加评论弹窗在未指定模块时兜底 */
+const commentsToolbarSelectedModule = ref('')
+const addCommentDialogRef = ref<InstanceType<typeof ClientAddCommentDialog> | null>(null)
+
+provide(CLIENT_COMMENT_DIALOG_INJECT_KEY, {
+  openNewComment: () => addCommentDialogRef.value?.openNewComment()
+})
+
+const commentsPanelRef = ref<{ loadComments: () => Promise<void> } | null>(null)
 const commentsSidebarRef = ref<InstanceType<typeof ClientCommentsSidebar> | null>(null)
 
 /** 含回复的总条数，用于是否显示右侧评论栏（与侧栏内计数一致） */
@@ -2276,16 +2385,55 @@ const handleCommentsChanged = () => {
   commentsSidebarRef.value?.reload()
 }
 
+/** 从全局弹窗提交新评论后刷新列表（Comments 页签可能未挂载过） */
+const handleAddCommentDialogSuccess = () => {
+  handleCommentsChanged()
+  void commentsPanelRef.value?.loadComments()
+}
+
 const goToCommentsTab = () => {
   activeTab.value = 'comments'
 }
 
-const openCommentFromModule = (module: WorkflowModule, presetTitle: string) => {
-  activeTab.value = 'comments'
+/** Progress「提交签名」：跳到 Documents 上传 Forms 区签字件（后端校验 FORMS 文档） */
+const handleOpenDocumentsFormsFromProgress = () => {
+  progressDialogVisible.value = false
+  activeTab.value = 'documents'
+}
+
+watch(
+  () => route.query.tab,
+  tab => {
+    if (tab === 'documents') {
+      activeTab.value = 'documents'
+    }
+  },
+  { immediate: true }
+)
+
+/** 从各 Tab 内「Add comment」打开弹窗，不跳转 Comments 标签（弹窗挂在 tab 外，append 到 body） */
+const openCommentFromModule = (module: string, presetTitle: string) => {
   nextTick(() => {
-    commentsPanelRef.value?.openAddComment({ moduleName: module, presetTitle })
+    addCommentDialogRef.value?.openAddComment({ moduleName: module, presetTitle })
   })
 }
+
+/** Operation/Compliance/RO 不可通过地址栏进入普通 /edit，仅允许 ?mode=review */
+watch(
+  () => [route.path, route.query.mode, clientId.value, authStore.user?.role] as const,
+  () => {
+    if (!clientId.value) return
+    if (!route.path.includes('/edit')) return
+    if (!isReviewerOnlyEditInReviewRole(authStore.user?.role)) return
+    if (route.query.mode === 'review') return
+    const base = getClientBasePath(route.path)
+    void router.replace({
+      path: `${base}/${clientId.value}`,
+      query: { clientType: (route.query.clientType as string) || currentClientType.value }
+    })
+    ElMessage.info('Please use Review on the client view page to edit during the approval process.')
+  }
+)
 
 watch(clientId, id => {
   if (!id && activeTab.value === 'comments') {
@@ -2293,6 +2441,8 @@ watch(clientId, id => {
   }
   if (!id) {
     commentTotalCount.value = 0
+    clientDetailLoaded.value = false
+    commentsToolbarSelectedModule.value = ''
   }
 })
 
@@ -2553,14 +2703,14 @@ const documentUploadType = ref<DocumentType | 'kyc'>('identity')
 const kycUploadDocumentType = ref<'SUPPORTING_DOCUMENT' | 'NAME_SCREENING'>('SUPPORTING_DOCUMENT')
 const documentUploadTitle = computed(() => {
   if (documentUploadType.value === 'kyc') {
-    return kycUploadDocumentType.value === 'NAME_SCREENING' ? 'Upload Name Screening Documents' : 'Upload Supporting Documents'
+    return kycUploadDocumentType.value === 'NAME_SCREENING' ? 'Name Screening Documents' : 'Supporting Documents'
   }
   const titles: Record<DocumentType, string> = {
-    identity: 'Upload Identity Proof',
-    address: 'Upload Address Proof',
-    forms: 'Upload Forms',
-    statements: 'Upload XinXi Statements',
-    others: 'Upload Others Documents'
+    identity: 'Identity Proof',
+    address: 'Address Proof',
+    forms: 'Forms',
+    statements: 'XinXi Statements',
+    others: 'Others Documents'
   }
   return titles[documentUploadType.value]
 })
@@ -2626,16 +2776,32 @@ const portfolioFormRules = computed<FormRules>(() => {
   }
 })
 
+/** 防止路由快速切换或 Strict Mode 下重复 loadClient 导致后发先至污染表单 */
+let loadClientGeneration = 0
+
 // 加载数据
 const loadClient = async () => {
   if (!clientId.value) return
 
+  const gen = ++loadClientGeneration
+  clientDetailLoaded.value = false
   pageLoading.value = true
   try {
-    // 从路由查询参数中获取 clientType，确保后端能正确识别客户类型
-    const clientTypeFromQuery = route.query.clientType as 'Individual' | 'Corporate' | undefined
-    const response = await userClientApi.getClientById(clientId.value, clientTypeFromQuery)
+    // 不传 clientType：后端按 id 自动判断 Individual/Corporate，避免 URL 与库不一致时间歇性报错
+    const response = await userClientApi.getClientById(clientId.value)
+    if (gen !== loadClientGeneration) return
+
     const data = response.data || response
+
+    const rawCreated =
+      data.createdTime || data.created_time || data.createdAt || data.created_at
+    if (rawCreated instanceof Date) {
+      clientRecordCreatedAt.value = rawCreated.toISOString()
+    } else if (rawCreated != null && rawCreated !== '') {
+      clientRecordCreatedAt.value = typeof rawCreated === 'string' ? rawCreated : String(rawCreated)
+    } else {
+      clientRecordCreatedAt.value = ''
+    }
 
     // 填充表单数据
     // 优先使用后端返回的 contactNature，如果没有则使用 general.contactNature，最后才默认 Individual
@@ -2644,7 +2810,8 @@ const loadClient = async () => {
     // 确保 contactNature 正确设置，优先使用后端返回的值
     const finalContactNature = backendContactNature || generalContactNature || 'Individual'
     clientForm.contactNature = finalContactNature
-    
+    clientDetailLoaded.value = true
+
     // 处理 General 信息
     if (data.general) {
       const general = data.general
@@ -2914,11 +3081,13 @@ const loadClient = async () => {
     await loadProgress()
   } catch (error: any) {
     console.error('Failed to load client:', error)
+    clientDetailLoaded.value = false
     // 登录态失效（401）时，全局拦截器已经提示并跳转，这里不再额外提示
     if (!(error as any)?.isAuthError && (error as any)?.response?.status !== 401) {
       ElMessage.error('Failed to load client details')
     }
   } finally {
+    if (gen !== loadClientGeneration) return
     // 添加最小延迟，避免闪烁
     await new Promise(resolve => setTimeout(resolve, 300))
     pageLoading.value = false
@@ -3077,9 +3246,13 @@ const openProgressDialog = () => {
   progressDialogVisible.value = true
 }
 
-// 处理 Edit 按钮点击，跳转到编辑页面（仅普通用户）
+// 处理 Edit 按钮点击，跳转到编辑页面（非 Operation/Compliance/RO 的无限编辑；后者仅能通过 Review）
 const handleEdit = () => {
   if (!clientId.value) return
+  if (isReviewerOnlyEditInReviewRole(authStore.user?.role)) {
+    ElMessage.info('Please use Review on this page to edit during the approval process.')
+    return
+  }
   const clientType = route.query.clientType || clientForm.contactNature || 'Individual'
   const base = getClientBasePath(route.path)
   router.push({ path: `${base}/${clientId.value}/edit`, query: { clientType } })
@@ -3233,6 +3406,14 @@ const handleSave = async (closeAfter: boolean = false) => {
           if (closeAfter) {
             await nextTick()
             await router.push(getClientListPath(route.path))
+          } else if (route.path.includes('/edit')) {
+            // 草稿页保存成功 → 进入预览（只读详情），与从列表进入预览一致
+            await nextTick()
+            const base = getClientBasePath(route.path)
+            await router.replace({
+              path: `${base}/${currentClientId}`,
+              query: { clientType: currentClientType.value }
+            })
           }
         } else {
           // 创建新 Client
@@ -3363,14 +3544,15 @@ const handleSave = async (closeAfter: boolean = false) => {
             await nextTick()
             const base = getClientBasePath(route.path)
             const listPath = getClientListPath(route.path)
+            const createdType = (clientForm.contactNature as ClientType) || 'Individual'
             if (closeAfter) {
               await router.push(listPath)
             } else {
-              if (isAdminClientRoute(route.path)) {
-                await router.push(`${base}/${currentClientId}`)
-              } else {
-                await router.push(`${base}/${currentClientId}/edit`)
-              }
+              // 新建首次保存后也进入预览页（非 /edit），需再改时点顶栏 Edit
+              await router.replace({
+                path: `${base}/${currentClientId}`,
+                query: { clientType: createdType }
+              })
             }
           } else {
             throw new Error('Client ID is missing after creation')
@@ -3976,41 +4158,27 @@ watch(isViewMode, (newVal) => {
   }
 })
 
+// 合并初次进入与同页内路由变化（如 /edit ↔ 预览）：仅一处触发 loadClient，避免与 onMounted 重复请求打竞态
 watch(
-  () => route.fullPath,
-  async (newPath, oldPath) => {
-    if (newPath === oldPath) return
-    if (clientId.value) {
-      await loadClient()
-    } else {
+  () => [clientId.value, route.fullPath] as const,
+  () => {
+    if (!clientId.value) {
       progressData.value = null
-    }
-  }
-)
-
-onMounted(async () => {
-  try {
-    // 管理员不能新建客户，若访问新建页则重定向到 admin 客户列表
-    if (
-      isAdminRole(authStore.user?.role) &&
-      (route.path === '/user/client/new' || route.path === '/standalone/user/client/new')
-    ) {
-      router.replace('/client')
+      clientDetailLoaded.value = false
       return
     }
-    // 新建模式下，完全不加载任何数据，页面立即渲染
-    // 编辑模式下，只加载必要的 client 数据
-    if (isEditMode.value) {
-      await loadClient()
-    } else {
-      progressData.value = null
-    }
-    
-    // 下拉选项数据完全按需加载，不在 onMounted 中加载
-    // 这些数据只在用户点击对应的选择器时才加载
-  } catch (error) {
-    console.error('Error in onMounted:', error)
-    // 即使出错也不阻止页面渲染
+    void loadClient()
+  },
+  { immediate: true }
+)
+
+onMounted(() => {
+  // 管理员不能新建客户，若访问新建页则重定向到 admin 客户列表
+  if (
+    isAdminRole(authStore.user?.role) &&
+    (route.path === '/user/client/new' || route.path === '/standalone/user/client/new')
+  ) {
+    router.replace('/client')
   }
 })
 </script>
@@ -4370,12 +4538,25 @@ onMounted(async () => {
   min-width: 0;
 }
 
+.kyc-information-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
 .kyc-information-title {
   font-size: 18px;
   font-weight: 600;
   color: #303133;
-  margin: 0 0 20px 0;
+  margin: 0;
   padding: 0;
+}
+
+.portfolio-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .kyc-information-form {
@@ -4445,7 +4626,7 @@ onMounted(async () => {
   width: 100%;
 }
 
-// KYC Section（Upload Supporting / Name Screening：小模块白底，与 tab 标头左右对齐）
+// KYC Section（Supporting / Name Screening：小模块白底，与 tab 标头左右对齐）
 .kyc-section {
   .kyc-upload-header {
     display: flex;

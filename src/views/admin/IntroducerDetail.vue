@@ -99,7 +99,7 @@
             </div>
             <div class="kyc-section">
               <div class="kyc-upload-header">
-                <h3 class="kyc-upload-title">Upload Supporting Documents</h3>
+                <h3 class="kyc-upload-title">Supporting Documents</h3>
                 <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')">
                   Upload
                 </el-button>
@@ -123,7 +123,7 @@
             </div>
             <div class="kyc-section">
               <div class="kyc-upload-header">
-                <h3 class="kyc-upload-title">Upload Name Screening Documents</h3>
+                <h3 class="kyc-upload-title">Name Screening Documents</h3>
                 <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleUploadKYCDocument('NAME_SCREENING')">
                   Upload
                 </el-button>
@@ -503,10 +503,10 @@ const isViewMode = computed(() => route.name === 'IntroducerView')
 const isNew = computed(() => route.name === 'IntroducerNew')
 
 const documentSections: { key: keyof IntroducerDocumentsData; title: string }[] = [
-  { key: 'identity', title: 'Upload Identity Proof' },
-  { key: 'address', title: 'Upload Address Proof' },
-  { key: 'forms', title: 'Upload Forms' },
-  { key: 'others', title: 'Upload Others Documents' }
+  { key: 'identity', title: 'Identity Proof' },
+  { key: 'address', title: 'Address Proof' },
+  { key: 'forms', title: 'Forms' },
+  { key: 'others', title: 'Others Documents' }
 ]
 
 const tabLoading = reactive({
@@ -535,13 +535,13 @@ const documentUploadType = ref<IntroducerDocumentType | 'kyc'>('identity')
 const kycUploadDocumentType = ref<'SUPPORTING_DOCUMENT' | 'NAME_SCREENING'>('SUPPORTING_DOCUMENT')
 const documentUploadTitle = computed(() => {
   if (documentUploadType.value === 'kyc') {
-    return kycUploadDocumentType.value === 'NAME_SCREENING' ? 'Upload Name Screening Documents' : 'Upload Supporting Documents'
+    return kycUploadDocumentType.value === 'NAME_SCREENING' ? 'Name Screening Documents' : 'Supporting Documents'
   }
   const titles: Record<IntroducerDocumentType, string> = {
-    identity: 'Upload Identity Proof',
-    address: 'Upload Address Proof',
-    forms: 'Upload Forms',
-    others: 'Upload Others Documents'
+    identity: 'Identity Proof',
+    address: 'Address Proof',
+    forms: 'Forms',
+    others: 'Others Documents'
   }
   return titles[documentUploadType.value as IntroducerDocumentType]
 })
