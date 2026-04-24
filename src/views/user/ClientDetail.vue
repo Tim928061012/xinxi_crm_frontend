@@ -4376,7 +4376,7 @@ onMounted(() => {
     .form-section {
       margin-top: 0;
       margin-bottom: 16px;
-      padding: 16px 20px;
+      padding: 16px 36px;
       background-color: #fff;
       border: none;
       border-radius: 4px;
@@ -4526,7 +4526,7 @@ onMounted(() => {
 // KYC Information 卡片（小模块白底，与 tab 标头左右对齐）
 .kyc-information-card {
   margin-bottom: 16px;
-  padding: 16px 20px;
+  padding: 16px 36px;
   background-color: #fff;
   border: none;
   border-radius: 4px;
@@ -4629,7 +4629,7 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
-    padding: 12px 16px;
+    padding: 12px 36px;
     background-color: #fff;
     border: none;
     border-radius: 4px;
@@ -4652,7 +4652,7 @@ onMounted(() => {
 // Document Section：单层白卡片（标题 + 可选表格），与浅灰 tab 底分层
 .document-section {
   margin-bottom: 16px;
-  padding: 16px 20px;
+  padding: 16px 36px;
   background-color: #fff;
   border: none;
   border-radius: 8px;
@@ -4729,7 +4729,7 @@ onMounted(() => {
 
   .form-section {
     margin-bottom: 16px;
-    padding: 16px 20px;
+    padding: 16px 36px;
     background-color: #fff;
     border: none;
     border-radius: 4px;
@@ -4890,7 +4890,7 @@ onMounted(() => {
 .fee-schedule-form {
   .form-section {
     margin-bottom: 16px;
-    padding: 16px 20px;
+    padding: 16px 36px;
     background-color: #fff;
     border: none;
     border-radius: 4px;

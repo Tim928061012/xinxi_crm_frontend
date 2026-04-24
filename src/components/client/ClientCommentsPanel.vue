@@ -6,66 +6,75 @@
 
     <div v-loading.fullscreen="loading">
       <el-empty v-if="!comments.length" description="No comments yet" />
-      <div v-else class="comment-list">
-        <div v-for="comment in comments" :key="comment.commentId" class="comment-card">
-          <div class="comment-header">
-            <div>
-              <div class="comment-title">{{ comment.title || 'Comment' }}</div>
-              <div class="comment-meta">
-                <span>{{ comment.createdByName || '-' }}</span>
-                <span>{{ comment.createdByRoleLabel || comment.createdByRole || '-' }}</span>
-                <span>{{ formatDateTime(comment.createdAt) }}</span>
-                <el-tag v-if="comment.moduleName" size="small">{{ commentModuleLabel(comment.moduleName) }}</el-tag>
+      <div v-else class="comment-groups">
+        <section v-for="group in groupedComments" :key="group.groupKey" class="comment-group">
+          <h3 class="comment-group__title">{{ group.label }}</h3>
+          <div class="comment-group__list">
+            <article v-for="comment in group.items" :key="comment.commentId" class="comment-item">
+              <p class="comment-item__text">{{ comment.description }}</p>
+              <div class="comment-item__meta-row">
+                <span class="comment-item__meta">{{ authorAtLine(comment) }}</span>
+                <div class="comment-item__actions">
+                  <button type="button" class="icon-action" aria-label="Reply" @click="toggleReply(comment.commentId)">
+                    <el-icon><ChatDotRound /></el-icon>
+                  </button>
+                  <button
+                    v-if="canDelete(comment)"
+                    type="button"
+                    class="icon-action"
+                    aria-label="Delete"
+                    @click="deleteComment(comment.commentId)"
+                  >
+                    <el-icon><Delete /></el-icon>
+                  </button>
+                </div>
               </div>
-            </div>
-            <div class="comment-actions">
-              <el-button link type="primary" @click="toggleReply(comment.commentId)">Reply</el-button>
-              <el-button
-                v-if="canDelete(comment)"
-                link
-                type="danger"
-                @click="deleteComment(comment.commentId)"
-              >
-                Delete
-              </el-button>
-            </div>
-          </div>
-          <div class="comment-body">{{ comment.description }}</div>
 
-          <div v-if="replyTargetId === comment.commentId" class="reply-box">
-            <el-input v-model="replyText" type="textarea" :rows="3" maxlength="1000" show-word-limit placeholder="Please enter reply" />
-            <div class="reply-actions">
-              <el-button @click="cancelReply">Cancel</el-button>
-              <el-button type="primary" @click="submitReply(comment.commentId)">Submit Reply</el-button>
-            </div>
-          </div>
-
-          <div v-if="comment.replies?.length" class="reply-list">
-            <div v-for="reply in comment.replies" :key="reply.commentId" class="reply-item">
-              <div class="reply-meta">
-                <span>{{ reply.createdByName || '-' }}</span>
-                <span>{{ reply.createdByRoleLabel || reply.createdByRole || '-' }}</span>
-                <span>{{ formatDateTime(reply.createdAt) }}</span>
-                <el-button
-                  v-if="canDelete(reply)"
-                  link
-                  type="danger"
-                  @click="deleteComment(reply.commentId)"
-                >
-                  Delete
-                </el-button>
+              <div v-if="replyTargetId === comment.commentId" class="reply-box">
+                <el-input
+                  v-model="replyText"
+                  type="textarea"
+                  :rows="3"
+                  maxlength="1000"
+                  show-word-limit
+                  placeholder="Please enter reply"
+                />
+                <div class="reply-actions">
+                  <el-button size="small" @click="cancelReply">Cancel</el-button>
+                  <el-button type="primary" size="small" @click="submitReply(comment.commentId)">Submit Reply</el-button>
+                </div>
               </div>
-              <div class="reply-body">{{ reply.description }}</div>
-            </div>
+
+              <div v-if="comment.replies?.length" class="reply-list">
+                <div v-for="reply in comment.replies" :key="reply.commentId" class="reply-item">
+                  <p class="reply-item__text">{{ reply.description }}</p>
+                  <div class="comment-item__meta-row">
+                    <span class="comment-item__meta">{{ authorAtLine(reply) }}</span>
+                    <div class="comment-item__actions">
+                      <button
+                        v-if="canDelete(reply)"
+                        type="button"
+                        class="icon-action"
+                        aria-label="Delete"
+                        @click="deleteComment(reply.commentId)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { inject, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
+import { ChatDotRound, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
 import { getCommentModuleLabel } from '@/utils/comment-modules'
@@ -92,6 +101,19 @@ const loading = ref(false)
 const comments = ref<ClientComment[]>([])
 const replyTargetId = ref<number | null>(null)
 const replyText = ref('')
+type CommentGroup = { groupKey: string; label: string; items: ClientComment[] }
+
+const groupedComments = computed<CommentGroup[]>(() => {
+  const map = new Map<string, CommentGroup>()
+  for (const c of comments.value) {
+    const moduleCode = (c.moduleName || '').trim()
+    const label = commentModuleLabel(moduleCode) || 'Comment'
+    const key = `MODULE:${moduleCode || 'NONE'}`
+    if (!map.has(key)) map.set(key, { groupKey: key, label, items: [] })
+    map.get(key)!.items.push(c)
+  }
+  return [...map.values()]
+})
 
 const loadComments = async () => {
   loading.value = true
@@ -159,6 +181,16 @@ const deleteComment = async (commentId: number) => {
 
 const canDelete = (comment: ClientComment) => String(comment.createdByUserId) === String(props.currentUserId || '')
 
+const formatDisplayDate = (value?: string | null) => {
+  const text = formatDateTime(value || '')
+  const m = text.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/)
+  if (!m) return text
+  const [, y, mo, d, hm] = m
+  return `${d}/${mo}/${y} ${hm}`
+}
+
+const authorAtLine = (comment: ClientComment) => `${comment.createdByName || '-'} at ${formatDisplayDate(comment.createdAt)}`
+
 watch(
   () => [props.clientId, props.clientType],
   () => {
@@ -176,6 +208,9 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 0 36px;
 }
 
 .comments-toolbar {
@@ -184,62 +219,79 @@ watch(
   gap: 12px;
 }
 
-.comment-list {
+.comment-groups {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
 }
 
-.comment-card {
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  padding: 16px;
-  background: #fff;
+.comment-group {
+  padding-bottom: 2px;
+  margin: 0;
 }
 
-.comment-header,
-.reply-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
+.comment-group + .comment-group {
+  border-top: 1px solid #ebeef5;
+  padding-top: 16px;
 }
 
-.comment-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 6px;
+.comment-group__title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #1f2937;
 }
 
-.comment-meta,
-.reply-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  color: #909399;
-  font-size: 12px;
-}
-
-.comment-body,
-.reply-body {
-  margin-top: 12px;
-  color: #303133;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-
-.reply-list {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid #f0f2f5;
+.comment-group__list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.comment-item {
+  margin: 0;
+  padding: 0;
+}
+
+.comment-item__text,
+.reply-item__text {
+  margin: 0;
+  color: #1f2937;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 15px;
+}
+
+.comment-item__meta-row {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.comment-item__meta {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.reply-list {
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 2px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .reply-item {
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 12px;
+  padding-top: 2px;
 }
 
 .reply-box {
@@ -250,9 +302,32 @@ watch(
 }
 
 .reply-actions,
-.comment-actions {
+.comment-item__actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.icon-action {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #025189;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+
+  .el-icon {
+    font-size: 15px;
+  }
+
+  &:hover {
+    background: rgba(2, 81, 137, 0.08);
+  }
 }
 </style>

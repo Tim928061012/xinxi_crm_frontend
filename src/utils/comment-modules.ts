@@ -62,6 +62,12 @@ export function getCommentModuleLabel(code?: string | null): string {
   return COMMENT_MODULE_LABELS[code] ?? code
 }
 
+/** 侧栏分组排序：与 COMMENT_MODULE_CODES 顺序一致，未知模块置后 */
+export function commentModuleSortIndex(code: string): number {
+  const i = COMMENT_MODULE_CODES.indexOf(code as CommentModuleCode)
+  return i === -1 ? 9999 : i
+}
+
 /** 从主 Tab 进入 Comments 时，筛选/默认模块为该 Tab 下合理默认区块 */
 export function mapTabToCommentModule(tab: string): CommentModuleCode {
   switch (tab) {
