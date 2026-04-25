@@ -42,6 +42,7 @@ export interface ClientComment {
   createdByRoleLabel?: string
   createdByName?: string
   createdAt: string
+  deletable?: boolean
   replies: ClientComment[]
 }
 

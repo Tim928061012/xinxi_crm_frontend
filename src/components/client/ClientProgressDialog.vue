@@ -487,6 +487,15 @@ const handleAction = async (action: string) => {
   }
 
   try {
+    if (action === 'SUBMIT' || action === 'WITHDRAW') {
+      await ElMessageBox.confirm(
+        action === 'SUBMIT'
+          ? 'Are you sure you want to submit this client for review?'
+          : 'Are you sure you want to withdraw this client?',
+        action === 'SUBMIT' ? 'Confirm Submit' : 'Confirm Withdraw',
+        { type: 'warning' }
+      )
+    }
     if (action === 'DEACTIVATE' || action === 'ACTIVATE') {
       await ElMessageBox.confirm(
         `Are you sure you want to ${action === 'DEACTIVATE' ? 'deactivate' : 'activate'} this client?`,

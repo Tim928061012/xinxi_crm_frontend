@@ -80,7 +80,14 @@
                           <el-icon><EditPen /></el-icon>
                         </button>
                         <button
-                          v-if="canDelete(comment)"
+                          type="button"
+                          class="thread-icon-action"
+                          aria-label="Reply"
+                          @click="toggleReply(comment.commentId)"
+                        >
+                          <el-icon><ChatDotRound /></el-icon>
+                        </button>
+                        <button
                           type="button"
                           class="thread-icon-action"
                           aria-label="Delete"
@@ -89,6 +96,21 @@
                           <el-icon><Delete /></el-icon>
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  <div v-if="replyTargetId === comment.commentId" class="sidebar-reply-box">
+                    <el-input
+                      v-model="replyText"
+                      type="textarea"
+                      :rows="2"
+                      maxlength="1000"
+                      show-word-limit
+                      placeholder="Reply..."
+                    />
+                    <div class="sidebar-reply-box__actions">
+                      <el-button size="small" @click="cancelReply">Cancel</el-button>
+                      <el-button type="primary" size="small" @click="submitReply(comment.commentId)">Submit</el-button>
                     </div>
                   </div>
 
@@ -126,7 +148,6 @@
                             <el-icon><EditPen /></el-icon>
                           </button>
                           <button
-                            v-if="canDelete(reply)"
                             type="button"
                             class="thread-icon-action"
                             aria-label="Delete"
@@ -156,12 +177,13 @@
 
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
-import { ArrowRight, DArrowLeft, Delete, EditPen, Plus } from '@element-plus/icons-vue'
+import { ArrowRight, ChatDotRound, DArrowLeft, Delete, EditPen, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
 import { getCommentModuleLabel, commentModuleSortIndex } from '@/utils/comment-modules'
 import { CLIENT_COMMENT_DIALOG_INJECT_KEY } from '@/components/client/client-comment-dialog-key'
 import { formatDateTime } from '@/utils/date'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
   clientId: number
@@ -180,11 +202,14 @@ const emit = defineEmits<{
 }>()
 
 const commentDialog = inject(CLIENT_COMMENT_DIALOG_INJECT_KEY, null)
+const authStore = useAuthStore()
 
 const loading = ref(false)
 const comments = ref<ClientComment[]>([])
 const editingId = ref<number | null>(null)
 const editText = ref('')
+const replyTargetId = ref<number | null>(null)
+const replyText = ref('')
 
 const UNSPECIFIED = '_UNSPECIFIED'
 
@@ -271,17 +296,73 @@ function onAddComment() {
   }
 }
 
-const canDelete = (comment: ClientComment) => String(comment.createdByUserId ?? '') === String(props.currentUserId ?? '')
-const canEdit = canDelete
+const canEdit = (comment: ClientComment) => {
+  if (comment.deletable === true) return true
+  const localUser = (() => {
+    try {
+      const raw = localStorage.getItem('user') || sessionStorage.getItem('user')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })()
+  const currentUserId = props.currentUserId ?? authStore.user?.id ?? localUser?.id ?? localUser?.userId
+  const byId = String(comment.createdByUserId ?? '') === String(currentUserId ?? '')
+  if (byId) return true
+  const currentDisplayName =
+    authStore.user?.name ||
+    [authStore.user?.lastName, authStore.user?.firstName].filter(Boolean).join(', ') ||
+    authStore.user?.username ||
+    localUser?.name ||
+    localUser?.username ||
+    ''
+  return Boolean(comment.createdByName && currentDisplayName && comment.createdByName.trim() === currentDisplayName.trim())
+}
 
 const startEdit = (comment: ClientComment) => {
   editingId.value = comment.commentId
   editText.value = comment.description || ''
+  if (replyTargetId.value === comment.commentId) {
+    cancelReply()
+  }
 }
 
 const cancelEdit = () => {
   editingId.value = null
   editText.value = ''
+}
+
+const toggleReply = (commentId: number) => {
+  if (editingId.value === commentId) return
+  replyTargetId.value = replyTargetId.value === commentId ? null : commentId
+  replyText.value = ''
+}
+
+const cancelReply = () => {
+  replyTargetId.value = null
+  replyText.value = ''
+}
+
+const submitReply = async (commentId: number) => {
+  const text = replyText.value.trim()
+  if (!text) {
+    ElMessage.warning('Please enter reply')
+    return
+  }
+  if (text.length > 1000) {
+    ElMessage.warning('Reply max 1000 characters')
+    return
+  }
+  try {
+    await workflowApi.replyComment(props.clientId, props.clientType, commentId, { description: text })
+    ElMessage.success('Reply added')
+    cancelReply()
+    await loadComments()
+    emit('changed')
+  } catch (error: unknown) {
+    const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message) : ''
+    ElMessage.error(msg || 'Failed to add reply')
+  }
 }
 
 const saveEdit = async (comment: ClientComment) => {
@@ -314,6 +395,7 @@ const deleteComment = async (commentId: number) => {
     await workflowApi.deleteComment(props.clientId, props.clientType, commentId)
     ElMessage.success('Comment deleted')
     if (editingId.value === commentId) cancelEdit()
+    if (replyTargetId.value === commentId) cancelReply()
     await loadComments()
     emit('changed')
   } catch (error: unknown) {
@@ -636,6 +718,17 @@ $divider: #ebeef5;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.sidebar-reply-box {
+  margin-top: 10px;
+}
+
+.sidebar-reply-box__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .sidebar-reply {

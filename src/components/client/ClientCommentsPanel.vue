@@ -19,7 +19,6 @@
                     <el-icon><ChatDotRound /></el-icon>
                   </button>
                   <button
-                    v-if="canDelete(comment)"
                     type="button"
                     class="icon-action"
                     aria-label="Delete"
@@ -52,7 +51,6 @@
                     <span class="comment-item__meta">{{ authorAtLine(reply) }}</span>
                     <div class="comment-item__actions">
                       <button
-                        v-if="canDelete(reply)"
                         type="button"
                         class="icon-action"
                         aria-label="Delete"
@@ -178,8 +176,6 @@ const deleteComment = async (commentId: number) => {
     ElMessage.error(error.message || 'Failed to delete comment')
   }
 }
-
-const canDelete = (comment: ClientComment) => String(comment.createdByUserId) === String(props.currentUserId || '')
 
 const formatDisplayDate = (value?: string | null) => {
   const text = formatDateTime(value || '')

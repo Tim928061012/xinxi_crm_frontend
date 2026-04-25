@@ -15,7 +15,7 @@
           <el-button
             v-if="canSubmitAction"
             type="primary"
-            :disabled="workflowLoading"
+            :disabled="workflowLoading || !clientDetailLoaded || pageLoading"
             @click="handleHeaderSubmit"
           >
             Submit
@@ -26,6 +26,7 @@
           <el-button
             v-if="clientId"
             :class="['top-header__btn-progress', { 'top-header__btn-progress--muted': headerProgressMuted }]"
+            :disabled="!clientDetailLoaded || pageLoading"
             @click="openProgressDialog"
           >
             Progress
@@ -38,7 +39,7 @@
           <el-button
             type="success"
             @click="handleReviewDecision(true)"
-            :disabled="saving || workflowLoading"
+            :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
           >
             Approve
           </el-button>
@@ -46,11 +47,11 @@
             type="danger"
             plain
             @click="handleReviewDecision(false)"
-            :disabled="saving || workflowLoading"
+            :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
           >
             Reject
           </el-button>
-          <el-button v-if="clientId" @click="openProgressDialog">
+          <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
             Progress
           </el-button>
         </template>
@@ -69,7 +70,7 @@
           >
             Save & Close
           </el-button>
-          <el-button v-if="clientId" @click="openProgressDialog">
+          <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
             Progress
           </el-button>
         </template>
@@ -1959,7 +1960,7 @@
             ref="commentsPanelRef"
             :client-id="clientId"
             :client-type="currentClientType"
-            :current-user-id="authStore.user?.id"
+            :current-user-id="resolvedCurrentUserId"
             @changed="handleCommentsChanged"
           />
         </div>
@@ -1976,7 +1977,7 @@
           v-model:collapsed="commentsRailCollapsed"
           :client-id="clientId!"
           :client-type="currentClientType"
-          :current-user-id="authStore.user?.id"
+          :current-user-id="resolvedCurrentUserId"
           :default-module="commentsContextModule"
           @open-comments-tab="goToCommentsTab"
           @count-updated="setCommentTotalCount"
@@ -2174,6 +2175,17 @@ import { isAdminRole, isOperationRole, isReviewerOnlyEditInReviewRole } from '@/
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const resolvedCurrentUserId = computed(() => {
+  if (authStore.user?.id) return authStore.user.id
+  try {
+    const raw = localStorage.getItem('user') || sessionStorage.getItem('user')
+    if (!raw) return ''
+    const parsed = JSON.parse(raw)
+    return parsed?.id || parsed?.userId || ''
+  } catch {
+    return ''
+  }
+})
 
 const clientId = computed(() => {
   // 如果是新建模式（路由名称为 UserClientNew 或路径包含 /new），返回 null
@@ -2364,7 +2376,7 @@ function countCommentTree(list: ClientComment[]): number {
 }
 
 const commentsSideRailVisible = computed(() => {
-  if (!clientId.value || !showModuleCommentEntry.value) return false
+  if (!clientId.value) return false
   return (MAIN_TABS_WITH_COMMENTS_RAIL as readonly string[]).includes(activeTab.value)
 })
 
@@ -2791,6 +2803,25 @@ const portfolioFormRules = computed<FormRules>(() => {
 /** 防止路由快速切换或 Strict Mode 下重复 loadClient 导致后发先至污染表单 */
 let loadClientGeneration = 0
 
+async function fetchClientDetailWithRetry(id: number) {
+  const maxAttempts = 3
+  let lastErr: unknown
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await userClientApi.getClientById(id)
+    } catch (error) {
+      lastErr = error
+      const status = (error as { response?: { status?: number } })?.response?.status
+      const retryable = status == null || status === 502 || status === 503 || status === 504
+      if (!retryable || attempt === maxAttempts) {
+        throw error
+      }
+      await new Promise(resolve => setTimeout(resolve, 280 * attempt))
+    }
+  }
+  throw lastErr
+}
+
 // 加载数据
 const loadClient = async () => {
   if (!clientId.value) return
@@ -2800,10 +2831,13 @@ const loadClient = async () => {
   pageLoading.value = true
   try {
     // 不传 clientType：后端按 id 自动判断 Individual/Corporate，避免 URL 与库不一致时间歇性报错
-    const response = await userClientApi.getClientById(clientId.value)
+    const response = await fetchClientDetailWithRetry(clientId.value)
     if (gen !== loadClientGeneration) return
 
     const data = response.data || response
+    if (!data || !data.general) {
+      throw new Error('Client detail response is incomplete')
+    }
 
     const rawCreated =
       data.createdTime || data.created_time || data.createdAt || data.created_at
@@ -2822,7 +2856,6 @@ const loadClient = async () => {
     // 确保 contactNature 正确设置，优先使用后端返回的值
     const finalContactNature = backendContactNature || generalContactNature || 'Individual'
     clientForm.contactNature = finalContactNature
-    clientDetailLoaded.value = true
 
     // 处理 General 信息
     if (data.general) {
@@ -3091,9 +3124,12 @@ const loadClient = async () => {
 
     await loadCommentCount()
     await loadProgress()
+    if (gen !== loadClientGeneration) return
+    clientDetailLoaded.value = true
   } catch (error: any) {
     console.error('Failed to load client:', error)
     clientDetailLoaded.value = false
+    progressData.value = null
     // 登录态失效（401）时，全局拦截器已经提示并跳转，这里不再额外提示
     if (!(error as any)?.isAuthError && (error as any)?.response?.status !== 401) {
       ElMessage.error('Failed to load client details')
@@ -3253,6 +3289,10 @@ const handleBack = () => {
 const openProgressDialog = () => {
   if (!clientId.value) {
     ElMessage.warning('Please save the client first')
+    return
+  }
+  if (!clientDetailLoaded.value || pageLoading.value) {
+    ElMessage.warning('Client detail is still loading. Please try again in a moment.')
     return
   }
   progressDialogVisible.value = true
@@ -3603,12 +3643,33 @@ const validateClientForm = async () => {
 
 const handleReviewDecision = async (approve: boolean) => {
   if (!clientId.value) return
+  if (!clientDetailLoaded.value || pageLoading.value) {
+    ElMessage.warning('Client detail is still loading. Please wait and try again.')
+    return
+  }
   if (approve) {
     const valid = await validateClientForm()
     if (!valid) {
       ElMessage.warning('Please complete the required fields before approval')
       return
     }
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      approve
+        ? '确认通过该客户审批吗？通过后将进入下一流程状态。'
+        : '确认拒绝该客户审批吗？拒绝后将回退到上一流程状态。',
+      approve ? 'Confirm Approval' : 'Confirm Rejection',
+      {
+        type: approve ? 'warning' : 'error',
+        confirmButtonText: approve ? 'Approve' : 'Reject',
+        cancelButtonText: 'Cancel'
+      }
+    )
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    throw error
   }
 
   workflowLoading.value = true
@@ -3639,6 +3700,10 @@ const handleProgressUpdated = (progress: ClientProgressData) => {
 /** 预览顶栏 Submit（Pending Submission + 后端 availableActions 含 SUBMIT） */
 const handleHeaderSubmit = async () => {
   if (!clientId.value) return
+  if (!clientDetailLoaded.value || pageLoading.value) {
+    ElMessage.warning('Client detail is still loading. Please wait and try again.')
+    return
+  }
   workflowLoading.value = true
   try {
     await workflowApi.submit(clientId.value, currentClientType.value)
