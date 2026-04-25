@@ -1227,7 +1227,7 @@
               <div class="kyc-upload-actions">
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && kycData.documents.length"
-                  @click="bulkDownloadKycList(kycData.documents)"
+                  @click="bulkDownloadKycList(kycData.documents, 'Supporting Documents')"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
@@ -1270,7 +1270,7 @@
               <div class="kyc-upload-actions">
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && kycData.nameScreeningDocuments.length"
-                  @click="bulkDownloadKycList(kycData.nameScreeningDocuments)"
+                  @click="bulkDownloadKycList(kycData.nameScreeningDocuments, 'Name Screening')"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
@@ -1557,7 +1557,7 @@
                 />
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.identity.length"
-                  @click="bulkDownloadDocumentList(documentsData.identity)"
+                  @click="bulkDownloadDocumentList(documentsData.identity, 'Identity Proof')"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
@@ -1607,7 +1607,7 @@
                 />
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.address.length"
-                  @click="bulkDownloadDocumentList(documentsData.address)"
+                  @click="bulkDownloadDocumentList(documentsData.address, 'Address Proof')"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
@@ -1657,7 +1657,7 @@
                 />
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.forms.length"
-                  @click="bulkDownloadDocumentList(documentsData.forms)"
+                  @click="bulkDownloadDocumentList(documentsData.forms, 'Forms')"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
@@ -1710,7 +1710,7 @@
                 />
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.statements.length"
-                  @click="bulkDownloadDocumentList(documentsData.statements)"
+                  @click="bulkDownloadDocumentList(documentsData.statements, 'Xinxi Statements')"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
@@ -1758,7 +1758,7 @@
                 />
                 <BulkDownloadButton
                   v-if="canBulkDownloadModule && documentsData.others.length"
-                  @click="bulkDownloadDocumentList(documentsData.others)"
+                  @click="bulkDownloadDocumentList(documentsData.others, 'Others')"
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
@@ -2145,6 +2145,7 @@ import { ref, reactive, computed, onMounted, watch, nextTick, provide } from 'vu
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled, Place } from '@element-plus/icons-vue'
+import JSZip from 'jszip'
 import crmUploadActionImg from '@/assets/crm-upload-action.png'
 import { useAuthStore } from '@/stores/auth'
 import { userClientApi, type Client, type ContactInfo, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
@@ -2422,8 +2423,16 @@ const goToCommentsTab = () => {
 
 /** Progress「提交签名」：跳到 Documents 上传 Forms 区签字件（后端校验 FORMS 文档） */
 const handleOpenDocumentsFormsFromProgress = () => {
+  if (!clientId.value) return
   progressDialogVisible.value = false
-  activeTab.value = 'documents'
+  const base = getClientBasePath(route.path)
+  void router.push({
+    path: `${base}/${clientId.value}`,
+    query: {
+      clientType: currentClientType.value,
+      tab: 'documents'
+    }
+  })
 }
 
 watch(
@@ -3658,8 +3667,8 @@ const handleReviewDecision = async (approve: boolean) => {
   try {
     await ElMessageBox.confirm(
       approve
-        ? '确认通过该客户审批吗？通过后将进入下一流程状态。'
-        : '确认拒绝该客户审批吗？拒绝后将回退到上一流程状态。',
+        ? 'Are you sure you want to approve this client? The workflow will move to the next stage.'
+        : 'Are you sure you want to reject this client? The workflow will roll back to the previous stage.',
       approve ? 'Confirm Approval' : 'Confirm Rejection',
       {
         type: approve ? 'warning' : 'error',
@@ -3954,8 +3963,63 @@ const safeFileBaseName = (name: string, fallback: string) => {
   return n || fallback
 }
 
-const bulkDownloadDocumentList = async (list: Document[]) => {
+const buildDownloadTimestamp = () => {
+  const d = new Date()
+  const yyyy = String(d.getFullYear())
+  const MM = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const HH = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${yyyy}${MM}${dd}${HH}${mm}${ss}`
+}
+
+const triggerBrowserDownload = (blob: Blob, fileName: string) => {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+const bulkDownloadAsZip = async (
+  items: Array<{ id?: number; document: string }>,
+  moduleName: string,
+  fetchBlob: (id: number) => Promise<Blob>
+) => {
+  const zip = new JSZip()
+  let added = 0
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]
+    if (!item.id) continue
+    try {
+      const blob = await fetchBlob(item.id)
+      zip.file(safeFileBaseName(item.document, `document-${i + 1}.pdf`), blob)
+      added++
+    } catch (error) {
+      console.error(error)
+      ElMessage.error(`Failed to download ${item.document || 'file'}`)
+    }
+  }
+  if (!added) return
+  const zipBlob = await zip.generateAsync({ type: 'blob' })
+  const zipName = `${safeFileBaseName(moduleName, 'Documents')}_${buildDownloadTimestamp()}.zip`
+  triggerBrowserDownload(zipBlob, zipName)
+  ElMessage.success(`Downloaded ${added} file(s)`)
+}
+
+const bulkDownloadDocumentList = async (list: Document[], moduleName: string) => {
   if (!clientId.value || !list.length) return
+  if (list.length > 1) {
+    await bulkDownloadAsZip(list, moduleName, async (id: number) => {
+      const response = await documentsApi.getDocument(clientId.value as number, id)
+      const blobData = (response as any).data || response
+      return blobData instanceof Blob ? blobData : new Blob([blobData], { type: 'application/pdf' })
+    })
+    return
+  }
+
   let ok = 0
   for (let i = 0; i < list.length; i++) {
     const doc = list[i]
@@ -3964,12 +4028,7 @@ const bulkDownloadDocumentList = async (list: Document[]) => {
       const response = await documentsApi.getDocument(clientId.value, doc.id)
       const blobData = (response as any).data || response
       const blob = blobData instanceof Blob ? blobData : new Blob([blobData], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = safeFileBaseName(doc.document, `document-${i + 1}.pdf`)
-      a.click()
-      URL.revokeObjectURL(url)
+      triggerBrowserDownload(blob, safeFileBaseName(doc.document, `document-${i + 1}.pdf`))
       ok++
       await new Promise<void>(r => setTimeout(r, 400))
     } catch (error) {
@@ -3980,8 +4039,17 @@ const bulkDownloadDocumentList = async (list: Document[]) => {
   if (ok) ElMessage.success(`Downloaded ${ok} file(s)`)
 }
 
-const bulkDownloadKycList = async (list: KYCDocument[]) => {
+const bulkDownloadKycList = async (list: KYCDocument[], moduleName: string) => {
   if (!clientId.value || !list.length) return
+  if (list.length > 1) {
+    await bulkDownloadAsZip(list, moduleName, async (id: number) => {
+      const response = await kycApi.getKYCDocument(clientId.value as number, id)
+      const blobData = (response as any).data || response
+      return blobData instanceof Blob ? blobData : new Blob([blobData], { type: 'application/pdf' })
+    })
+    return
+  }
+
   let ok = 0
   for (let i = 0; i < list.length; i++) {
     const doc = list[i]
@@ -3990,12 +4058,7 @@ const bulkDownloadKycList = async (list: KYCDocument[]) => {
       const response = await kycApi.getKYCDocument(clientId.value, doc.id)
       const blobData = (response as any).data || response
       const blob = blobData instanceof Blob ? blobData : new Blob([blobData], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = safeFileBaseName(doc.document, `document-${i + 1}.pdf`)
-      a.click()
-      URL.revokeObjectURL(url)
+      triggerBrowserDownload(blob, safeFileBaseName(doc.document, `document-${i + 1}.pdf`))
       ok++
       await new Promise<void>(r => setTimeout(r, 400))
     } catch (error) {

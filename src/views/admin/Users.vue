@@ -161,7 +161,7 @@ import { isAdminRole, roleDisplayName } from '@/utils/roles'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增用户')
+const dialogTitle = ref('Create User')
 const userFormRef = ref<FormInstance>()
 
 const searchForm = reactive({
@@ -244,7 +244,7 @@ const loadUsers = async () => {
     // tableData.value = response.data.list
     // pagination.total = response.data.total
   } catch (error) {
-    ElMessage.error('加载用户列表失败')
+    ElMessage.error('Failed to load user list')
   } finally {
     loading.value = false
   }
@@ -262,7 +262,7 @@ const handleReset = () => {
 }
 
 const handleAdd = () => {
-  dialogTitle.value = '新增用户'
+  dialogTitle.value = 'Create User'
   userForm.id = null
   userForm.username = ''
   userForm.name = ''
@@ -274,7 +274,7 @@ const handleAdd = () => {
 }
 
 const handleEdit = (row: any) => {
-  dialogTitle.value = '编辑用户'
+  dialogTitle.value = 'Edit User'
   userForm.id = row.id
   userForm.username = row.username
   userForm.name = row.name
@@ -297,11 +297,11 @@ const handleSubmit = async () => {
         // } else {
         //   await adminApi.createUser(userForm)
         // }
-        ElMessage.success(userForm.id ? '更新成功' : '创建成功')
+        ElMessage.success(userForm.id ? 'Updated successfully' : 'Created successfully')
         dialogVisible.value = false
         loadUsers()
       } catch (error) {
-        ElMessage.error('操作失败')
+        ElMessage.error('Operation failed')
       }
     }
   })
@@ -313,15 +313,15 @@ const handleDialogClose = () => {
 
 const handleToggleStatus = async (row: any) => {
   const newStatus = row.status === 'active' ? 'inactive' : 'active'
-  const action = newStatus === 'active' ? '启用' : '禁用'
+  const action = newStatus === 'active' ? 'enable' : 'disable'
   
   try {
-    await ElMessageBox.confirm(`确定要${action}该用户吗？`, '提示', {
+    await ElMessageBox.confirm(`Are you sure you want to ${action} this user?`, 'Confirmation', {
       type: 'warning'
     })
     // TODO: 调用接口更新状态
     // await adminApi.updateUserStatus(row.id, newStatus)
-    ElMessage.success(`${action}成功`)
+    ElMessage.success(newStatus === 'active' ? 'User enabled successfully' : 'User disabled successfully')
     loadUsers()
   } catch {
     // 用户取消
@@ -345,7 +345,7 @@ const handleDelete = async (row: any) => {
     )
     // TODO: 调用删除接口
     // await adminApi.deleteUser(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success('Deleted successfully')
     loadUsers()
   } catch {
     // 用户取消

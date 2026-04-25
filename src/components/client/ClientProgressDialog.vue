@@ -39,7 +39,7 @@
         </div>
         <div class="base-info-item">
           <span class="label">Created By :</span>
-          <span class="base-info-value">{{ rmName || '-' }}</span>
+          <span class="base-info-value">{{ displayCreatedBy }}</span>
         </div>
         <div class="base-info-item">
           <span class="label">Created Time :</span>
@@ -237,6 +237,19 @@ function isLatestLogRow(logId: number) {
 }
 
 const displayCreatedTime = computed(() => toDisplayDate(props.createdTime))
+
+const displayCreatedBy = computed(() => {
+  const logs = sortedLogs.value
+  // 优先使用 CREATED 日志中的操作者，避免信息区与日志区来源不一致
+  const createdLog = logs.find(log => (log.actionType || '').toUpperCase() === 'CREATED')
+  if (createdLog?.actorName?.trim()) return createdLog.actorName.trim()
+  // 历史脏数据/缺日志场景下回退到最早一条日志的 actorName
+  const firstLog = logs[0]
+  if (firstLog?.actorName?.trim()) return firstLog.actorName.trim()
+  // 最后兜底：沿用原字段（兼容尚未补齐历史日志的数据）
+  if (props.rmName?.trim()) return props.rmName.trim()
+  return '-'
+})
 
 const actionButtons = computed(() => {
   if (!progress.value) return []
@@ -450,23 +463,10 @@ const handleAction = async (action: string) => {
   }
 
   if (action === 'SUBMIT_SIGNATURE') {
-    try {
-      await ElMessageBox.confirm(
-        'Signed files must be uploaded under the client’s Documents tab → Forms section (backend checks document type Forms). If you have not uploaded yet, open that section first; otherwise choose Submit now.',
-        'Submit Signature',
-        {
-          confirmButtonText: 'Go to Documents · Forms',
-          cancelButtonText: 'Submit now',
-          distinguishCancelAndClose: true,
-          type: 'info'
-        }
-      )
-      emit('open-documents-forms')
-      emit('update:modelValue', false)
-      return
-    } catch (e) {
-      if (e !== 'cancel') return
-    }
+    // +Signature 作为入口：统一跳转到客户预览页 Documents(Tab4) 进行上传
+    emit('open-documents-forms')
+    emit('update:modelValue', false)
+    return
   }
 
   const runner = async () => {

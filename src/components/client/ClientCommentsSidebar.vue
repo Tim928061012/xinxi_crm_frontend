@@ -48,37 +48,10 @@
               <div class="sidebar-thread-group__list">
                 <article v-for="comment in group.items" :key="comment.commentId" class="sidebar-thread">
                   <div class="sidebar-thread__block">
-                    <template v-if="editingId === comment.commentId">
-                      <div class="sidebar-thread__edit">
-                        <el-input
-                          v-model="editText"
-                          type="textarea"
-                          :rows="3"
-                          maxlength="1000"
-                          show-word-limit
-                          placeholder="Edit comment…"
-                        />
-                        <div class="sidebar-thread__edit-actions">
-                          <el-button size="small" @click="cancelEdit">Cancel</el-button>
-                          <el-button type="primary" size="small" @click="saveEdit(comment)">Save</el-button>
-                        </div>
-                      </div>
-                    </template>
-                    <template v-else>
-                      <p class="sidebar-thread__text">{{ comment.description }}</p>
-                    </template>
+                    <p class="sidebar-thread__text">{{ comment.description }}</p>
                     <div class="sidebar-thread__footer">
                       <span class="sidebar-thread__meta">{{ authorAtLine(comment) }}</span>
-                      <div v-if="editingId !== comment.commentId" class="sidebar-thread__actions">
-                        <button
-                          v-if="canEdit(comment)"
-                          type="button"
-                          class="thread-icon-action"
-                          aria-label="Edit"
-                          @click="startEdit(comment)"
-                        >
-                          <el-icon><EditPen /></el-icon>
-                        </button>
+                      <div class="sidebar-thread__actions">
                         <button
                           type="button"
                           class="thread-icon-action"
@@ -116,37 +89,10 @@
 
                   <div v-if="comment.replies?.length" class="sidebar-thread__replies">
                     <div v-for="reply in comment.replies" :key="reply.commentId" class="sidebar-reply">
-                      <template v-if="editingId === reply.commentId">
-                        <div class="sidebar-thread__edit">
-                          <el-input
-                            v-model="editText"
-                            type="textarea"
-                            :rows="2"
-                            maxlength="1000"
-                            show-word-limit
-                            placeholder="Edit reply…"
-                          />
-                          <div class="sidebar-thread__edit-actions">
-                            <el-button size="small" @click="cancelEdit">Cancel</el-button>
-                            <el-button type="primary" size="small" @click="saveEdit(reply)">Save</el-button>
-                          </div>
-                        </div>
-                      </template>
-                      <template v-else>
-                        <p class="sidebar-reply__text">{{ reply.description }}</p>
-                      </template>
+                      <p class="sidebar-reply__text">{{ reply.description }}</p>
                       <div class="sidebar-thread__footer">
                         <span class="sidebar-thread__meta">{{ authorAtLine(reply) }}</span>
-                        <div v-if="editingId !== reply.commentId" class="sidebar-thread__actions">
-                          <button
-                            v-if="canEdit(reply)"
-                            type="button"
-                            class="thread-icon-action"
-                            aria-label="Edit"
-                            @click="startEdit(reply)"
-                          >
-                            <el-icon><EditPen /></el-icon>
-                          </button>
+                        <div class="sidebar-thread__actions">
                           <button
                             type="button"
                             class="thread-icon-action"
@@ -177,13 +123,12 @@
 
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
-import { ArrowRight, ChatDotRound, DArrowLeft, Delete, EditPen, Plus } from '@element-plus/icons-vue'
+import { ArrowRight, ChatDotRound, DArrowLeft, Delete, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
 import { getCommentModuleLabel, commentModuleSortIndex } from '@/utils/comment-modules'
 import { CLIENT_COMMENT_DIALOG_INJECT_KEY } from '@/components/client/client-comment-dialog-key'
 import { formatDateTime } from '@/utils/date'
-import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
   clientId: number
@@ -191,7 +136,6 @@ const props = defineProps<{
   collapsed: boolean
   /** 当前主 Tab 映射的模块，用于侧栏「添加评论」默认归属 */
   defaultModule?: string
-  currentUserId?: string | number
 }>()
 
 const emit = defineEmits<{
@@ -202,12 +146,9 @@ const emit = defineEmits<{
 }>()
 
 const commentDialog = inject(CLIENT_COMMENT_DIALOG_INJECT_KEY, null)
-const authStore = useAuthStore()
 
 const loading = ref(false)
 const comments = ref<ClientComment[]>([])
-const editingId = ref<number | null>(null)
-const editText = ref('')
 const replyTargetId = ref<number | null>(null)
 const replyText = ref('')
 
@@ -296,44 +237,7 @@ function onAddComment() {
   }
 }
 
-const canEdit = (comment: ClientComment) => {
-  if (comment.deletable === true) return true
-  const localUser = (() => {
-    try {
-      const raw = localStorage.getItem('user') || sessionStorage.getItem('user')
-      return raw ? JSON.parse(raw) : null
-    } catch {
-      return null
-    }
-  })()
-  const currentUserId = props.currentUserId ?? authStore.user?.id ?? localUser?.id ?? localUser?.userId
-  const byId = String(comment.createdByUserId ?? '') === String(currentUserId ?? '')
-  if (byId) return true
-  const currentDisplayName =
-    authStore.user?.name ||
-    [authStore.user?.lastName, authStore.user?.firstName].filter(Boolean).join(', ') ||
-    authStore.user?.username ||
-    localUser?.name ||
-    localUser?.username ||
-    ''
-  return Boolean(comment.createdByName && currentDisplayName && comment.createdByName.trim() === currentDisplayName.trim())
-}
-
-const startEdit = (comment: ClientComment) => {
-  editingId.value = comment.commentId
-  editText.value = comment.description || ''
-  if (replyTargetId.value === comment.commentId) {
-    cancelReply()
-  }
-}
-
-const cancelEdit = () => {
-  editingId.value = null
-  editText.value = ''
-}
-
 const toggleReply = (commentId: number) => {
-  if (editingId.value === commentId) return
   replyTargetId.value = replyTargetId.value === commentId ? null : commentId
   replyText.value = ''
 }
@@ -365,36 +269,11 @@ const submitReply = async (commentId: number) => {
   }
 }
 
-const saveEdit = async (comment: ClientComment) => {
-  const text = editText.value.trim()
-  if (!text) {
-    ElMessage.warning('Please enter comment text')
-    return
-  }
-  if (text.length > 1000) {
-    ElMessage.warning('Max 1000 characters')
-    return
-  }
-  try {
-    await workflowApi.updateComment(props.clientId, props.clientType, comment.commentId, {
-      description: text
-    })
-    ElMessage.success('Saved')
-    cancelEdit()
-    await loadComments()
-    emit('changed')
-  } catch (error: unknown) {
-    const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message) : ''
-    ElMessage.error(msg || 'Failed to save')
-  }
-}
-
 const deleteComment = async (commentId: number) => {
   try {
     await ElMessageBox.confirm('Are you sure you want to delete this comment?', 'Confirm', { type: 'warning' })
     await workflowApi.deleteComment(props.clientId, props.clientType, commentId)
     ElMessage.success('Comment deleted')
-    if (editingId.value === commentId) cancelEdit()
     if (replyTargetId.value === commentId) cancelReply()
     await loadComments()
     emit('changed')

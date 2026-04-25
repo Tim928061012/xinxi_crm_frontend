@@ -61,9 +61,14 @@ const asBool = (v: unknown): boolean => v === true || v === 1
 
 export const riskProfileApi = {
   // 获取投资风险档案（使用 client-risk-profiles/assessment 接口）
-  async getRiskProfile(clientId: number, clientType: 'Individual' | 'Corporate') {
+  async getRiskProfile(
+    clientId: number,
+    clientType: 'Individual' | 'Corporate',
+    options?: { skipErrorToast?: boolean }
+  ) {
     const res = await request.get(`/client-risk-profiles/assessment/${clientId}`, {
-      params: { clientType }
+      params: { clientType },
+      ...(options || {})
     })
     const dto = (res as any).data || res || {}
     const profile = dto.riskProfile || {}

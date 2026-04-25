@@ -238,6 +238,7 @@ import { computed, onActivated, onMounted, reactive, ref, shallowRef, watch } fr
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
+import JSZip from 'jszip'
 import { useAuthStore } from '@/stores/auth'
 import { adminClientApi } from '@/api/client'
 import { userClientApi, type Client } from '@/api/user/client'
@@ -248,7 +249,7 @@ import type { ClientProgressData, ClientType } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import { formatDateTime } from '@/utils/date'
 import { buildClientListCsv } from '@/utils/client-list-csv-export'
-import { buildMultiClientSpecCsv, fillClientSpecExportRows } from '@/utils/client-spec-csv-export'
+import { buildClientSpecCsv, buildMultiClientSpecCsv, fillClientSpecExportRows } from '@/utils/client-spec-csv-export'
 import { clientExportRowKey } from '@/utils/client-export-row-key'
 import {
   getProgressLabel,
@@ -509,6 +510,55 @@ const downloadCsv = (filename: string, content: string) => {
   URL.revokeObjectURL(url)
 }
 
+const formatExportTimestamp = () => {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const MM = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const HH = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${yyyy}${MM}${dd}${HH}${mm}${ss}`
+}
+
+const safeExportName = (text: string, fallback: string) => {
+  const s = String(text || '')
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .trim()
+  return s || fallback
+}
+
+const downloadBlob = (filename: string, blob: Blob) => {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+const isRetryableExportError = (error: unknown) => {
+  const e = error as { response?: { status?: number } }
+  const status = e?.response?.status
+  return !status || status === 502 || status === 503 || status === 504
+}
+
+const withExportRetry = async <T>(task: () => Promise<T>, maxAttempts = 3): Promise<T> => {
+  let lastError: unknown
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await task()
+    } catch (error) {
+      lastError = error
+      if (!isRetryableExportError(error) || attempt >= maxAttempts) {
+        break
+      }
+      await new Promise(resolve => setTimeout(resolve, 250 * attempt))
+    }
+  }
+  throw lastError
+}
+
 const handleExportList = async () => {
   if (!exportSelectedCount.value) {
     ElMessage.warning('Please select at least one client')
@@ -540,19 +590,37 @@ const handleExportSpec = async () => {
   const rows = exportDisplayList.value.filter(r => exportSelectedIds.value.has(clientExportRowKey(r)))
   await runExportJob(async () => {
     const blocks = []
+    const blockMetas: Array<{ clientName: string }> = []
     for (const listRow of rows) {
-      const res = await userClientApi.getClientById(listRow.id, listRow.contactNature)
+      const res = await withExportRetry(() =>
+        userClientApi.getClientById(listRow.id, listRow.contactNature, { skipErrorToast: true })
+      )
       const client = ((res as { data?: Client }).data ?? res) as Client
       const [kyc, risk, fee] = await Promise.all([
-        kycApi.getKycInfo(listRow.id, listRow.contactNature),
-        riskProfileApi.getRiskProfile(listRow.id, listRow.contactNature),
-        feeScheduleApi.getFeeSchedule(listRow.id, listRow.contactNature)
+        withExportRetry(() => kycApi.getKycInfo(listRow.id, listRow.contactNature, { skipErrorToast: true })),
+        withExportRetry(() => riskProfileApi.getRiskProfile(listRow.id, listRow.contactNature, { skipErrorToast: true })),
+        withExportRetry(() => feeScheduleApi.getFeeSchedule(listRow.id, listRow.contactNature, { skipErrorToast: true }))
       ])
       blocks.push(fillClientSpecExportRows(client, kyc, risk, fee))
+      blockMetas.push({ clientName: listRow.client || 'Client' })
     }
     await new Promise<void>(resolve => setTimeout(resolve, 200))
-    const csv = buildMultiClientSpecCsv(blocks)
-    downloadCsv(`client-spec-${Date.now()}.csv`, csv)
+    const ts = formatExportTimestamp()
+    if (blocks.length <= 1) {
+      const csv = buildMultiClientSpecCsv(blocks)
+      downloadCsv(`client-spec-${Date.now()}.csv`, csv)
+      ElMessage.success('Export completed')
+      return
+    }
+
+    const zip = new JSZip()
+    blocks.forEach((block, index) => {
+      const csv = buildClientSpecCsv(block)
+      const clientName = safeExportName(blockMetas[index]?.clientName || 'Client', 'Client')
+      zip.file(`${clientName}_${ts}.csv`, csv)
+    })
+    const zipBlob = await zip.generateAsync({ type: 'blob' })
+    downloadBlob(`ClientSpec_${ts}.zip`, zipBlob)
     ElMessage.success('Export completed')
   })
 }

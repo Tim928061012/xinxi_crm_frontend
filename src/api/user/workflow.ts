@@ -56,12 +56,6 @@ export interface ReplyCommentPayload {
   description: string
 }
 
-export interface UpdateCommentPayload {
-  description: string
-  /** 仅顶层评论会提交；回复可省略 */
-  title?: string
-}
-
 export interface WorkflowActionPayload {
   clientDetail?: any
 }
@@ -124,12 +118,6 @@ export const workflowApi = {
 
   replyComment(clientId: number, clientType: ClientType, commentId: number, payload: ReplyCommentPayload) {
     return request.post(`/user/clients/${clientId}/comments/${commentId}/reply`, payload, {
-      params: clientParams(clientType)
-    })
-  },
-
-  updateComment(clientId: number, clientType: ClientType, commentId: number, payload: UpdateCommentPayload) {
-    return request.put(`/user/clients/${clientId}/comments/${commentId}`, payload, {
       params: clientParams(clientType)
     })
   },

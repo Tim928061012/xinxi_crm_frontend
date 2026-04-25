@@ -152,7 +152,7 @@ const handleQuickAction = (action: any) => {
   if (action.route) {
     router.push(action.route)
   } else {
-    ElMessage.info(`功能开发中: ${action.title}`)
+    ElMessage.info(`Feature is under development: ${action.title}`)
   }
 }
 </script>

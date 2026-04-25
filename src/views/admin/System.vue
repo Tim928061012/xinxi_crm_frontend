@@ -168,40 +168,40 @@ const handleSaveConfig = async () => {
   try {
     // TODO: 调用接口保存系统配置
     // await adminApi.saveSystemConfig(configForm)
-    ElMessage.success('配置保存成功')
+    ElMessage.success('Configuration saved successfully')
   } catch (error) {
-    ElMessage.error('配置保存失败')
+    ElMessage.error('Failed to save configuration')
   }
 }
 
 const handleClearCache = async () => {
   try {
-    await ElMessageBox.confirm('确定要清除系统缓存吗？', '提示', {
+    await ElMessageBox.confirm('Are you sure you want to clear the system cache?', 'Confirmation', {
       type: 'warning'
     })
     // TODO: 调用清除缓存接口
     // await adminApi.clearCache()
-    ElMessage.success('缓存清除成功')
+    ElMessage.success('Cache cleared successfully')
   } catch {
     // 用户取消
   }
 }
 
 const handleExportLogs = () => {
-  ElMessage.info('导出日志功能开发中')
+  ElMessage.info('Log export feature is under development')
   // TODO: 实现导出日志功能
 }
 
 const handleSystemRestart = async () => {
   try {
-    await ElMessageBox.confirm('确定要重启系统吗？重启期间系统将无法访问！', '警告', {
+    await ElMessageBox.confirm('Are you sure you want to restart the system? The system will be unavailable during restart.', 'Warning', {
       type: 'warning',
-      confirmButtonText: '确定重启',
-      cancelButtonText: '取消'
+      confirmButtonText: 'Restart',
+      cancelButtonText: 'Cancel'
     })
     // TODO: 调用系统重启接口
     // await adminApi.restartSystem()
-    ElMessage.success('系统重启中...')
+    ElMessage.success('System restart in progress...')
   } catch {
     // 用户取消
   }
@@ -211,23 +211,23 @@ const handleTestConnection = async () => {
   try {
     // TODO: 调用测试数据库连接接口
     // await adminApi.testDbConnection(dbForm)
-    ElMessage.success('数据库连接测试成功')
+    ElMessage.success('Database connection test succeeded')
   } catch (error) {
-    ElMessage.error('数据库连接测试失败')
+    ElMessage.error('Database connection test failed')
   }
 }
 
 const handleSaveDbConfig = async () => {
   try {
-    await ElMessageBox.confirm('修改数据库配置可能导致系统无法正常运行，确定要继续吗？', '警告', {
+    await ElMessageBox.confirm('Changing database configuration may affect system stability. Do you want to continue?', 'Warning', {
       type: 'warning'
     })
     // TODO: 调用保存数据库配置接口
     // await adminApi.saveDbConfig(dbForm)
-    ElMessage.success('数据库配置保存成功')
+    ElMessage.success('Database configuration saved successfully')
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('数据库配置保存失败')
+      ElMessage.error('Failed to save database configuration')
     }
   }
 }

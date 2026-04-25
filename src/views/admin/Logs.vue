@@ -179,7 +179,7 @@ const loadLogs = async () => {
     // tableData.value = response.data.list
     // pagination.total = response.data.total
   } catch (error) {
-    ElMessage.error('加载日志列表失败')
+    ElMessage.error('Failed to load log list')
   } finally {
     loading.value = false
   }

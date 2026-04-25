@@ -92,6 +92,10 @@ type SpecRow = [string, string, string, string, string]
 
 function escapeCsvField(value: string): string {
   const s = value ?? ''
+  // Spec 导出中的数字统一按文本原样写入，避免 Excel 自动转科学计数法（含 Portfolio No. / Id No. 等）。
+  if (/^-?\d+(?:\.\d+)?$/.test(s)) {
+    return `="${s}"`
+  }
   if (/[",\r\n]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`
   }
@@ -105,7 +109,6 @@ function fmt(value: unknown): string {
 
 function yn(b: boolean | undefined): string {
   if (b === true) return 'yes'
-  if (b === false) return 'no'
   return ''
 }
 
@@ -141,12 +144,28 @@ export function fillClientSpecExportRows(
   risk: InvestmentRiskProfile,
   fee: FeeSchedule
 ): SpecRow[] {
-  const row = cloneTemplate()
+  const template = cloneTemplate()
   const g = client.general
   const cn = client.contactNature
   const contact = client.contact || {}
   const sec = client.secondaryContact || {}
   const portfolios = client.portfolios || []
+  const portfolioCount = Math.max(1, portfolios.length)
+
+  // 0~30 为 General/Contact/Secondary Contact；39 起为 KYC~Fee。
+  // Portfolio 区改为按记录数动态平铺（最少 1 组，超过 2 组继续追加）。
+  const row: SpecRow[] = [
+    ...template.slice(0, 31),
+    ...Array.from({ length: portfolioCount }).flatMap((_, i) => ([
+      ['', i === 0 ? 'Portfolio' : '', 'Bank', '', ''],
+      ['', '', 'Booking Centre', '', ''],
+      ['', '', 'Portfolio No.', '', ''],
+      ['', '', 'Upload Time', '', '']
+    ] as SpecRow[])),
+    ...template.slice(39)
+  ]
+
+  const indexOfField = (field: string) => row.findIndex(r => r[2] === field)
 
   row[0][3] = fmt((g as { contactType?: string }).contactType) || 'Client'
   row[1][3] = fmt(cn)
@@ -203,42 +222,53 @@ export function fillClientSpecExportRows(
   row[29][3] = fmt(sec.primaryEmail)
   row[30][3] = fmt(sec.address)
 
-  const p0 = portfolios[0]
-  const p1 = portfolios[1]
-  if (p0) {
-    row[31][3] = fmt(p0.bank)
-    row[32][3] = fmt(p0.bookingCentre)
-    row[33][3] = fmt(p0.portfolioNo)
-    row[34][3] = fmt(p0.uploadTime)
-  }
-  if (p1) {
-    row[35][3] = fmt(p1.bank)
-    row[36][3] = fmt(p1.bookingCentre)
-    row[37][3] = fmt(p1.portfolioNo)
-    row[38][3] = fmt(p1.uploadTime)
+  const portfolioStart = 31
+  for (let i = 0; i < portfolioCount; i++) {
+    const p = portfolios[i]
+    const offset = portfolioStart + i * 4
+    row[offset][3] = fmt(p?.bank)
+    row[offset + 1][3] = fmt(p?.bookingCentre)
+    row[offset + 2][3] = fmt(p?.portfolioNo)
+    row[offset + 3][3] = fmt(p?.uploadTime)
   }
 
-  row[38][3] = fmt(kyc.kycDate)
-  row[39][3] = fmt(kyc.nextReviewDate)
-  row[40][3] = fmt(kyc.kycStatus)
+  row[indexOfField('KYC Date (dd/mm/yyyy)')][3] = fmt(kyc.kycDate)
+  row[indexOfField('Next Review Date (dd/mm/yyyy)')][3] = fmt(kyc.nextReviewDate)
+  row[indexOfField('KYC Status')][3] = fmt(kyc.kycStatus)
 
-  row[41][3] = fmt(risk.investmentRiskRating)
-  row[42][3] = fmt(risk.remarks)
-  row[43][3] = yn(risk.hongKongPI)
+  row[indexOfField('Investment Risk Rating')][3] = fmt(risk.investmentRiskRating)
+  row[indexOfField('Remarks')][3] = fmt(risk.remarks)
+  row[indexOfField('HongKong PI')][3] = yn(risk.hongKongPI)
 
   const v = risk.vulnerableClientAssessment
   if (v) {
-    row[44][3] = yn(v.age65AndAbove)
-    row[45][3] = yn(v.physicalOrIntellectualDisabilities)
-    row[46][3] = yn(v.notProficientInEnglish)
-    row[47][3] = yn(v.educationPrimaryOrBelow)
-    row[48][3] = yn(v.vulnerableClient)
-    row[49][3] = fmt(v.reviewDate)
+    row[indexOfField('1. Age 65 years old and above')][3] = yn(v.age65AndAbove)
+    row[indexOfField('2. Physical or intellectual disabilities')][3] = yn(v.physicalOrIntellectualDisabilities)
+    row[indexOfField('3. Not proficient in written or spoken English')][3] = yn(v.notProficientInEnglish)
+    row[indexOfField('4. Education primary or below and has no investment')][3] = yn(v.educationPrimaryOrBelow)
+    row[indexOfField('Vulnerable Client')][3] = yn(v.vulnerableClient)
+    row[indexOfField('Review Date (dd/mm/yyyy)')][3] = fmt(v.reviewDate)
   }
 
   const types = risk.investmentKnowledgeExperience?.types || []
-  for (let i = 51; i <= 63; i++) {
-    const label = row[i][2]
+  const investmentTypeLabels = [
+    'Alternative Investments',
+    'Bonds',
+    'Bonds With Special Features',
+    'Commodities',
+    'Deposits (including foreign currency deposits)',
+    'Equities',
+    'Equity Funds / Money Market Funds',
+    'Synthetic ETF / Futures-based ETF / Leveraged and Inverse Products',
+    'Other Mutual Funds',
+    'Derivatives',
+    'Foreign Exchange (e.g. Spot)',
+    'Security Tokens',
+    'Margin/Leveraged Trading'
+  ]
+  for (const label of investmentTypeLabels) {
+    const i = indexOfField(label)
+    if (i < 0) continue
     const t = types.find(x => x.type === label)
     if (t) {
       row[i][3] = yn(t.knowledge)
@@ -249,15 +279,19 @@ export function fillClientSpecExportRows(
     }
   }
 
-  row[64][3] = yn(fee.managementFee.enabled)
-  row[65][3] = fee.managementFee.yearlyManagementFee != null ? String(fee.managementFee.yearlyManagementFee) : ''
-  row[66][3] = fee.managementFee.minimumManagementFee != null ? String(fee.managementFee.minimumManagementFee) : ''
-  row[67][3] = yn(fee.retrocession.enabled)
-  row[68][3] = yn(fee.performanceFee.enabled)
-  row[69][3] = fee.performanceFee.hurdleRate != null ? String(fee.performanceFee.hurdleRate) : ''
-  row[70][3] = fee.performanceFee.profitSharedToXinXi != null ? String(fee.performanceFee.profitSharedToXinXi) : ''
-  row[71][3] = yn(fee.others.enabled)
-  row[72][3] = fmt(fee.others.details)
+  row[indexOfField('Management Fee')][3] = yn(fee.managementFee.enabled)
+  row[indexOfField('Yearly Management Fee (%)')][3] =
+    fee.managementFee.yearlyManagementFee != null ? String(fee.managementFee.yearlyManagementFee) : ''
+  row[indexOfField('Minimum Management Fee (p.a.)')][3] =
+    fee.managementFee.minimumManagementFee != null ? String(fee.managementFee.minimumManagementFee) : ''
+  row[indexOfField('Retrocession')][3] = yn(fee.retrocession.enabled)
+  row[indexOfField('Performance Fee')][3] = yn(fee.performanceFee.enabled)
+  row[indexOfField('Hurdle Rate (%)')][3] =
+    fee.performanceFee.hurdleRate != null ? String(fee.performanceFee.hurdleRate) : ''
+  row[indexOfField('Profit shared to XinXi (%)')][3] =
+    fee.performanceFee.profitSharedToXinXi != null ? String(fee.performanceFee.profitSharedToXinXi) : ''
+  row[indexOfField('Others')][3] = yn(fee.others.enabled)
+  row[indexOfField('Details')][3] = fmt(fee.others.details)
 
   return row
 }

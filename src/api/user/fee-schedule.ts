@@ -35,9 +35,14 @@ export interface FeeSchedule {
 
 export const feeScheduleApi = {
   // 获取费用计划（使用 client-fee-schedules 接口）
-  async getFeeSchedule(clientId: number, clientType: 'Individual' | 'Corporate') {
+  async getFeeSchedule(
+    clientId: number,
+    clientType: 'Individual' | 'Corporate',
+    options?: { skipErrorToast?: boolean }
+  ) {
     const res = await request.get(`/client-fee-schedules/client/${clientId}`, {
-      params: { clientType }
+      params: { clientType },
+      ...(options || {})
     })
     const raw = (res as any).data || res || {}
 

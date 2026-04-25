@@ -314,7 +314,7 @@ const handleStatusChange = async (row: Account) => {
   if (isSystemAdmin(row)) {
     row.isActive = true
     row.status = 'enabled'
-    ElMessage.warning('超级管理员的状态不允许修改为不可用')
+    ElMessage.warning('Super admin status cannot be changed to disabled')
     return
   }
 

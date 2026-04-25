@@ -149,7 +149,7 @@ import { Plus, Search, Refresh } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref('新建任务')
+const dialogTitle = ref('Create Task')
 const taskFormRef = ref<FormInstance>()
 
 const searchForm = reactive({
@@ -207,7 +207,7 @@ const loadTasks = async () => {
     // tableData.value = response.data.list
     // pagination.total = response.data.total
   } catch (error) {
-    ElMessage.error('加载任务列表失败')
+    ElMessage.error('Failed to load task list')
   } finally {
     loading.value = false
   }
@@ -225,7 +225,7 @@ const handleReset = () => {
 }
 
 const handleAdd = () => {
-  dialogTitle.value = '新建任务'
+  dialogTitle.value = 'Create Task'
   taskForm.id = null
   taskForm.name = ''
   taskForm.type = ''
@@ -245,11 +245,11 @@ const handleSubmit = async () => {
         // } else {
         //   await taskApi.createTask(taskForm)
         // }
-        ElMessage.success(taskForm.id ? '更新成功' : '创建成功')
+        ElMessage.success(taskForm.id ? 'Updated successfully' : 'Created successfully')
         dialogVisible.value = false
         loadTasks()
       } catch (error) {
-        ElMessage.error('操作失败')
+        ElMessage.error('Operation failed')
       }
     }
   })
@@ -261,12 +261,12 @@ const handleDialogClose = () => {
 
 const handleStart = async (row: any) => {
   try {
-    await ElMessageBox.confirm('确定要启动该任务吗？', '提示', {
+    await ElMessageBox.confirm('Are you sure you want to start this task?', 'Confirmation', {
       type: 'warning'
     })
     // TODO: 调用启动接口
     // await taskApi.startTask(row.id)
-    ElMessage.success('任务已启动')
+    ElMessage.success('Task started')
     loadTasks()
   } catch {
     // 用户取消
@@ -275,12 +275,12 @@ const handleStart = async (row: any) => {
 
 const handleStop = async (row: any) => {
   try {
-    await ElMessageBox.confirm('确定要停止该任务吗？', '提示', {
+    await ElMessageBox.confirm('Are you sure you want to stop this task?', 'Confirmation', {
       type: 'warning'
     })
     // TODO: 调用停止接口
     // await taskApi.stopTask(row.id)
-    ElMessage.success('任务已停止')
+    ElMessage.success('Task stopped')
     loadTasks()
   } catch {
     // 用户取消
@@ -288,7 +288,7 @@ const handleStop = async (row: any) => {
 }
 
 const handleView = (row: any) => {
-  ElMessage.info('查看任务详情功能开发中')
+  ElMessage.info('Task detail view is under development')
   // TODO: 跳转到任务详情页
 }
 
@@ -309,7 +309,7 @@ const handleDelete = async (row: any) => {
     )
     // TODO: 调用删除接口
     // await taskApi.deleteTask(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success('Deleted successfully')
     loadTasks()
   } catch {
     // 用户取消
@@ -336,10 +336,10 @@ const getStatusType = (status: string) => {
 
 const getStatusText = (status: string) => {
   const map: Record<string, string> = {
-    pending: '待开始',
-    running: '进行中',
-    completed: '已完成',
-    stopped: '已停止'
+    pending: 'Pending',
+    running: 'Running',
+    completed: 'Completed',
+    stopped: 'Stopped'
   }
   return map[status] || status
 }

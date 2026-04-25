@@ -27,9 +27,14 @@ export interface KYCData {
 
 export const kycApi = {
   // 获取 KYC 信息（顶部三个字段）
-  async getKycInfo(clientId: number, clientType: 'Individual' | 'Corporate') {
+  async getKycInfo(
+    clientId: number,
+    clientType: 'Individual' | 'Corporate',
+    options?: { skipErrorToast?: boolean }
+  ) {
     const res = await request.get(`/user/clients/${clientId}/kyc-info`, {
-      params: { clientType }
+      params: { clientType },
+      ...(options || {})
     })
     const data = (res as any).data ?? res ?? {}
     return {

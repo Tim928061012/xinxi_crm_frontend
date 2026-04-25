@@ -154,7 +154,7 @@ const loadData = async () => {
     // tableData.value = response.data.list
     // pagination.total = response.data.total
   } catch (error) {
-    ElMessage.error('加载数据列表失败')
+    ElMessage.error('Failed to load data list')
   } finally {
     loading.value = false
   }
@@ -181,7 +181,7 @@ const handleView = (row: any) => {
 }
 
 const handleEdit = (row: any) => {
-  ElMessage.info('编辑功能开发中')
+  ElMessage.info('Edit feature is under development')
   // TODO: 实现编辑功能
 }
 
@@ -202,7 +202,7 @@ const handleDelete = async (row: any) => {
     )
     // TODO: 调用删除接口
     // await dataApi.deleteData(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success('Deleted successfully')
     loadData()
   } catch {
     // 用户取消
@@ -211,15 +211,15 @@ const handleDelete = async (row: any) => {
 
 const handleExport = () => {
   if (selectedRows.value.length === 0) {
-    ElMessage.warning('请选择要导出的数据')
+    ElMessage.warning('Please select data to export')
     return
   }
-  ElMessage.info('导出功能开发中')
+  ElMessage.info('Export feature is under development')
   // TODO: 实现导出功能
 }
 
 const handleImport = () => {
-  ElMessage.info('导入功能开发中')
+  ElMessage.info('Import feature is under development')
   // TODO: 实现导入功能
 }
 

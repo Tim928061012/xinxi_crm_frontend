@@ -2,7 +2,9 @@ export const ROLE_ADMIN = 'ADMIN'
 
 export const normalizeRole = (role?: string | null): string => {
   if (!role) return ''
-  const normalized = role.trim().toUpperCase().replace(/[-/\s]+/g, '_')
+  let normalized = role.trim().toUpperCase().replace(/[-/\s]+/g, '_')
+  // 兼容后端常见的 ROLE_ 前缀，避免权限判断偏差（如 ROLE_COMPLIANCE）
+  normalized = normalized.replace(/^ROLE_/, '')
   if (['USER', 'RM', 'ARM', 'RMARM', 'RM_ARM'].includes(normalized)) {
     return 'RM/ARM'
   }
