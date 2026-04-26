@@ -65,7 +65,7 @@
         <el-option label="RM" value="rm" />
         <el-option label="Progress" value="progress" />
       </el-select>
-      <el-button text @click="resetFilters">Reset</el-button>
+      <el-button text class="reset-btn" @click="resetFilters">Reset</el-button>
     </div>
 
     <div v-loading.fullscreen="loading" class="table-wrapper">
@@ -112,7 +112,7 @@
               {{ formatDateTime(row.createdTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="Actions" width="300" fixed="right">
+          <el-table-column label="Actions" width="230" fixed="right">
             <template #default="{ row }">
               <div class="client-actions">
                 <el-link type="primary" class="action-link" :underline="false" @click.prevent="handleView(row)">
@@ -191,7 +191,7 @@
             collapse-tags-tooltip
             clearable
             placeholder="Contact Nature"
-            style="width: 200px"
+            style="width: 180px"
           >
             <el-option
               v-for="item in contactNatureOptionsWithCount"
@@ -207,7 +207,7 @@
             collapse-tags-tooltip
             clearable
             placeholder="RM"
-            style="width: 220px"
+            style="width: 160px"
           >
             <el-option v-for="rm in rmOptionsWithCount" :key="rm.value" :label="rm.label" :value="rm.value" />
           </el-select>
@@ -218,7 +218,7 @@
             collapse-tags-tooltip
             clearable
             placeholder="Progress"
-            style="width: 240px"
+            style="width: 190px"
           >
             <el-option
               v-for="progress in progressOptionsWithCount"
@@ -227,40 +227,50 @@
               :value="progress.value"
             />
           </el-select>
-          <el-select v-model="exportDialogSortBy" placeholder="Sort By" style="width: 220px">
+          <el-select v-model="exportDialogSortBy" placeholder="Sort By" style="width: 170px">
             <el-option label="Created Time (Newest)" value="created-desc" />
             <el-option label="Created Time (Oldest)" value="created-asc" />
             <el-option label="RM" value="rm" />
             <el-option label="Progress" value="progress" />
           </el-select>
-          <el-button text @click="resetExportDialogFilters">Reset</el-button>
+          <el-button text class="reset-btn" @click="resetExportDialogFilters">Reset</el-button>
         </div>
-        <el-table :data="exportDisplayList" :row-key="exportTableRowKey" size="small" border class="export-client-table">
-          <el-table-column width="52" align="center">
-            <template #header>
-              <el-checkbox
-                :model-value="exportHeaderAllChecked"
-                :indeterminate="exportHeaderIndeterminate"
-                :disabled="!exportDisplayList.length"
-                @change="onExportToggleAll"
-              />
-            </template>
-            <template #default="{ row }">
-              <el-checkbox
-                :key="clientExportRowKey(row)"
-                :model-value="exportSelectedIds.has(clientExportRowKey(row))"
-                @change="(val: string | number | boolean) => toggleExportRow(clientExportRowKey(row), !!val)"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column prop="client" label="Client" min-width="140" />
-          <el-table-column prop="contactNature" label="Contact Nature" min-width="130" />
-          <el-table-column prop="rm" label="RM" min-width="120" />
-          <el-table-column prop="progressLabel" label="Progress" min-width="170" />
-          <el-table-column label="Created Time" min-width="140">
-            <template #default="{ row }">{{ formatDateTime(row.createdTime) }}</template>
-          </el-table-column>
-        </el-table>
+        <div class="export-table-scroll">
+          <el-table
+            :data="exportDisplayList"
+            :row-key="exportTableRowKey"
+            size="small"
+            border
+            class="export-client-table"
+            @row-click="onExportRowClick"
+          >
+            <el-table-column width="52" align="center">
+              <template #header>
+                <el-checkbox
+                  :model-value="exportHeaderAllChecked"
+                  :indeterminate="exportHeaderIndeterminate"
+                  :disabled="!exportDisplayList.length"
+                  @change="onExportToggleAll"
+                />
+              </template>
+              <template #default="{ row }">
+                <el-checkbox
+                  :key="clientExportRowKey(row)"
+                  :model-value="exportSelectedIds.has(clientExportRowKey(row))"
+                  @click.stop
+                  @change="(val: string | number | boolean) => toggleExportRow(clientExportRowKey(row), !!val)"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column prop="client" label="Client" min-width="140" />
+            <el-table-column prop="contactNature" label="Contact Nature" min-width="130" />
+            <el-table-column prop="rm" label="RM" min-width="120" />
+            <el-table-column prop="progressLabel" label="Progress" min-width="170" />
+            <el-table-column label="Created Time" min-width="140">
+              <template #default="{ row }">{{ formatDateTime(row.createdTime) }}</template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
       <template #footer>
         <div class="export-footer">
@@ -442,6 +452,11 @@ function onExportToggleAll(val: string | number | boolean) {
     rows.forEach(r => next.delete(clientExportRowKey(r)))
   }
   exportSelectedIds.value = next
+}
+
+function onExportRowClick(row: ClientListRow) {
+  const key = clientExportRowKey(row)
+  toggleExportRow(key, !exportSelectedIds.value.has(key))
 }
 
 function resetExportDialogFilters() {
@@ -808,19 +823,44 @@ onMounted(loadClients)
   .left-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+  }
+
+  .left-actions :deep(.el-button + .el-button) {
+    margin-left: 0;
+  }
+
+  .reset-btn.el-button {
+    background: #eef1f4 !important;
+    border: 1px solid #d9dee5 !important;
+    color: #4b5563 !important;
+    border-radius: 6px;
+    padding: 8px 14px;
+  }
+
+  .reset-btn.el-button:hover {
+    background: #e5eaf0 !important;
+    color: #374151 !important;
   }
 
   .user-info {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #e8eff6;
+    line-height: 1;
     font-size: 14px;
-    color: #303133;
+    color: #1f2a37;
 
     .user-role {
-      margin-left: 4px;
-      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      margin-left: 2px;
+      font-size: 13px;
+      line-height: 1;
+      font-weight: 500;
       color: #025189;
     }
   }
@@ -901,16 +941,11 @@ onMounted(loadClients)
       padding: 4px 2px;
       margin: -4px -2px;
 
-      &:hover {
-        background: rgba(0, 64, 128, 0.06);
-      }
-
       &:hover .progress-label,
       &:focus-visible .progress-label {
         color: #0b63c5;
         text-decoration: underline;
         text-underline-offset: 2px;
-        font-weight: 500;
       }
     }
   }
@@ -990,11 +1025,24 @@ onMounted(loadClients)
   }
 
   .export-dialog-inner {
-    min-height: 120px;
+    height: 62vh;
+    min-height: 520px;
+    max-height: 620px;
+    display: flex;
+    flex-direction: column;
   }
 
   .export-dialog-toolbar {
     margin-bottom: 12px;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .export-table-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .empty-state {
@@ -1011,6 +1059,12 @@ onMounted(loadClients)
 
 :deep(.client-export-dialog .el-dialog__body) {
   padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+:deep(.export-client-table .el-table__header-wrapper th.el-table__cell) {
+  background: #f1f3f5 !important;
+  color: #606266 !important;
 }
 
 .export-footer {

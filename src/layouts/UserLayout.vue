@@ -6,22 +6,22 @@
       </div>
 
       <nav class="sidebar-nav">
-        <router-link
-          :to="{ name: 'UserClient' }"
+        <button
+          type="button"
           class="nav-item"
           :class="{ active: isClientActive }"
+          @click="goUserClient"
         >
           <span>Client</span>
-        </router-link>
-        <router-link
-          :to="{ name: 'UserProfile' }"
+        </button>
+        <button
+          type="button"
           class="nav-item"
           :class="{ active: activeMenu === '/user/profile' }"
+          @click="goUserProfile"
         >
           <span>Profile</span>
-        </router-link>
-
-        <div class="nav-spacer" />
+        </button>
 
         <div class="nav-item logout" @click="handleLogout">
           <span>Log out</span>
@@ -57,6 +57,14 @@ const activeMenu = computed(() => route.path)
 const isClientActive = computed(
   () => activeMenu.value === '/user/client' || activeMenu.value.startsWith('/user/client/')
 )
+
+const goUserClient = () => {
+  void router.push({ name: 'UserClient' })
+}
+
+const goUserProfile = () => {
+  void router.push({ name: 'UserProfile' })
+}
 
 const handleLogout = async () => {
   try {
@@ -116,15 +124,14 @@ const handleLogout = async () => {
     padding: 0 0 16px;
     min-height: 0;
 
-    .nav-spacer {
-      flex: 1;
-      min-height: 12px;
-    }
-
     .nav-item {
       display: flex;
       align-items: center;
       gap: 0;
+      width: 100%;
+      border: none;
+      background: transparent;
+      text-align: left;
       padding: 11px 20px;
       margin-bottom: 0;
       color: #111827;

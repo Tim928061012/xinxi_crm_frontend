@@ -7,41 +7,46 @@
       </div>
       
       <nav class="sidebar-nav">
-        <router-link
-          to="/account"
+        <button
+          type="button"
           class="nav-item"
           :class="{ active: activeMenu === '/account' }"
+          @click="goAccount"
         >
           Account
-        </router-link>
-        <router-link
-          to="/client"
+        </button>
+        <button
+          type="button"
           class="nav-item"
           :class="{ active: activeMenu === '/client' }"
+          @click="goClient"
         >
           Client
-        </router-link>
-        <router-link
-          to="/introducer"
+        </button>
+        <button
+          type="button"
           class="nav-item"
           :class="{ active: activeMenu === '/introducer' }"
+          @click="goIntroducer"
         >
           Introducer
-        </router-link>
-        <router-link
-          to="/bank-centre"
+        </button>
+        <button
+          type="button"
           class="nav-item"
           :class="{ active: activeMenu === '/bank-centre' }"
+          @click="goBankCentre"
         >
           Bank & Centre
-        </router-link>
-        <router-link
-          to="/profile"
+        </button>
+        <button
+          type="button"
           class="nav-item"
           :class="{ active: activeMenu === '/profile' }"
+          @click="goProfile"
         >
           Profile
-        </router-link>
+        </button>
         <div class="nav-item logout" @click="handleLogout">
           Log out
         </div>
@@ -98,6 +103,12 @@ onMounted(() => {
     router.replace('/user/client')
   }
 })
+
+const goAccount = () => void router.push('/account')
+const goClient = () => void router.push('/client')
+const goIntroducer = () => void router.push('/introducer')
+const goBankCentre = () => void router.push('/bank-centre')
+const goProfile = () => void router.push('/profile')
 
 const handleLogout = async () => {
   try {
@@ -160,6 +171,10 @@ const handleLogout = async () => {
     
     .nav-item {
       display: block;
+      width: 100%;
+      border: none;
+      background: transparent;
+      text-align: left;
       padding: 12px 20px;
       color: #606266;
       text-decoration: none;

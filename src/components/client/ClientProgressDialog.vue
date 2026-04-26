@@ -561,7 +561,6 @@ const toDisplayDate = (value?: string | null) => {
   max-height: min(780px, calc(100vh - 160px));
   overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 2px;
   /* 与 .flowchart-panel 左 padding 一致，使信息区与步骤序号圆点左缘对齐 */
   --progress-track-indent: 4px;
 }
@@ -655,21 +654,13 @@ const toDisplayDate = (value?: string | null) => {
   user-select: none;
 }
 
-/* 两 Tab 叠在同一 grid 格内，隐藏面板仍参与排版，容器高度 = max(flowchart, timeline)，避免切 Tab 弹窗高度抖动 */
+/* Tab 面板按当前激活项展示，避免 Timeline 底部出现过大留白 */
 .progress-tab-panels {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-}
-
-.flowchart-panel,
-.timeline-panel {
-  grid-area: 1 / 1;
+  display: block;
 }
 
 .tab-panel--inactive {
-  visibility: hidden;
-  pointer-events: none;
+  display: none;
 }
 
 .flowchart-panel {
@@ -767,11 +758,14 @@ const toDisplayDate = (value?: string | null) => {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-height: 28px;
 }
 
 .step-title {
+  display: flex;
+  align-items: center;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.2;
   font-weight: 400;
   color: #111827;
 
@@ -859,7 +853,7 @@ const toDisplayDate = (value?: string | null) => {
 }
 
 .timeline-list {
-  padding: 4px 0 12px;
+  padding: 4px 0 40px;
 }
 
 .timeline-item {
@@ -898,6 +892,7 @@ const toDisplayDate = (value?: string | null) => {
 }
 
 .client-progress-dialog .el-dialog__body {
-  padding: 8px 24px 24px;
+  /* 右侧不留内边距，确保滚动条贴弹窗最右侧 */
+  padding: 8px 0 24px 24px;
 }
 </style>

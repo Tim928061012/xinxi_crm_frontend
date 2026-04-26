@@ -49,23 +49,28 @@ html, body {
   overflow-x: hidden;
 }
 
-// 滚动条样式
+// 全局滚动条样式：贴右侧、低对比不抢视觉
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.42) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.42);
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgba(148, 163, 184, 0.58);
 }
 
 // NProgress样式覆盖
@@ -918,4 +923,17 @@ html, body {
 :deep(.el-form-item__label) {
   pointer-events: none !important;
   cursor: default !important;
+}
+
+// 全局弹窗默认居中（无需每个页面单独写 align-center）
+.el-overlay-dialog {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.el-overlay-dialog .el-dialog {
+  margin: 0 !important;
 }
