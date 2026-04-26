@@ -209,22 +209,22 @@ const userForm = reactive({
 
 const userRules: FormRules = {
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' }
+    { required: true, message: 'Please enter username', trigger: 'blur' },
+    { min: 3, max: 20, message: 'Username length must be between 3 and 20 characters', trigger: 'blur' }
   ],
   name: [
-    { required: true, message: '请输入姓名', trigger: 'blur' }
+    { required: true, message: 'Please enter name', trigger: 'blur' }
   ],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    { required: true, message: 'Please enter email', trigger: 'blur' },
+    { type: 'email', message: 'Please enter a valid email address', trigger: 'blur' }
   ],
   role: [
-    { required: true, message: '请选择角色', trigger: 'change' }
+    { required: true, message: 'Please select a role', trigger: 'change' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
+    { required: true, message: 'Please enter password', trigger: 'blur' },
+    { min: 6, max: 20, message: 'Password length must be between 6 and 20 characters', trigger: 'blur' }
   ]
 }
 

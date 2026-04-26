@@ -101,10 +101,10 @@ const loginForm = reactive({
 
 const loginRules: FormRules = {
   username: [
-    { required: true, message: '请输入账号/用户名', trigger: 'blur' }
+    { required: true, message: 'Please enter account or username', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' }
+    { required: true, message: 'Please enter password', trigger: 'blur' }
   ]
 }
 

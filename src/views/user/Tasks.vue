@@ -184,10 +184,10 @@ const taskForm = reactive({
 
 const taskRules: FormRules = {
   name: [
-    { required: true, message: '请输入任务名称', trigger: 'blur' }
+    { required: true, message: 'Please enter task name', trigger: 'blur' }
   ],
   type: [
-    { required: true, message: '请选择任务类型', trigger: 'change' }
+    { required: true, message: 'Please select task type', trigger: 'change' }
   ]
 }
 
