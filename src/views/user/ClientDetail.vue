@@ -2322,9 +2322,20 @@ const isRoSignatureReviewInView = computed(
 )
 /** v1.0 遗留：预览/审批视图下可按模块批量下载已上传文件 */
 const canBulkDownloadModule = computed(() => !!clientId.value && (isViewMode.value || isReviewMode.value))
-const canReviewAction = computed(() => progressData.value?.availableActions?.includes('REVIEW') ?? false)
+const currentProgressStatus = computed(() => normalizeProgressStatus(progressData.value?.progressStatus))
+const isPendingSignatureStatus = computed(() => currentProgressStatus.value === 'PENDING_SIGNATURE')
+const canReviewAction = computed(() => {
+  if (isPendingSignatureStatus.value) return false
+  return progressData.value?.availableActions?.includes('REVIEW') ?? false
+})
 /** 预览视图：RM 等在 Pending Submission 时后端下发 SUBMIT */
-const canSubmitAction = computed(() => progressData.value?.availableActions?.includes('SUBMIT') ?? false)
+const canSubmitAction = computed(() => {
+  const actions = progressData.value?.availableActions || []
+  if (isPendingSignatureStatus.value) {
+    return actions.includes('SUBMIT_SIGNATURE')
+  }
+  return actions.includes('SUBMIT')
+})
 /** Pending Submission 预览稿：Progress 为浅灰次要按钮 */
 const headerProgressMuted = computed(
   () =>
@@ -2787,6 +2798,10 @@ const feeScheduleData = reactive<FeeSchedule>({
 const documentUploadDialogVisible = ref(false)
 const documentUploadType = ref<DocumentType | 'kyc'>('identity')
 const kycUploadDocumentType = ref<'SUPPORTING_DOCUMENT' | 'NAME_SCREENING'>('SUPPORTING_DOCUMENT')
+type PendingFormsUpload = { tempId: number; file: File }
+const pendingFormsUploads = ref<PendingFormsUpload[]>([])
+const pendingFormsDeleteIds = ref<number[]>([])
+const pendingFormsTempIdSeed = ref(-1)
 const documentUploadTitle = computed(() => {
   if (documentUploadType.value === 'kyc') {
     return kycUploadDocumentType.value === 'NAME_SCREENING' ? 'Name Screening Documents' : 'Supporting Documents'
@@ -2803,6 +2818,9 @@ const documentUploadTitle = computed(() => {
 const uploadRef = ref()
 const fileList = ref<UploadFile[]>([])
 const uploading = ref(false)
+
+const isPendingSignatureFormsLocalEdit = () =>
+  isPendingSignatureStatus.value && canUploadFormsInPendingSignature.value
 
 // 可用的 Booking Centres（根据选择的 Bank 动态获取）
 const availableBookingCentres = computed(() => {
@@ -3093,6 +3111,9 @@ const loadClient = async () => {
       documentsData.forms = documents.forms || []
       documentsData.statements = documents.statements || []
       documentsData.others = documents.others || []
+      pendingFormsUploads.value = []
+      pendingFormsDeleteIds.value = []
+      pendingFormsTempIdSeed.value = -1
 
       // Documents Tab 的 Last saved：取所有文档中最新的上传时间
       const allDocs = [
@@ -3216,6 +3237,77 @@ const loadProgress = async () => {
   } catch (error) {
     console.warn('Failed to load workflow progress:', error)
     progressData.value = null
+  }
+}
+
+/** Pending Signature 提交签名后刷新 Documents 区（Forms 由 FORMS_DRAFT 转正等） */
+const reloadDocumentsTab = async () => {
+  if (!clientId.value) return
+  tabLoading.documents = true
+  try {
+    const documents = await documentsApi.getDocuments(clientId.value, currentClientType.value)
+    documentsData.identity = documents.identity || []
+    documentsData.address = documents.address || []
+    documentsData.forms = documents.forms || []
+    documentsData.statements = documents.statements || []
+    documentsData.others = documents.others || []
+    const allDocs = [
+      ...documentsData.identity,
+      ...documentsData.address,
+      ...documentsData.forms,
+      ...documentsData.statements,
+      ...documentsData.others
+    ]
+    const docTimes = allDocs
+      .map(d => d.uploadTime)
+      .filter(Boolean)
+      .map(t => new Date(t as string))
+      .filter(d => !isNaN(d.getTime()))
+    if (docTimes.length > 0) {
+      const latest = new Date(Math.max(...docTimes.map(d => d.getTime())))
+      tabLastSaved.documents = `Last saved: ${formatDateTime(latest)}`
+    }
+    pendingFormsUploads.value = []
+    pendingFormsDeleteIds.value = []
+    pendingFormsTempIdSeed.value = -1
+  } catch (error) {
+    console.warn('Failed to reload documents:', error)
+  } finally {
+    tabLoading.documents = false
+  }
+}
+
+const stagePendingFormsUploads = (files: File[]) => {
+  files.forEach(file => {
+    const tempId = pendingFormsTempIdSeed.value--
+    pendingFormsUploads.value.push({ tempId, file })
+    documentsData.forms.push({
+      id: tempId,
+      document: file.name,
+      size: formatFileSizeMb(file.size ?? 0),
+      uploadTime: new Date().toISOString(),
+      type: 'forms'
+    })
+  })
+}
+
+const removeStagedPendingFormsUpload = (tempId: number) => {
+  pendingFormsUploads.value = pendingFormsUploads.value.filter(item => item.tempId !== tempId)
+}
+
+const commitPendingFormsChanges = async () => {
+  if (!clientId.value) return
+  if (pendingFormsDeleteIds.value.length) {
+    for (const id of pendingFormsDeleteIds.value) {
+      await documentsApi.deleteDocument(clientId.value, id)
+    }
+  }
+  if (!pendingFormsUploads.value.length) return
+  const files = pendingFormsUploads.value.map(item => item.file)
+  const chunkSize = 10
+  for (let i = 0; i < files.length; i += chunkSize) {
+    const chunk = files.slice(i, i + chunkSize)
+    await documentsApi.uploadDocumentsBatch(clientId.value, currentClientType.value, 'forms', chunk)
   }
 }
 
@@ -3781,11 +3873,52 @@ const handleProgressUpdated = (progress: ClientProgressData) => {
   progressData.value = progress
 }
 
-/** 预览顶栏 Submit（Pending Submission + 后端 availableActions 含 SUBMIT） */
+const FORMS_REQUIRED_BEFORE_SUBMIT_MSG =
+  'Upload signed documents to the Forms module before submitting'
+const PROGRESS_UPDATED_MSG = 'Failed. Progress has been updated.'
+
+/** 预览顶栏 Submit（Pending Submission 为提交初审；Pending Signature 为提交签名并进入 Signature Under Review） */
 const handleHeaderSubmit = async () => {
   if (!clientId.value) return
   if (!clientDetailLoaded.value || pageLoading.value) {
     ElMessage.warning('Client detail is still loading. Please wait and try again.')
+    return
+  }
+  if (isPendingSignatureStatus.value) {
+    if (!documentsData.forms?.length) {
+      ElMessage.warning(FORMS_REQUIRED_BEFORE_SUBMIT_MSG)
+      return
+    }
+    workflowLoading.value = true
+    try {
+      await commitPendingFormsChanges()
+      const response = await workflowApi.submitSignature(clientId.value, currentClientType.value)
+      const res = response as unknown as { data?: ClientProgressData }
+      progressData.value = res.data || (response as unknown as ClientProgressData)
+      ElMessage.success('Success!')
+      await reloadDocumentsTab()
+    } catch (error: unknown) {
+      const err = error as { message?: string; response?: { data?: { message?: string } } }
+      const msg = err.response?.data?.message || err.message || 'Submit failed'
+      const progressUpdated =
+        typeof msg === 'string' &&
+        (msg === PROGRESS_UPDATED_MSG || msg.includes('Progress has been updated'))
+      if (progressUpdated) {
+        ElMessage.error(msg)
+        window.setTimeout(() => window.location.reload(), 400)
+        return
+      }
+      if (
+        typeof msg === 'string' &&
+        (msg === FORMS_REQUIRED_BEFORE_SUBMIT_MSG || msg.includes('Forms module before submitting'))
+      ) {
+        ElMessage.warning(FORMS_REQUIRED_BEFORE_SUBMIT_MSG)
+        return
+      }
+      ElMessage.error(msg)
+    } finally {
+      workflowLoading.value = false
+    }
     return
   }
   workflowLoading.value = true
@@ -4175,14 +4308,26 @@ const handleDeleteDocument = async (document: Document) => {
         showClose: false
       }
     )
-    await documentsApi.deleteDocument(clientId.value, document.id)
+    const isLocalFormsDelete =
+      document.type === 'forms' && isPendingSignatureFormsLocalEdit()
+    if (isLocalFormsDelete) {
+      if (document.id > 0) {
+        if (!pendingFormsDeleteIds.value.includes(document.id)) {
+          pendingFormsDeleteIds.value.push(document.id)
+        }
+      } else {
+        removeStagedPendingFormsUpload(document.id)
+      }
+    } else {
+      await documentsApi.deleteDocument(clientId.value, document.id)
+    }
     // 从对应的数组中删除
     const type = document.type
     const index = documentsData[type].findIndex(d => d.id === document.id)
     if (index > -1) {
       documentsData[type].splice(index, 1)
     }
-    ElMessage.success('Document deleted successfully')
+    ElMessage.success(isLocalFormsDelete ? 'Document removal staged' : 'Document deleted successfully')
   } catch (error: any) {
     if (error !== 'cancel') {
       console.error('Failed to delete document:', error)
@@ -4293,8 +4438,20 @@ const handleSubmitDocumentUpload = async () => {
     } else {
       const docTypeKey = documentUploadType.value as DocumentType
       const targetList = documentsData[docTypeKey]
-      const shouldSubmitSignatureAfterUpload =
+      const isFormsUploadInPendingSignature =
         canUploadFormsInPendingSignature.value && docTypeKey === 'forms'
+
+      if (isFormsUploadInPendingSignature && isPendingSignatureFormsLocalEdit()) {
+        stagePendingFormsUploads(files)
+        ElMessage.success(
+          files.length > 1
+            ? `${files.length} documents staged. Changes will be committed on Submit.`
+            : 'Document staged. Changes will be committed on Submit.'
+        )
+        documentUploadDialogVisible.value = false
+        fileList.value = []
+        return
+      }
 
       const appendDocs = (saved: any[]) => {
         saved.forEach((data: any, i: number) => {
@@ -4335,18 +4492,11 @@ const handleSubmitDocumentUpload = async () => {
         }
         appendDocs(saved)
       }
-      if (shouldSubmitSignatureAfterUpload) {
-        await workflowApi.submitSignature(clientId.value, currentClientType.value)
-        await loadProgress()
-        ElMessage.success(
-          files.length > 1
-            ? `${files.length} forms uploaded and signature submitted successfully`
-            : 'Form uploaded and signature submitted successfully'
-        )
-      } else {
-        ElMessage.success(
-          files.length > 1 ? `${files.length} documents uploaded successfully` : 'Document uploaded successfully'
-        )
+      ElMessage.success(
+        files.length > 1 ? `${files.length} documents uploaded successfully` : 'Document uploaded successfully'
+      )
+      if (isFormsUploadInPendingSignature) {
+        ElMessage.info('Forms uploaded. Complete this review action to submit the signature package.')
       }
     }
     documentUploadDialogVisible.value = false

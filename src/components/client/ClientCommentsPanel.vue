@@ -10,7 +10,12 @@
         <section v-for="group in groupedComments" :key="group.groupKey" class="comment-group">
           <h3 class="comment-group__title">{{ group.label }}</h3>
           <div class="comment-group__list">
-            <article v-for="comment in group.items" :key="comment.commentId" class="comment-item">
+            <article
+              v-for="comment in group.items"
+              :key="comment.commentId"
+              class="comment-item"
+              :data-comment-id="comment.commentId"
+            >
               <p class="comment-item__text">{{ comment.description }}</p>
               <div class="comment-item__meta-row">
                 <span class="comment-item__meta">{{ authorAtLine(comment) }}</span>
@@ -19,10 +24,11 @@
                     <el-icon><ChatDotRound /></el-icon>
                   </button>
                   <button
+                    v-if="canDeleteComment(comment)"
                     type="button"
                     class="icon-action"
                     aria-label="Delete"
-                    @click="deleteComment(comment.commentId)"
+                    @click="deleteComment(comment)"
                   >
                     <el-icon><Delete /></el-icon>
                   </button>
@@ -51,10 +57,11 @@
                     <span class="comment-item__meta">{{ authorAtLine(reply) }}</span>
                     <div class="comment-item__actions">
                       <button
+                        v-if="canDeleteComment(reply)"
                         type="button"
                         class="icon-action"
                         aria-label="Delete"
-                        @click="deleteComment(reply.commentId)"
+                        @click="deleteComment(reply)"
                       >
                         <el-icon><Delete /></el-icon>
                       </button>
@@ -71,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue'
+import { computed, inject, nextTick, ref, watch } from 'vue'
 import { ChatDotRound, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
@@ -137,6 +144,14 @@ defineExpose({
 const toggleReply = (commentId: number) => {
   replyTargetId.value = replyTargetId.value === commentId ? null : commentId
   replyText.value = ''
+  if (replyTargetId.value === commentId) {
+    void nextTick(() => {
+      const box = document.querySelector(
+        `.comments-panel [data-comment-id="${commentId}"] .reply-box`
+      ) as HTMLElement | null
+      box?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    })
+  }
 }
 
 const cancelReply = () => {
@@ -165,10 +180,27 @@ const submitReply = async (commentId: number) => {
   }
 }
 
-const deleteComment = async (commentId: number) => {
+const normalizeId = (value: string | number | null | undefined): string => {
+  if (value === null || value === undefined) return ''
+  return String(value).trim()
+}
+
+const canDeleteComment = (comment: ClientComment): boolean => {
+  const current = normalizeId(props.currentUserId)
+  const owner = normalizeId(comment.createdByUserId)
+  if (!current || !owner) return false
+  return current === owner
+}
+
+const deleteComment = async (comment: ClientComment) => {
+  if (!canDeleteComment(comment)) {
+    ElMessage.warning('You can only delete your own comments')
+    return
+  }
+
   try {
     await ElMessageBox.confirm('Are you sure you want to delete this comment?', 'Confirm', { type: 'warning' })
-    await workflowApi.deleteComment(props.clientId, props.clientType, commentId)
+    await workflowApi.deleteComment(props.clientId, props.clientType, comment.commentId)
     ElMessage.success('Comment deleted')
     await loadComments()
   } catch (error: any) {

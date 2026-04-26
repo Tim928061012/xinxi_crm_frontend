@@ -57,7 +57,7 @@ export const documentsApi = {
       } else if (docType === 'ADDRESS_PROOF') {
         base.type = 'address'
         docs.address.push(base)
-      } else if (docType === 'FORMS') {
+      } else if (docType === 'FORMS' || docType === 'FORMS_DRAFT') {
         base.type = 'forms'
         docs.forms.push(base)
       } else if (docType === 'XINXI_STATEMENTS') {

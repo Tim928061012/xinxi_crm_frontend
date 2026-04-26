@@ -43,86 +43,83 @@
         <el-scrollbar class="comments-sidebar__scrollbar">
           <div v-if="!comments.length" class="empty-mini">No comments yet</div>
           <div v-else class="sidebar-groups">
-            <section v-for="group in commentGroups" :key="group.moduleCode" class="sidebar-thread-group">
-              <h3 class="sidebar-thread-group__heading">{{ group.label }}</h3>
-              <div class="sidebar-thread-group__list">
-                <article v-for="comment in group.items" :key="comment.commentId" class="sidebar-thread">
-                  <div class="sidebar-thread__block">
-                    <p class="sidebar-thread__text">{{ comment.description }}</p>
-                    <div class="sidebar-thread__footer">
-                      <span class="sidebar-thread__meta">{{ authorAtLine(comment) }}</span>
-                      <div class="sidebar-thread__actions">
-                        <button
-                          type="button"
-                          class="thread-icon-action"
-                          aria-label="Reply"
-                          @click="toggleReply(comment.commentId)"
-                        >
-                          <el-icon><ChatDotRound /></el-icon>
-                        </button>
-                        <button
-                          type="button"
-                          class="thread-icon-action"
-                          aria-label="Delete"
-                          @click="deleteComment(comment.commentId)"
-                        >
-                          <el-icon><Delete /></el-icon>
-                        </button>
-                      </div>
-                    </div>
+            <article
+              v-for="thread in flatThreads"
+              :key="thread.comment.commentId"
+              class="sidebar-thread"
+              :data-comment-id="thread.comment.commentId"
+            >
+              <h3 class="sidebar-thread__heading">{{ thread.moduleLabel }}</h3>
+              <div class="sidebar-thread__block">
+                <p class="sidebar-thread__text">{{ thread.comment.description }}</p>
+                <div class="sidebar-thread__footer">
+                  <span class="sidebar-thread__meta">{{ authorAtLine(thread.comment) }}</span>
+                  <div class="sidebar-thread__actions">
+                    <button
+                      type="button"
+                      class="thread-icon-action"
+                      aria-label="Reply"
+                      @click="toggleReply(thread.comment.commentId)"
+                    >
+                      <el-icon><ChatDotRound /></el-icon>
+                    </button>
+                    <button
+                      v-if="canDeleteComment(thread.comment)"
+                      type="button"
+                      class="thread-icon-action"
+                      aria-label="Delete"
+                      @click="deleteComment(thread.comment)"
+                    >
+                      <el-icon><Delete /></el-icon>
+                    </button>
                   </div>
-
-                  <div v-if="replyTargetId === comment.commentId" class="sidebar-reply-box">
-                    <el-input
-                      v-model="replyText"
-                      type="textarea"
-                      :rows="2"
-                      maxlength="1000"
-                      show-word-limit
-                      placeholder="Reply..."
-                    />
-                    <div class="sidebar-reply-box__actions">
-                      <el-button size="small" @click="cancelReply">Cancel</el-button>
-                      <el-button type="primary" size="small" @click="submitReply(comment.commentId)">Submit</el-button>
-                    </div>
-                  </div>
-
-                  <div v-if="comment.replies?.length" class="sidebar-thread__replies">
-                    <div v-for="reply in comment.replies" :key="reply.commentId" class="sidebar-reply">
-                      <p class="sidebar-reply__text">{{ reply.description }}</p>
-                      <div class="sidebar-thread__footer">
-                        <span class="sidebar-thread__meta">{{ authorAtLine(reply) }}</span>
-                        <div class="sidebar-thread__actions">
-                          <button
-                            type="button"
-                            class="thread-icon-action"
-                            aria-label="Delete"
-                            @click="deleteComment(reply.commentId)"
-                          >
-                            <el-icon><Delete /></el-icon>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </article>
+                </div>
               </div>
-            </section>
+
+              <div v-if="replyTargetId === thread.comment.commentId" class="sidebar-reply-box">
+                <el-input
+                  v-model="replyText"
+                  type="textarea"
+                  :rows="2"
+                  maxlength="1000"
+                  show-word-limit
+                  placeholder="Reply..."
+                />
+                <div class="sidebar-reply-box__actions">
+                  <el-button size="small" @click="cancelReply">Cancel</el-button>
+                  <el-button type="primary" size="small" @click="submitReply(thread.comment.commentId)">Submit</el-button>
+                </div>
+              </div>
+
+              <div v-if="thread.comment.replies?.length" class="sidebar-thread__replies">
+                <div v-for="reply in thread.comment.replies" :key="reply.commentId" class="sidebar-reply">
+                  <p class="sidebar-reply__text">{{ reply.description }}</p>
+                  <div class="sidebar-thread__footer">
+                    <span class="sidebar-thread__meta">{{ authorAtLine(reply) }}</span>
+                    <div class="sidebar-thread__actions">
+                      <button
+                        v-if="canDeleteComment(reply)"
+                        type="button"
+                        class="thread-icon-action"
+                        aria-label="Delete"
+                        @click="deleteComment(reply)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
           </div>
         </el-scrollbar>
       </div>
-
-      <footer class="comments-sidebar__foot">
-        <button type="button" class="foot-link" @click="emit('open-comments-tab')">
-          Open full Comments tab
-        </button>
-      </footer>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue'
+import { computed, inject, nextTick, ref, watch } from 'vue'
 import { ArrowRight, ChatDotRound, DArrowLeft, Delete, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
@@ -134,6 +131,7 @@ const props = defineProps<{
   clientId: number
   clientType: ClientType
   collapsed: boolean
+  currentUserId?: string | number
   /** 当前主 Tab 映射的模块，用于侧栏「添加评论」默认归属 */
   defaultModule?: string
 }>()
@@ -181,6 +179,17 @@ const commentGroups = computed<CommentGroup[]>(() => {
   }))
 })
 
+const threadCount = computed(() => comments.value.length)
+
+const flatThreads = computed(() =>
+  commentGroups.value.flatMap(group =>
+    group.items.map(comment => ({
+      moduleLabel: group.label,
+      comment
+    }))
+  )
+)
+
 function countTotal(list: ClientComment[]): number {
   let n = 0
   for (const c of list) {
@@ -189,8 +198,6 @@ function countTotal(list: ClientComment[]): number {
   }
   return n
 }
-
-const threadCount = computed(() => countTotal(comments.value))
 
 /** 设计稿：27/11/2025 19:00 */
 function formatSidebarDateTime(value?: string | null): string {
@@ -240,6 +247,14 @@ function onAddComment() {
 const toggleReply = (commentId: number) => {
   replyTargetId.value = replyTargetId.value === commentId ? null : commentId
   replyText.value = ''
+  if (replyTargetId.value === commentId) {
+    void nextTick(() => {
+      const box = document.querySelector(
+        `.comments-sidebar [data-comment-id="${commentId}"] .sidebar-reply-box`
+      ) as HTMLElement | null
+      box?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    })
+  }
 }
 
 const cancelReply = () => {
@@ -269,12 +284,29 @@ const submitReply = async (commentId: number) => {
   }
 }
 
-const deleteComment = async (commentId: number) => {
+const normalizeId = (value: string | number | null | undefined): string => {
+  if (value === null || value === undefined) return ''
+  return String(value).trim()
+}
+
+const canDeleteComment = (comment: ClientComment): boolean => {
+  const current = normalizeId(props.currentUserId)
+  const owner = normalizeId(comment.createdByUserId)
+  if (!current || !owner) return false
+  return current === owner
+}
+
+const deleteComment = async (comment: ClientComment) => {
+  if (!canDeleteComment(comment)) {
+    ElMessage.warning('You can only delete your own comments')
+    return
+  }
+
   try {
     await ElMessageBox.confirm('Are you sure you want to delete this comment?', 'Confirm', { type: 'warning' })
-    await workflowApi.deleteComment(props.clientId, props.clientType, commentId)
+    await workflowApi.deleteComment(props.clientId, props.clientType, comment.commentId)
     ElMessage.success('Comment deleted')
-    if (replyTargetId.value === commentId) cancelReply()
+    if (replyTargetId.value === comment.commentId) cancelReply()
     await loadComments()
     emit('changed')
   } catch (error: unknown) {
@@ -476,37 +508,24 @@ $divider: #ebeef5;
 .sidebar-groups {
   display: flex;
   flex-direction: column;
-  padding: 8px 0 12px;
-}
-
-.sidebar-thread-group {
-  & + & {
-    margin-top: 8px;
-    padding-top: 12px;
-    border-top: 1px solid $divider;
-  }
-
-  &__heading {
-    margin: 0 0 10px;
-    font-size: 14px;
-    font-weight: 700;
-    color: $text-body;
-    line-height: 1.35;
-  }
-
-  &__list {
-    display: flex;
-    flex-direction: column;
-  }
+  padding: 8px 0 24px;
 }
 
 .sidebar-thread {
-  padding: 12px 0;
+  padding: 14px 0 12px;
   border-bottom: 1px solid $divider;
 
   &:last-child {
     border-bottom: none;
   }
+}
+
+.sidebar-thread__heading {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: $text-body;
+  line-height: 1.25;
 }
 
 .sidebar-thread__block {
@@ -601,6 +620,7 @@ $divider: #ebeef5;
 
 .sidebar-reply-box {
   margin-top: 10px;
+  padding-bottom: 4px;
 }
 
 .sidebar-reply-box__actions {
@@ -627,27 +647,4 @@ $divider: #ebeef5;
   word-break: break-word;
 }
 
-.comments-sidebar__foot {
-  flex-shrink: 0;
-  padding: 10px 12px 14px;
-  border-top: 1px solid $divider;
-  text-align: center;
-}
-
-.foot-link {
-  border: none;
-  background: none;
-  padding: 0;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  color: $crm-primary;
-  cursor: pointer;
-  text-decoration: none;
-
-  &:hover {
-    color: $crm-primary-hover;
-    text-decoration: underline;
-  }
-}
 </style>

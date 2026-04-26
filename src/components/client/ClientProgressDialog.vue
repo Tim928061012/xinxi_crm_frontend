@@ -123,15 +123,18 @@
               >
                 {{ stepDisplayLabel(step, index) }}
               </div>
-              <el-button
-                v-if="stepRowInlineAction(index)"
-                text
-                :type="inlineActionButtonType(stepRowInlineAction(index)!.value)"
-                class="step-inline-action"
-                @click="handleAction(stepRowInlineAction(index)!.value)"
-              >
-                {{ stepRowInlineAction(index)!.label }}
-              </el-button>
+              <div v-if="stepRowInlineActions(index).length" class="step-inline-actions">
+                <el-button
+                  v-for="action in stepRowInlineActions(index)"
+                  :key="`${index}-${action.value}`"
+                  text
+                  :type="inlineActionButtonType(action.value)"
+                  class="step-inline-action"
+                  @click="handleAction(action.value)"
+                >
+                  {{ action.label }}
+                </el-button>
+              </div>
             </div>
 
             <div v-if="detailEntriesForStep(step.status, index).length" class="step-details">
@@ -287,37 +290,46 @@ const actionButtons = computed(() => {
  * 当前步骤行内展示的主操作（与设计稿一致：操作贴在对应阶段标题行右侧）
  * 仅当「当前阶段 index === 当前进度」且后端下发该 action 时显示。
  */
-function stepRowInlineAction(index: number): { label: string; value: string } | null {
-  if (index !== currentStepIndex.value || !progress.value) return null
+function stepRowInlineActions(index: number): { label: string; value: string }[] {
+  if (index !== currentStepIndex.value || !progress.value) return []
   const step = workflowSteps.value[index]
-  if (!step) return null
+  if (!step) return []
   const st = normalizeProgressStatus(step.status)
   const actions = progress.value.availableActions || []
+  const result: { label: string; value: string }[] = []
 
   if (st === 'PENDING_SUBMISSION' && actions.includes('SUBMIT')) {
-    return { label: 'Submit', value: 'SUBMIT' }
+    result.push({ label: 'Submit', value: 'SUBMIT' })
   }
   if (st === 'OPERATIONAL_REVIEW' && actions.includes('REVIEW')) {
-    return { label: 'Review', value: 'REVIEW' }
+    result.push({ label: 'Review', value: 'REVIEW' })
   }
-  if (st === 'COMPLIANCE_REVIEW' && actions.includes('WITHDRAW')) {
-    return { label: 'Withdraw', value: 'WITHDRAW' }
+  if (st === 'COMPLIANCE_REVIEW') {
+    if (actions.includes('REVIEW')) {
+      result.push({ label: 'Review', value: 'REVIEW' })
+    }
+    if (actions.includes('WITHDRAW')) {
+      result.push({ label: 'Withdraw', value: 'WITHDRAW' })
+    }
   }
   if (st === 'PENDING_SIGNATURE' && actions.includes('SUBMIT_SIGNATURE')) {
-    return { label: 'Submit Signature', value: 'SUBMIT_SIGNATURE' }
+    result.push({ label: '+ Signature', value: 'SUBMIT_SIGNATURE' })
+  }
+  if (st === 'PENDING_SIGNATURE' && actions.includes('WITHDRAW')) {
+    result.push({ label: 'Withdraw', value: 'WITHDRAW' })
   }
   if (st === 'SIGNATURE_UNDER_REVIEW' && actions.includes('REVIEW')) {
-    return { label: 'Review', value: 'REVIEW' }
+    result.push({ label: 'Review', value: 'REVIEW' })
   }
   if (st === 'ACTIVE' && actions.includes('DEACTIVATE')) {
-    return { label: 'Deactivate', value: 'DEACTIVATE' }
+    result.push({ label: 'Deactivate', value: 'DEACTIVATE' })
   }
   if (progress.value.inactive && actions.includes('ACTIVATE')) {
     if (st === 'ACTIVE' || index === WORKFLOW_STATUS_ORDER.length - 1) {
-      return { label: 'Activate', value: 'ACTIVATE' }
+      result.push({ label: 'Activate', value: 'ACTIVATE' })
     }
   }
-  return null
+  return result
 }
 
 function inlineActionButtonType(
@@ -340,9 +352,14 @@ function inlineActionButtonType(
 
 /** 与行内操作去重后的顶部按钮组 */
 const globalActionButtons = computed(() => {
-  const inline = stepRowInlineAction(currentStepIndex.value)
-  if (!inline) return actionButtons.value
-  return actionButtons.value.filter(b => b.value !== inline.value)
+  const inlineValues = new Set(stepRowInlineActions(currentStepIndex.value).map(a => a.value))
+  let list =
+    inlineValues.size === 0 ? actionButtons.value : actionButtons.value.filter(b => !inlineValues.has(b.value))
+  // Pending Signature 仅保留 + Signature / Withdraw，不展示 Review（审批在 Documents 侧完成）
+  if (currentStatus.value === 'PENDING_SIGNATURE') {
+    list = list.filter(b => b.value !== 'REVIEW')
+  }
+  return list
 })
 
 function isStepCompleted(index: number) {
@@ -386,7 +403,13 @@ function detailEntriesForStep(
 ): { logId: number; text: string }[] {
   const st = normalizeProgressStatus(stepStatus)
   const matched = sortedLogs.value.filter(
-    l => l.toStatus && normalizeProgressStatus(l.toStatus) === st
+    l => {
+      // Flowchart 日志归属到「操作发生前」的阶段：优先 fromStatus
+      const before = l.fromStatus ? normalizeProgressStatus(l.fromStatus) : ''
+      if (before) return before === st
+      // 历史脏数据/旧日志缺失 fromStatus 时，兼容回退到 toStatus
+      return !!l.toStatus && normalizeProgressStatus(l.toStatus) === st
+    }
   )
   if (matched.length > 0) {
     return matched.map(log => ({ logId: log.logId, text: formatLogLine(log) }))
@@ -818,6 +841,14 @@ const toDisplayDate = (value?: string | null) => {
   &.el-button--danger {
     --el-button-hover-bg-color: transparent;
   }
+}
+
+.step-inline-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-right: 22px;
 }
 
 .step-details {
