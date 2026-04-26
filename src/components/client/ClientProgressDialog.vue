@@ -103,6 +103,7 @@
               }"
             >
               <el-icon v-if="isStepCompleted(index)" class="step-check-icon"><Check /></el-icon>
+              <el-icon v-else-if="isInactiveFailedStep(index)" class="step-check-icon"><Close /></el-icon>
               <span v-else class="step-num">{{ index + 1 }}</span>
             </div>
             <div
@@ -120,7 +121,7 @@
                   'step-title--emphasis': isStepCompleted(index) || isCurrentStep(index)
                 }"
               >
-                {{ step.label }}
+                {{ stepDisplayLabel(step, index) }}
               </div>
               <el-button
                 v-if="stepRowInlineAction(index)"
@@ -171,7 +172,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Check } from '@element-plus/icons-vue'
+import { Check, Close } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientProgressData, type ClientProgressLog, type ClientType } from '@/api/user/workflow'
 import { formatDateTime } from '@/utils/date'
@@ -213,6 +214,19 @@ const currentStepIndex = computed(() => {
   const idx = WORKFLOW_STATUS_ORDER.indexOf(s as (typeof WORKFLOW_STATUS_ORDER)[number])
   return idx === -1 ? 0 : idx
 })
+
+const isActiveCompleted = computed(
+  () => currentStatus.value === 'ACTIVE' && progress.value?.inactive !== true
+)
+
+function isInactiveFailedStep(index: number) {
+  return currentStatus.value === 'ACTIVE' && progress.value?.inactive === true && index === currentStepIndex.value
+}
+
+function stepDisplayLabel(step: { status: string; label: string }, index: number) {
+  if (isInactiveFailedStep(index)) return 'Inactive'
+  return step.label
+}
 
 const sortedLogs = computed(() =>
   [...(progress.value?.logs || [])].sort((a, b) => {
@@ -332,7 +346,7 @@ const globalActionButtons = computed(() => {
 })
 
 function isStepCompleted(index: number) {
-  return index < currentStepIndex.value
+  return index < currentStepIndex.value || (isActiveCompleted.value && index === currentStepIndex.value)
 }
 
 function isCurrentStep(index: number) {

@@ -10,8 +10,28 @@
         </h1>
       </div>
       <div class="top-header__actions">
+        <template v-if="isRoSignatureReviewInView">
+          <el-button
+            type="success"
+            @click="handleReviewDecision(true)"
+            :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
+          >
+            Approve
+          </el-button>
+          <el-button
+            type="danger"
+            plain
+            @click="handleReviewDecision(false)"
+            :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
+          >
+            Reject
+          </el-button>
+          <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
+            Progress
+          </el-button>
+        </template>
         <!-- View 模式：普通用户与管理员均显示 Edit -->
-        <template v-if="isViewMode">
+        <template v-else-if="isViewMode">
           <el-button
             v-if="canSubmitAction"
             type="primary"
@@ -1651,7 +1671,7 @@
               <h3 class="section-title">Upload Forms</h3>
               <div class="section-header-actions">
                 <DocumentUploadLinkButton
-                  v-if="!isViewMode || canOperationUploadFormsPendingSignature"
+                  v-if="!isViewMode || canUploadFormsInPendingSignature"
                   aria-label="Upload"
                   @click="handleUploadDocument('forms')"
                 />
@@ -1684,9 +1704,9 @@
                   <el-link type="primary" underline="hover" @click="handleOpenDocument(row)">
                     Open
                   </el-link>
-                  <el-divider v-if="!isViewMode || canOperationUploadFormsPendingSignature" direction="vertical" />
+                  <el-divider v-if="!isViewMode || canUploadFormsInPendingSignature" direction="vertical" />
                   <el-link
-                    v-if="!isViewMode || canOperationUploadFormsPendingSignature"
+                    v-if="!isViewMode || canUploadFormsInPendingSignature"
                     type="primary"
                     underline="hover"
                     @click="handleDeleteDocument(row)"
@@ -2171,7 +2191,7 @@ import { formatFileSizeMb } from '@/utils/file-size'
 import { getProgressLabel, isClientEditable, isPendingSubmissionStatus, normalizeProgressStatus } from '@/utils/client-progress'
 import { mapTabToCommentModule } from '@/utils/comment-modules'
 import { getClientBasePath, getClientListPath, isStandaloneClientRoute } from '@/utils/client-routes'
-import { isAdminRole, isOperationRole, isReviewerOnlyEditInReviewRole } from '@/utils/roles'
+import { isAdminRole, isReviewerOnlyEditInReviewRole, normalizeRole } from '@/utils/roles'
 
 const route = useRoute()
 const router = useRouter()
@@ -2239,14 +2259,27 @@ const clientRecordCreatedAt = ref<string>('')
 const workflowLoading = ref(false)
 const progressData = ref<ClientProgressData | null>(null)
 
-/** Pending Signature 下 Operation 在预览页也需能上传/删除 Forms 区签字件（后端 submit-signature 校验 FORMS） */
-const canOperationUploadFormsPendingSignature = computed(
+/** Pending Signature 下上传签名权限与后端 availableActions 同源，避免前后端权限漂移 */
+const canUploadFormsInPendingSignature = computed(
   () =>
     !!clientId.value &&
     isViewMode.value &&
-    isOperationRole(authStore.user?.role) &&
-    normalizeProgressStatus(progressData.value?.progressStatus) === 'PENDING_SIGNATURE'
+    normalizeProgressStatus(progressData.value?.progressStatus) === 'PENDING_SIGNATURE' &&
+    (progressData.value?.availableActions || []).includes('SUBMIT_SIGNATURE')
 )
+/** PRD：Signature Under Review 阶段，RO 仅审核，不编辑资料 */
+const isRoSignatureReadOnlyReview = computed(
+  () =>
+    isReviewMode.value &&
+    normalizeRole(authStore.user?.role) === 'RO' &&
+    normalizeProgressStatus(progressData.value?.progressStatus) === 'SIGNATURE_UNDER_REVIEW'
+)
+
+const ensureReviewEditable = () => {
+  if (!isRoSignatureReadOnlyReview.value) return true
+  ElMessage.warning('RO can only review in Signature Under Review stage and cannot edit client data')
+  return false
+}
 const tabLoading: Record<string, boolean> = reactive({
   kyc: false,
   risk: false,
@@ -2280,6 +2313,13 @@ const currentClientType = computed((): ClientType => {
   return fromQuery || fromForm || 'Individual'
 })
 const isReviewMode = computed(() => route.query.mode === 'review' && !isViewMode.value)
+const isRoSignatureReviewInView = computed(
+  () =>
+    route.query.mode === 'review' &&
+    isViewMode.value &&
+    normalizeRole(authStore.user?.role) === 'RO' &&
+    normalizeProgressStatus(progressData.value?.progressStatus) === 'SIGNATURE_UNDER_REVIEW'
+)
 /** v1.0 遗留：预览/审批视图下可按模块批量下载已上传文件 */
 const canBulkDownloadModule = computed(() => !!clientId.value && (isViewMode.value || isReviewMode.value))
 const canReviewAction = computed(() => progressData.value?.availableActions?.includes('REVIEW') ?? false)
@@ -2294,9 +2334,11 @@ const headerProgressMuted = computed(
 )
 const canShowEditButton = computed(() => {
   if (!clientId.value || !isViewMode.value) return false
-  if (isAdminRole(authStore.user?.role)) return true
-  // Operation / Compliance / RO：不在预览页提供「无限编辑」入口，仅在 Review 流程（mode=review）中改资料，随通过/驳回一并提交
-  if (isReviewerOnlyEditInReviewRole(authStore.user?.role)) return false
+  // 权限矩阵：Admin 在各阶段均不提供资料编辑入口
+  if (isAdminRole(authStore.user?.role)) return false
+  const isDirectEditableStatus = isClientEditable(progressData.value?.progressStatus, progressData.value?.inactive)
+  // PRD：Active 与 Pending Submission 阶段均可直接进入 edit；Inactive 禁止
+  if (isReviewerOnlyEditInReviewRole(authStore.user?.role) && !isDirectEditableStatus) return false
   if (canReviewAction.value) return true
   return isClientEditable(progressData.value?.progressStatus, progressData.value?.inactive)
 })
@@ -2452,20 +2494,31 @@ const openCommentFromModule = (module: string, presetTitle: string) => {
   })
 }
 
-/** Operation/Compliance/RO 不可通过地址栏进入普通 /edit，仅允许 ?mode=review */
+/** Admin 禁止 /edit；Operation/Compliance/RO 在可编辑状态（Pending Submission / Active）可直接 /edit；其余阶段仅允许 ?mode=review */
 watch(
   () => [route.path, route.query.mode, clientId.value, authStore.user?.role] as const,
   () => {
     if (!clientId.value) return
     if (!route.path.includes('/edit')) return
+    if (isAdminRole(authStore.user?.role)) {
+      const base = getClientBasePath(route.path)
+      void router.replace({
+        path: `${base}/${clientId.value}`,
+        query: { clientType: (route.query.clientType as string) || currentClientType.value }
+      })
+      ElMessage.info('Admin can view clients but cannot edit client details.')
+      return
+    }
     if (!isReviewerOnlyEditInReviewRole(authStore.user?.role)) return
+    if (!clientDetailLoaded.value || pageLoading.value) return
+    if (isClientEditable(progressData.value?.progressStatus, progressData.value?.inactive)) return
     if (route.query.mode === 'review') return
     const base = getClientBasePath(route.path)
     void router.replace({
       path: `${base}/${clientId.value}`,
       query: { clientType: (route.query.clientType as string) || currentClientType.value }
     })
-    ElMessage.info('Please use Review on the client view page to edit during the approval process.')
+    ElMessage.info('Please use Review on the client view page to edit during this approval stage.')
   }
 )
 
@@ -3307,11 +3360,16 @@ const openProgressDialog = () => {
   progressDialogVisible.value = true
 }
 
-// 处理 Edit 按钮点击，跳转到编辑页面（非 Operation/Compliance/RO 的无限编辑；后者仅能通过 Review）
+// 处理 Edit 按钮点击：Admin 不可编辑；Active / Pending Submission 可直接编辑，其余审核阶段按 Review 约束
 const handleEdit = () => {
   if (!clientId.value) return
-  if (isReviewerOnlyEditInReviewRole(authStore.user?.role)) {
-    ElMessage.info('Please use Review on this page to edit during the approval process.')
+  if (isAdminRole(authStore.user?.role)) {
+    ElMessage.info('Admin can view clients but cannot edit client details.')
+    return
+  }
+  const isDirectEditableStatus = isClientEditable(progressData.value?.progressStatus, progressData.value?.inactive)
+  if (isReviewerOnlyEditInReviewRole(authStore.user?.role) && !isDirectEditableStatus) {
+    ElMessage.info('Please use Review on this page to edit during this approval stage.')
     return
   }
   const clientType = route.query.clientType || clientForm.contactNature || 'Individual'
@@ -3322,11 +3380,15 @@ const handleEdit = () => {
 const enterReviewMode = () => {
   if (!clientId.value) return
   const basePath = getClientBasePath(route.path)
+  const isRoSignatureReview =
+    normalizeRole(authStore.user?.role) === 'RO' &&
+    (progressData.value?.progressStatus || '').toUpperCase() === 'SIGNATURE_UNDER_REVIEW'
   router.push({
-    path: `${basePath}/${clientId.value}/edit`,
+    path: isRoSignatureReview ? `${basePath}/${clientId.value}` : `${basePath}/${clientId.value}/edit`,
     query: {
       clientType: currentClientType.value,
-      mode: 'review'
+      mode: 'review',
+      ...(isRoSignatureReview ? { tab: 'documents' } : {})
     }
   })
 }
@@ -3656,7 +3718,7 @@ const handleReviewDecision = async (approve: boolean) => {
     ElMessage.warning('Client detail is still loading. Please wait and try again.')
     return
   }
-  if (approve) {
+  if (approve && !isRoSignatureReviewInView.value) {
     const valid = await validateClientForm()
     if (!valid) {
       ElMessage.warning('Please complete the required fields before approval')
@@ -3683,9 +3745,22 @@ const handleReviewDecision = async (approve: boolean) => {
 
   workflowLoading.value = true
   try {
+    const shouldSubmitClientDetail =
+      !isRoSignatureReadOnlyReview.value &&
+      ['OPERATIONAL_REVIEW', 'COMPLIANCE_REVIEW'].includes(
+        normalizeProgressStatus(progressData.value?.progressStatus)
+      )
     const response = approve
-      ? await workflowApi.approve(clientId.value, currentClientType.value, { clientDetail: buildWorkflowClientDetailPayload() })
-      : await workflowApi.reject(clientId.value, currentClientType.value, { clientDetail: buildWorkflowClientDetailPayload() })
+      ? await workflowApi.approve(
+          clientId.value,
+          currentClientType.value,
+          shouldSubmitClientDetail ? { clientDetail: buildWorkflowClientDetailPayload() } : undefined
+        )
+      : await workflowApi.reject(
+          clientId.value,
+          currentClientType.value,
+          shouldSubmitClientDetail ? { clientDetail: buildWorkflowClientDetailPayload() } : undefined
+        )
 
     progressData.value = response.data || response
     ElMessage.success(approve ? 'Review approved successfully' : 'Review rejected successfully')
@@ -3727,6 +3802,7 @@ const handleHeaderSubmit = async () => {
 }
 
 const handleNewPortfolio = () => {
+  if (!ensureReviewEditable()) return
   if (!clientId.value) {
     ElMessage.warning('Please save the client first')
     return
@@ -3740,6 +3816,7 @@ const handleNewPortfolio = () => {
 }
 
 const handleEditPortfolio = async (portfolio: Portfolio, index: number) => {
+  if (!ensureReviewEditable()) return
   editingPortfolioIndex.value = index
   portfolioForm.clientId = clientId.value || 0
 
@@ -3764,6 +3841,7 @@ const handleEditPortfolio = async (portfolio: Portfolio, index: number) => {
 }
 
 const handleDeletePortfolio = async (index: number) => {
+  if (!ensureReviewEditable()) return
   try {
     await ElMessageBox.confirm(
       'This action cannot be undone. Are you sure you want to delete this?',
@@ -3795,6 +3873,7 @@ const handleDeletePortfolio = async (index: number) => {
 }
 
 const handleSubmitPortfolio = async () => {
+  if (!ensureReviewEditable()) return
   if (!portfolioFormRef.value) return
 
   await portfolioFormRef.value.validate(async (valid) => {
@@ -3855,6 +3934,7 @@ const handleSubmitPortfolio = async () => {
 
 // KYC 文档处理（type: Supporting 或 Name Screening）
 const handleUploadKYCDocument = (type: 'SUPPORTING_DOCUMENT' | 'NAME_SCREENING' = 'SUPPORTING_DOCUMENT') => {
+  if (!ensureReviewEditable()) return
   if (!clientId.value) {
     ElMessage.warning('Please save the client first')
     return
@@ -3887,6 +3967,7 @@ const handleOpenKYCDocument = async (document: KYCDocument) => {
 }
 
 const handleDeleteKYCDocument = async (document: KYCDocument, listKey: 'documents' | 'nameScreeningDocuments' = 'documents') => {
+  if (!ensureReviewEditable()) return
   if (!clientId.value) {
     ElMessage.warning('Client ID is missing')
     return
@@ -3926,6 +4007,7 @@ const handleDeleteKYCDocument = async (document: KYCDocument, listKey: 'document
 
 // Documents 处理
 const handleUploadDocument = (type: DocumentType) => {
+  if (!ensureReviewEditable()) return
   if (!clientId.value) {
     ElMessage.warning('Please save the client first')
     return
@@ -4070,6 +4152,7 @@ const bulkDownloadKycList = async (list: KYCDocument[], moduleName: string) => {
 }
 
 const handleDeleteDocument = async (document: Document) => {
+  if (!ensureReviewEditable()) return
   if (!clientId.value) {
     ElMessage.warning('Client ID is missing')
     return
@@ -4153,6 +4236,7 @@ const collectUploadFiles = (): File[] => {
 }
 
 const handleSubmitDocumentUpload = async () => {
+  if (!ensureReviewEditable()) return
   const files = collectUploadFiles()
   if (!files.length || !clientId.value) {
     ElMessage.warning('Please select at least one file')
@@ -4209,6 +4293,8 @@ const handleSubmitDocumentUpload = async () => {
     } else {
       const docTypeKey = documentUploadType.value as DocumentType
       const targetList = documentsData[docTypeKey]
+      const shouldSubmitSignatureAfterUpload =
+        canUploadFormsInPendingSignature.value && docTypeKey === 'forms'
 
       const appendDocs = (saved: any[]) => {
         saved.forEach((data: any, i: number) => {
@@ -4249,9 +4335,19 @@ const handleSubmitDocumentUpload = async () => {
         }
         appendDocs(saved)
       }
-      ElMessage.success(
-        files.length > 1 ? `${files.length} documents uploaded successfully` : 'Document uploaded successfully'
-      )
+      if (shouldSubmitSignatureAfterUpload) {
+        await workflowApi.submitSignature(clientId.value, currentClientType.value)
+        await loadProgress()
+        ElMessage.success(
+          files.length > 1
+            ? `${files.length} forms uploaded and signature submitted successfully`
+            : 'Form uploaded and signature submitted successfully'
+        )
+      } else {
+        ElMessage.success(
+          files.length > 1 ? `${files.length} documents uploaded successfully` : 'Document uploaded successfully'
+        )
+      }
     }
     documentUploadDialogVisible.value = false
     fileList.value = []

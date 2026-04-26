@@ -25,8 +25,12 @@
         placeholder="Contact Nature"
         style="width: 200px"
       >
-        <el-option label="Individual" value="Individual" />
-        <el-option label="Corporate" value="Corporate" />
+        <el-option
+          v-for="item in contactNatureOptionsWithCount"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
       </el-select>
       <el-select
         v-model="filters.rm"
@@ -37,7 +41,7 @@
         placeholder="RM"
         style="width: 220px"
       >
-        <el-option v-for="rm in rmOptions" :key="rm" :label="rm" :value="rm" />
+        <el-option v-for="rm in rmOptionsWithCount" :key="rm.value" :label="rm.label" :value="rm.value" />
       </el-select>
       <el-select
         v-model="filters.progress"
@@ -48,7 +52,12 @@
         placeholder="Progress"
         style="width: 240px"
       >
-        <el-option v-for="progress in progressOptions" :key="progress" :label="progress" :value="progress" />
+        <el-option
+          v-for="progress in progressOptionsWithCount"
+          :key="progress.value"
+          :label="progress.label"
+          :value="progress.value"
+        />
       </el-select>
       <el-select v-model="sortBy" placeholder="Sort By" style="width: 220px">
         <el-option label="Created Time (Newest)" value="created-desc" />
@@ -62,7 +71,18 @@
     <div v-loading.fullscreen="loading" class="table-wrapper">
       <template v-if="displayList.length">
         <el-table :data="displayList" class="client-table client-table--crm" style="width: 100%">
-          <el-table-column prop="client" label="Client" min-width="220" />
+          <el-table-column prop="client" label="Client" min-width="220">
+            <template #default="{ row }">
+              <el-link
+                type="primary"
+                class="client-name-link"
+                :underline="false"
+                @click.prevent="handleView(row)"
+              >
+                {{ row.client }}
+              </el-link>
+            </template>
+          </el-table-column>
           <el-table-column prop="contactNature" label="Contact Nature" width="150" />
           <el-table-column prop="rm" label="RM" min-width="180" />
           <el-table-column label="Progress" min-width="260">
@@ -173,8 +193,12 @@
             placeholder="Contact Nature"
             style="width: 200px"
           >
-            <el-option label="Individual" value="Individual" />
-            <el-option label="Corporate" value="Corporate" />
+            <el-option
+              v-for="item in contactNatureOptionsWithCount"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
           </el-select>
           <el-select
             v-model="exportDialogFilters.rm"
@@ -185,7 +209,7 @@
             placeholder="RM"
             style="width: 220px"
           >
-            <el-option v-for="rm in rmOptions" :key="rm" :label="rm" :value="rm" />
+            <el-option v-for="rm in rmOptionsWithCount" :key="rm.value" :label="rm.label" :value="rm.value" />
           </el-select>
           <el-select
             v-model="exportDialogFilters.progress"
@@ -196,7 +220,12 @@
             placeholder="Progress"
             style="width: 240px"
           >
-            <el-option v-for="progress in progressOptions" :key="progress" :label="progress" :value="progress" />
+            <el-option
+              v-for="progress in progressOptionsWithCount"
+              :key="progress.value"
+              :label="progress.label"
+              :value="progress.value"
+            />
           </el-select>
           <el-select v-model="exportDialogSortBy" placeholder="Sort By" style="width: 220px">
             <el-option label="Created Time (Newest)" value="created-desc" />
@@ -272,8 +301,9 @@ import {
   getProgressLabel,
   getProgressOwnerBadgeKind,
   getProgressSortWeight,
+  isClientEditable,
 } from '@/utils/client-progress'
-import { isReviewerOnlyEditInReviewRole } from '@/utils/roles'
+import { normalizeRole } from '@/utils/roles'
 
 interface ClientListRow {
   id: number
@@ -316,6 +346,38 @@ const filters = reactive({
 
 const rmOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.rm).filter(Boolean))).sort())
 const progressOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.progressLabel).filter(Boolean))))
+const contactNatureOptionsWithCount = computed(() => {
+  const counts = new Map<ClientType, number>()
+  clientList.value.forEach(item => {
+    counts.set(item.contactNature, (counts.get(item.contactNature) || 0) + 1)
+  })
+  return (['Individual', 'Corporate'] as const).map(value => ({
+    value,
+    label: `${value}（${counts.get(value) || 0}）`
+  }))
+})
+const rmOptionsWithCount = computed(() => {
+  const counts = new Map<string, number>()
+  clientList.value.forEach(item => {
+    if (!item.rm) return
+    counts.set(item.rm, (counts.get(item.rm) || 0) + 1)
+  })
+  return rmOptions.value.map(value => ({
+    value,
+    label: `${value}（${counts.get(value) || 0}）`
+  }))
+})
+const progressOptionsWithCount = computed(() => {
+  const counts = new Map<string, number>()
+  clientList.value.forEach(item => {
+    if (!item.progressLabel) return
+    counts.set(item.progressLabel, (counts.get(item.progressLabel) || 0) + 1)
+  })
+  return progressOptions.value.map(value => ({
+    value,
+    label: `${value}（${counts.get(value) || 0}）`
+  }))
+})
 
 const filterRows = (
   list: ClientListRow[],
@@ -473,11 +535,9 @@ const handleEdit = (row: ClientListRow) => {
 const canDeleteInList = (row: ClientListRow) =>
   canEditDeleteInClientList(row.progressStatus, row.inactive)
 
-/** 列表「Edit」：RM 等可改草稿；Operation/Compliance/RO 不在列表走普通编辑 */
+/** 列表「Edit」：可编辑状态（Pending Submission / Active）均可修改，Inactive 禁止 */
 const canEditInList = (row: ClientListRow) => {
-  if (!canEditDeleteInClientList(row.progressStatus, row.inactive)) return false
-  if (isReviewerOnlyEditInReviewRole(authStore.user?.role)) return false
-  return true
+  return isClientEditable(row.progressStatus, row.inactive)
 }
 
 const ownerBadgeKind = (row: ClientListRow) =>
@@ -687,11 +747,15 @@ const handleProgressUpdated = (progress: ClientProgressData) => {
 const handleProgressReview = () => {
   if (!selectedProgressClient.value) return
   const row = selectedProgressClient.value
+  const isRoSignatureReview =
+    normalizeRole(authStore.user?.role) === 'RO' &&
+    (row.progressStatus || '').toUpperCase() === 'SIGNATURE_UNDER_REVIEW'
   const url = router.resolve({
-    path: `/standalone/user/client/${row.id}/edit`,
+    path: isRoSignatureReview ? `/standalone/user/client/${row.id}` : `/standalone/user/client/${row.id}/edit`,
     query: {
       clientType: row.contactNature,
-      mode: 'review'
+      mode: 'review',
+      ...(isRoSignatureReview ? { tab: 'documents' } : {})
     }
   }).href
   window.open(url, '_blank', 'noopener,noreferrer')
@@ -905,6 +969,18 @@ onMounted(loadClients)
 
   .action-link {
     font-weight: 500;
+  }
+
+  .client-name-link {
+    color: #0f172a !important;
+    font-weight: 400;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .client-name-link:hover {
+    color: #025189 !important;
+    text-decoration: underline;
   }
 
   .action-link--disabled {

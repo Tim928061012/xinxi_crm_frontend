@@ -24,8 +24,12 @@
         placeholder="Contact Nature"
         style="width: 200px"
       >
-        <el-option label="Individual" value="Individual" />
-        <el-option label="Corporate" value="Corporate" />
+        <el-option
+          v-for="item in contactNatureOptionsWithCount"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
       </el-select>
       <el-select
         v-model="filters.rm"
@@ -36,7 +40,7 @@
         placeholder="RM"
         style="width: 220px"
       >
-        <el-option v-for="rm in rmOptions" :key="rm" :label="rm" :value="rm" />
+        <el-option v-for="rm in rmOptionsWithCount" :key="rm.value" :label="rm.label" :value="rm.value" />
       </el-select>
       <el-select
         v-model="filters.progress"
@@ -47,7 +51,12 @@
         placeholder="Progress"
         style="width: 240px"
       >
-        <el-option v-for="progress in progressOptions" :key="progress" :label="progress" :value="progress" />
+        <el-option
+          v-for="progress in progressOptionsWithCount"
+          :key="progress.value"
+          :label="progress.label"
+          :value="progress.value"
+        />
       </el-select>
       <el-select v-model="sortBy" placeholder="Sort By" style="width: 220px">
         <el-option label="Created Time (Newest)" value="created-desc" />
@@ -61,7 +70,18 @@
     <div v-loading.fullscreen="loading" class="table-wrapper">
       <template v-if="displayList.length">
         <el-table :data="displayList" class="client-table client-table--crm" style="width: 100%">
-          <el-table-column prop="client" label="Client" min-width="220" />
+          <el-table-column prop="client" label="Client" min-width="220">
+            <template #default="{ row }">
+              <el-link
+                type="primary"
+                class="client-name-link"
+                :underline="false"
+                @click.prevent="handleView(row)"
+              >
+                {{ row.client }}
+              </el-link>
+            </template>
+          </el-table-column>
           <el-table-column prop="contactNature" label="Contact Nature" width="150" />
           <el-table-column label="RM" min-width="200">
             <template #default="{ row }">
@@ -106,10 +126,12 @@
                 <el-link type="primary" class="action-link" :underline="false" @click.prevent="openProgress(row)">
                   Progress
                 </el-link>
-                <span class="action-sep" aria-hidden="true">|</span>
-                <el-link type="primary" class="action-link" :underline="false" @click.prevent="handleDelete(row)">
-                  Delete
-                </el-link>
+                <template v-if="canDeleteInList(row)">
+                  <span class="action-sep" aria-hidden="true">|</span>
+                  <el-link type="primary" class="action-link" :underline="false" @click.prevent="handleDelete(row)">
+                    Delete
+                  </el-link>
+                </template>
               </div>
             </template>
           </el-table-column>
@@ -143,8 +165,12 @@
             placeholder="Contact Nature"
             style="width: 200px"
           >
-            <el-option label="Individual" value="Individual" />
-            <el-option label="Corporate" value="Corporate" />
+            <el-option
+              v-for="item in contactNatureOptionsWithCount"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
           </el-select>
           <el-select
             v-model="exportDialogFilters.rm"
@@ -155,7 +181,7 @@
             placeholder="RM"
             style="width: 220px"
           >
-            <el-option v-for="rm in rmOptions" :key="rm" :label="rm" :value="rm" />
+            <el-option v-for="rm in rmOptionsWithCount" :key="rm.value" :label="rm.label" :value="rm.value" />
           </el-select>
           <el-select
             v-model="exportDialogFilters.progress"
@@ -166,7 +192,12 @@
             placeholder="Progress"
             style="width: 240px"
           >
-            <el-option v-for="progress in progressOptions" :key="progress" :label="progress" :value="progress" />
+            <el-option
+              v-for="progress in progressOptionsWithCount"
+              :key="progress.value"
+              :label="progress.label"
+              :value="progress.value"
+            />
           </el-select>
           <el-select v-model="exportDialogSortBy" placeholder="Sort By" style="width: 220px">
             <el-option label="Created Time (Newest)" value="created-desc" />
@@ -252,11 +283,12 @@ import { buildClientListCsv } from '@/utils/client-list-csv-export'
 import { buildClientSpecCsv, buildMultiClientSpecCsv, fillClientSpecExportRows } from '@/utils/client-spec-csv-export'
 import { clientExportRowKey } from '@/utils/client-export-row-key'
 import {
+  canEditDeleteInClientList,
   getProgressLabel,
   getProgressOwnerBadgeKind,
   getProgressSortWeight,
 } from '@/utils/client-progress'
-import { roleDisplayName } from '@/utils/roles'
+import { normalizeRole, roleDisplayName } from '@/utils/roles'
 
 interface AdminClientRow {
   id: number
@@ -300,6 +332,38 @@ const filters = reactive({
 
 const rmOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.rm).filter(Boolean))).sort())
 const progressOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.progressLabel).filter(Boolean))))
+const contactNatureOptionsWithCount = computed(() => {
+  const counts = new Map<ClientType, number>()
+  clientList.value.forEach(item => {
+    counts.set(item.contactNature, (counts.get(item.contactNature) || 0) + 1)
+  })
+  return (['Individual', 'Corporate'] as const).map(value => ({
+    value,
+    label: `${value}（${counts.get(value) || 0}）`
+  }))
+})
+const rmOptionsWithCount = computed(() => {
+  const counts = new Map<string, number>()
+  clientList.value.forEach(item => {
+    if (!item.rm) return
+    counts.set(item.rm, (counts.get(item.rm) || 0) + 1)
+  })
+  return rmOptions.value.map(value => ({
+    value,
+    label: `${value}（${counts.get(value) || 0}）`
+  }))
+})
+const progressOptionsWithCount = computed(() => {
+  const counts = new Map<string, number>()
+  clientList.value.forEach(item => {
+    if (!item.progressLabel) return
+    counts.set(item.progressLabel, (counts.get(item.progressLabel) || 0) + 1)
+  })
+  return progressOptions.value.map(value => ({
+    value,
+    label: `${value}（${counts.get(value) || 0}）`
+  }))
+})
 
 const filterRows = (
   list: AdminClientRow[],
@@ -446,7 +510,11 @@ const handleView = (row: AdminClientRow) => {
 const ownerBadgeKind = (row: AdminClientRow) =>
   getProgressOwnerBadgeKind(row.progressOwnerRoleLabel, row.progressStatus, row.inactive)
 
+const canDeleteInList = (row: AdminClientRow) =>
+  canEditDeleteInClientList(row.progressStatus, row.inactive)
+
 const handleDelete = async (row: AdminClientRow) => {
+  if (!canDeleteInList(row)) return
   try {
     await ElMessageBox.confirm(
       'This action cannot be undone. Are you sure you want to delete this client?',
@@ -637,11 +705,15 @@ const handleProgressUpdated = (progress: ClientProgressData) => {
 const handleProgressReview = () => {
   if (!selectedProgressClient.value) return
   const row = selectedProgressClient.value
+  const isRoSignatureReview =
+    normalizeRole(authStore.user?.role) === 'RO' &&
+    (row.progressStatus || '').toUpperCase() === 'SIGNATURE_UNDER_REVIEW'
   const url = router.resolve({
-    path: `/standalone/client/${row.id}/edit`,
+    path: isRoSignatureReview ? `/standalone/client/${row.id}` : `/standalone/client/${row.id}/edit`,
     query: {
       clientType: row.contactNature,
-      mode: 'review'
+      mode: 'review',
+      ...(isRoSignatureReview ? { tab: 'documents' } : {})
     }
   }).href
   window.open(url, '_blank', 'noopener,noreferrer')
@@ -868,6 +940,18 @@ onMounted(loadClients)
 
   .action-link {
     font-weight: 500;
+  }
+
+  .client-name-link {
+    color: #0f172a !important;
+    font-weight: 400;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .client-name-link:hover {
+    color: #025189 !important;
+    text-decoration: underline;
   }
 
   .export-dialog-inner {

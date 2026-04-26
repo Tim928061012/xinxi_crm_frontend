@@ -119,6 +119,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // 仅清理本地登录态，不调用后端接口（用于账号失效等强制退出场景）
+  function clearAuthLocal() {
+    token.value = null
+    user.value = null
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
+  }
+
   // 获取用户信息
   async function fetchUserInfo() {
     try {
@@ -171,6 +181,7 @@ export const useAuthStore = defineStore('auth', () => {
     isUser,
     login,
     logout,
+    clearAuthLocal,
     fetchUserInfo,
     initAuth
   }

@@ -51,6 +51,32 @@ request.interceptors.request.use(
 
 // 标记是否已经在展示登录失效弹窗，避免重复弹出
 let isAuthDialogVisible = false
+let isAccountDisabledRedirecting = false
+
+const isAccountDisabledMessage = (message?: string): boolean => {
+  if (!message) return false
+  const text = String(message).toLowerCase()
+  return text.includes('account is disabled') || text.includes('账号已禁用') || text.includes('账号不可用')
+}
+
+const forceLogoutToLogin = () => {
+  if (isAccountDisabledRedirecting) return
+  isAccountDisabledRedirecting = true
+
+  const authStore = useAuthStore()
+  authStore.clearAuthLocal()
+
+  const jump = () => {
+    if (router.currentRoute.value.name === 'Login') {
+      isAccountDisabledRedirecting = false
+      return
+    }
+    router.replace({ name: 'Login' }).finally(() => {
+      isAccountDisabledRedirecting = false
+    })
+  }
+  jump()
+}
 
 // 响应拦截器
 request.interceptors.response.use(
@@ -72,8 +98,15 @@ request.interceptors.response.use(
           result.__rawResponse = response
           return result
         } else {
+          const msg = data.msg || data.message
+          if (isAccountDisabledMessage(msg)) {
+            const disabledError = new Error(msg || 'Account is disabled')
+            ;(disabledError as any).isAuthError = true
+            forceLogoutToLogin()
+            return Promise.reject(disabledError)
+          }
           // success 为 false，不显示错误消息，让调用方处理，避免重复提示
-          return Promise.reject(new Error(data.message || 'Request failed'))
+          return Promise.reject(new Error(msg || 'Request failed'))
         }
       }
       
@@ -85,16 +118,23 @@ request.interceptors.response.use(
           result.__rawResponse = response
           return result
         } else {
+          const msg = data.msg || data.message
+          if (isAccountDisabledMessage(msg)) {
+            const disabledError = new Error(msg || 'Account is disabled')
+            ;(disabledError as any).isAuthError = true
+            forceLogoutToLogin()
+            return Promise.reject(disabledError)
+          }
           // 403 权限错误特殊处理
           if (data.code === 403) {
-            const error = new Error(data.msg || data.message || 'Permission denied')
+            const error = new Error(msg || 'Permission denied')
             // 标记为权限错误，方便调用方处理
             ;(error as any).code = 403
             ;(error as any).isPermissionError = true
             return Promise.reject(error)
           }
           // 不在这里显示错误消息，让调用方处理，避免重复提示
-          const error = new Error(data.msg || data.message || 'Request failed')
+          const error = new Error(msg || 'Request failed')
           ;(error as any).code = data.code
           return Promise.reject(error)
         }
@@ -121,6 +161,13 @@ request.interceptors.response.use(
 
     if (response) {
       const status = response.status
+      const message = response?.data?.msg || response?.data?.message || error?.message
+
+      if (isAccountDisabledMessage(message)) {
+        ;(error as any).isAuthError = true
+        forceLogoutToLogin()
+        return Promise.reject(error)
+      }
       
       // 401 特殊处理：未授权，需要提示登录失效并跳转到登录页
       if (status === 401) {
