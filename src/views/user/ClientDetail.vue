@@ -260,20 +260,7 @@
                 <!-- 第4行: Client Relationship Status, Gender -->
                 <div class="form-row">
                   <el-form-item label="Client Relationship Status">
-                    <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientRelationshipStatus) }}</span>
-                    </template>
-                    <template v-else>
-                      <el-select
-                        v-model="clientForm.general.clientRelationshipStatus"
-                        placeholder="Please select"
-                        style="width: 100%"
-                        :disabled="isViewMode"
-                      >
-                        <el-option label="Prospecting" value="Prospecting" />
-                        <el-option label="On Boarding" value="On Boarding" />
-                      </el-select>
-                    </template>
+                    <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientRelationshipStatus) }}</span>
                   </el-form-item>
                   <el-form-item label="Gender">
                     <template v-if="isViewMode">
@@ -633,20 +620,7 @@
                 <!-- 第4行: Client Relationship Status, Date of Company Search/COI Issued -->
                 <div class="form-row">
                   <el-form-item label="Client Relationship Status">
-                    <template v-if="isViewMode">
-                      <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientRelationshipStatus) }}</span>
-                    </template>
-                    <template v-else>
-                      <el-select
-                        v-model="clientForm.general.clientRelationshipStatus"
-                        placeholder="Please select"
-                        style="width: 100%"
-                        :disabled="isViewMode"
-                      >
-                        <el-option label="Prospecting" value="Prospecting" />
-                        <el-option label="On Boarding" value="On Boarding" />
-                      </el-select>
-                    </template>
+                    <span class="view-mode-text">{{ formatDisplayValue(clientForm.general.clientRelationshipStatus) }}</span>
                   </el-form-item>
                   <el-form-item label="Date of Company Search/COI Issued (dd/mm/yyyy)" style="align-self: flex-start;">
                     <template v-if="isViewMode">
@@ -2342,6 +2316,39 @@ const isRoSignatureReviewInView = computed(
 const canBulkDownloadModule = computed(() => !!clientId.value && (isViewMode.value || isReviewMode.value))
 const currentProgressStatus = computed(() => normalizeProgressStatus(progressData.value?.progressStatus))
 const isPendingSignatureStatus = computed(() => currentProgressStatus.value === 'PENDING_SIGNATURE')
+const ON_BOARDING_PROGRESS_SET = new Set([
+  'OPERATIONAL_REVIEW',
+  'COMPLIANCE_REVIEW',
+  'PENDING_SIGNATURE',
+  'SIGNATURE_UNDER_REVIEW'
+])
+
+const deriveClientRelationshipStatus = (
+  progressStatus: string | undefined,
+  currentValue: string | undefined
+) => {
+  const normalized = normalizeProgressStatus(progressStatus)
+  const current = (currentValue || '').trim()
+  if (normalized === 'ACTIVE') return 'Approved'
+  if (ON_BOARDING_PROGRESS_SET.has(normalized)) return 'On Boarding'
+  if (normalized === 'PENDING_SUBMISSION') {
+    // 进入过提交流程后回退到 Pending Submission（如驳回重提）仍维持 On Boarding。
+    if (current === 'On Boarding' || current === 'Approved') return 'On Boarding'
+    return 'Prospecting'
+  }
+  return current || 'Prospecting'
+}
+
+const syncClientRelationshipStatusFromProgress = () => {
+  const g = clientForm.general as { clientRelationshipStatus?: string } | null
+  if (!g) return
+  const resolvedStatus = deriveClientRelationshipStatus(
+    progressData.value?.progressStatus || progressStatusFallback.value,
+    g.clientRelationshipStatus
+  )
+  g.clientRelationshipStatus = resolvedStatus
+}
+
 const canReviewAction = computed(() => {
   if (isPendingSignatureStatus.value) return false
   return progressData.value?.availableActions?.includes('REVIEW') ?? false
@@ -2995,6 +3002,7 @@ const loadClient = async () => {
         general.introducerId = undefined
       }
       clientForm.general = general as any
+      syncClientRelationshipStatusFromProgress()
     } else {
       // 如果没有general，创建默认值
       if (clientForm.contactNature === 'Individual') {
@@ -3017,6 +3025,7 @@ const loadClient = async () => {
           introducerId: undefined
         } as CorporateGeneralInfo
       }
+      syncClientRelationshipStatusFromProgress()
     }
     
     // 如果存在 introducerId，则预先加载 Introducer 列表，保证下拉中有对应的名称
@@ -3278,6 +3287,7 @@ const loadProgress = async () => {
   try {
     const response = await workflowApi.getProgress(clientId.value, currentClientType.value)
     progressData.value = response.data || response
+    syncClientRelationshipStatusFromProgress()
   } catch (error) {
     console.warn('Failed to load workflow progress:', error)
     // 保留已有 progressData，避免顶部状态在网络抖动时闪空
@@ -3927,6 +3937,7 @@ const handleReviewDecision = async (approve: boolean) => {
 
 const handleProgressUpdated = (progress: ClientProgressData) => {
   progressData.value = progress
+  syncClientRelationshipStatusFromProgress()
 }
 
 const FORMS_REQUIRED_BEFORE_SUBMIT_MSG =
