@@ -48,7 +48,6 @@ export interface ClientComment {
 
 export interface CreateCommentPayload {
   moduleName: string
-  title: string
   description: string
 }
 

@@ -1,45 +1,21 @@
 <template>
-  <div class="comments-sidebar" :class="{ 'comments-sidebar--collapsed': collapsed }">
-    <button
-      v-if="collapsed"
-      type="button"
-      class="comments-sidebar__expand-strip"
-      aria-label="Expand comments"
-      @click="emit('update:collapsed', false)"
-    >
-      <el-icon class="chev"><DArrowLeft /></el-icon>
-      <span class="v-label"
-        >Comments<span class="v-label__count"> ({{ threadCount }})</span></span
-      >
-    </button>
-
-    <div v-else class="comments-sidebar__expanded">
-      <header class="comments-sidebar__head">
-        <h2 class="head-title">
-          Comments
-          <span class="head-title__count">({{ threadCount }})</span>
-        </h2>
+  <div class="comments-sidebar">
+    <div ref="sidebarExpandedRef" class="comments-sidebar__expanded">
+      <header ref="sidebarHeadRef" class="comments-sidebar__head">
+        <h2 class="head-title">Comment</h2>
         <div class="head-actions">
           <button
             type="button"
             class="head-icon-btn head-icon-btn--add"
-            aria-label="Add comment"
+            aria-label="Comment"
             @click="onAddComment"
           >
-            <el-icon><Plus /></el-icon>
-          </button>
-          <button
-            type="button"
-            class="head-icon-btn head-icon-btn--collapse"
-            aria-label="Collapse comments"
-            @click="emit('update:collapsed', true)"
-          >
-            <el-icon><ArrowRight /></el-icon>
+            <el-icon><CirclePlus /></el-icon>
           </button>
         </div>
       </header>
 
-      <div v-loading="loading" class="comments-sidebar__scroll-wrap">
+      <div v-loading="loading && comments.length > 0" class="comments-sidebar__scroll-wrap">
         <el-scrollbar class="comments-sidebar__scrollbar">
           <div v-if="!comments.length" class="empty-mini">No comments yet</div>
           <div v-else class="sidebar-groups">
@@ -53,7 +29,11 @@
               <div class="sidebar-thread__block">
                 <p class="sidebar-thread__text">{{ thread.comment.description }}</p>
                 <div class="sidebar-thread__footer">
-                  <span class="sidebar-thread__meta">{{ authorAtLine(thread.comment) }}</span>
+                  <span class="sidebar-thread__meta">
+                    <span class="sidebar-thread__author">{{ displayAuthorName(thread.comment) }}</span>
+                    <span class="sidebar-thread__at">at</span>
+                    <span class="sidebar-thread__time">{{ formatSidebarDateTime(thread.comment.createdAt) }}</span>
+                  </span>
                   <div class="sidebar-thread__actions">
                     <button
                       type="button"
@@ -95,7 +75,11 @@
                 <div v-for="reply in thread.comment.replies" :key="reply.commentId" class="sidebar-reply">
                   <p class="sidebar-reply__text">{{ reply.description }}</p>
                   <div class="sidebar-thread__footer">
-                    <span class="sidebar-thread__meta">{{ authorAtLine(reply) }}</span>
+                    <span class="sidebar-thread__meta">
+                      <span class="sidebar-thread__author">{{ displayAuthorName(reply) }}</span>
+                      <span class="sidebar-thread__at">at</span>
+                      <span class="sidebar-thread__time">{{ formatSidebarDateTime(reply.createdAt) }}</span>
+                    </span>
                     <div class="sidebar-thread__actions">
                       <button
                         v-if="canDeleteComment(reply)"
@@ -120,7 +104,7 @@
 
 <script setup lang="ts">
 import { computed, inject, nextTick, ref, watch } from 'vue'
-import { ArrowRight, ChatDotRound, DArrowLeft, Delete, Plus } from '@element-plus/icons-vue'
+import { ChatDotRound, CirclePlus, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { workflowApi, type ClientComment, type ClientType } from '@/api/user/workflow'
 import { getCommentModuleLabel, commentModuleSortIndex } from '@/utils/comment-modules'
@@ -130,15 +114,13 @@ import { formatDateTime } from '@/utils/date'
 const props = defineProps<{
   clientId: number
   clientType: ClientType
-  collapsed: boolean
+  collapsed?: boolean
   currentUserId?: string | number
   /** 当前主 Tab 映射的模块，用于侧栏「添加评论」默认归属 */
   defaultModule?: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:collapsed', value: boolean): void
-  (e: 'open-comments-tab'): void
   (e: 'count-updated', total: number): void
   (e: 'changed'): void
 }>()
@@ -149,6 +131,8 @@ const loading = ref(false)
 const comments = ref<ClientComment[]>([])
 const replyTargetId = ref<number | null>(null)
 const replyText = ref('')
+const sidebarExpandedRef = ref<HTMLElement | null>(null)
+const sidebarHeadRef = ref<HTMLElement | null>(null)
 
 const UNSPECIFIED = '_UNSPECIFIED'
 
@@ -179,8 +163,6 @@ const commentGroups = computed<CommentGroup[]>(() => {
   }))
 })
 
-const threadCount = computed(() => comments.value.length)
-
 const flatThreads = computed(() =>
   commentGroups.value.flatMap(group =>
     group.items.map(comment => ({
@@ -199,22 +181,21 @@ function countTotal(list: ClientComment[]): number {
   return n
 }
 
-/** 设计稿：27/11/2025 19:00 */
+/** 设计稿：27/11 19:00（隐藏年份以缩短占宽） */
 function formatSidebarDateTime(value?: string | null): string {
   const t = formatDateTime(value || '')
   if (!t || t === '-') return '-'
   const m = t.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/)
   if (m) {
-    const [, y, mo, d, hm] = m
-    return `${d}/${mo}/${y} ${hm}`
+    const [, , mo, d, hm] = m
+    return `${d}/${mo} ${hm}`
   }
   return t
 }
 
-function authorAtLine(c: ClientComment): string {
-  const name = c.createdByName || '-'
-  const when = formatSidebarDateTime(c.createdAt)
-  return `${name} at ${when}`
+function displayAuthorName(c: ClientComment): string {
+  const raw = (c.createdByName || '').trim()
+  return raw || '-'
 }
 
 const loadComments = async () => {
@@ -236,8 +217,7 @@ function onAddComment() {
   const mod = (props.defaultModule || 'BASIC').trim() || 'BASIC'
   if (commentDialog?.openAddComment) {
     commentDialog.openAddComment({
-      moduleName: mod,
-      presetTitle: getCommentModuleLabel(mod) || mod
+      moduleName: mod
     })
   } else {
     commentDialog?.openNewComment()
@@ -325,24 +305,29 @@ watch(
 )
 
 defineExpose({
-  reload: loadComments
+  reload: loadComments,
+  getContentHeight: () => {
+    const expanded = sidebarExpandedRef.value
+    if (!expanded) return 0
+    return expanded.scrollHeight
+  },
+  getHeaderHeight: () => {
+    const head = sidebarHeadRef.value
+    return head?.offsetHeight || 0
+  }
 })
 </script>
 
 <style scoped lang="scss">
 $crm-primary: #025189;
 $crm-primary-hover: #0369a1;
-$head-add: #0c8ce8;
-$head-add-hover: #0778c9;
-$head-collapse: #003056;
-$head-collapse-hover: #002040;
 $meta-grey: #909399;
 $text-body: #303133;
 $divider: #ebeef5;
 
 .comments-sidebar {
-  height: 100%;
-  min-height: 320px;
+  height: auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: #fff;
@@ -350,53 +335,10 @@ $divider: #ebeef5;
   border-radius: inherit;
 }
 
-.comments-sidebar--collapsed {
-  min-height: 0;
-  width: 100%;
-  align-items: stretch;
-}
-
-.comments-sidebar__expand-strip {
-  flex: 1;
-  min-height: 280px;
-  width: 100%;
-  border: none;
-  padding: 8px 4px;
-  background: linear-gradient(180deg, #f8fafc 0%, #fff 40%);
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  color: $crm-primary;
-  border-radius: 0 4px 4px 0;
-
-  &:hover {
-    background: #eef5fc;
-  }
-
-  .chev {
-    font-size: 18px;
-  }
-
-  .v-label {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-
-    &__count {
-      font-weight: 700;
-    }
-  }
-}
-
 .comments-sidebar__expanded {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: auto;
   min-height: 0;
 }
 
@@ -432,23 +374,24 @@ $divider: #ebeef5;
 }
 
 .head-icon-btn {
-  $size: 32px;
-  width: $size;
-  height: $size;
-  min-width: $size;
-  min-height: $size;
-  border-radius: 50%;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 0;
   border: none;
+  background: transparent;
+  box-shadow: none;
   padding: 0;
   margin: 0;
-  color: #fff;
+  color: $crm-primary;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition:
-    background 0.15s ease,
+    color 0.15s ease,
     transform 0.1s ease;
   -webkit-tap-highlight-color: transparent;
 
@@ -466,36 +409,26 @@ $divider: #ebeef5;
   }
 
   &--add {
-    background: $head-add;
-
     &:hover {
-      background: $head-add-hover;
-    }
-  }
-
-  &--collapse {
-    background: $head-collapse;
-
-    &:hover {
-      background: $head-collapse-hover;
+      color: $crm-primary-hover;
     }
   }
 }
 
 .comments-sidebar__scroll-wrap {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
   position: relative;
 }
 
 .comments-sidebar__scrollbar {
-  height: 100%;
+  height: auto;
   padding: 0 8px 0 14px;
   box-sizing: border-box;
 }
 
 .comments-sidebar__scrollbar :deep(.el-scrollbar__wrap) {
-  max-height: calc(100vh - 200px);
+  max-height: none;
 }
 
 .empty-mini {
@@ -567,6 +500,22 @@ $divider: #ebeef5;
   line-height: 1.4;
   flex: 1;
   min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+}
+
+.sidebar-thread__author {
+  white-space: nowrap;
+}
+
+.sidebar-thread__at {
+  white-space: nowrap;
+  margin: 0 4px;
+}
+
+.sidebar-thread__time {
+  white-space: nowrap;
 }
 
 .sidebar-thread__actions {
@@ -581,12 +530,12 @@ $divider: #ebeef5;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: auto;
+  height: auto;
   padding: 0;
   margin: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: 0;
   background: transparent;
   color: $crm-primary;
   cursor: pointer;
@@ -595,7 +544,7 @@ $divider: #ebeef5;
     background 0.12s ease;
 
   .el-icon {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   &:hover {

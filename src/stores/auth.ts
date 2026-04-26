@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { User, LoginForm } from '@/types/auth'
 import { authApi } from '@/api/auth'
 import { isAdminRole, isEmployeeRole, normalizeRole, roleDisplayName } from '@/utils/roles'
+import { formatPersonName } from '@/utils/name'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -69,7 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
         roleDisplayName: roleDisplayName(normalized),
         name:
           rawUserData.name ||
-          [rawUserData.lastName, rawUserData.firstName].filter(Boolean).join(', ') ||
+          formatPersonName(rawUserData.firstName, rawUserData.lastName) ||
           rawUserData.username
       }
 
@@ -140,7 +141,7 @@ export const useAuthStore = defineStore('auth', () => {
         account: data.account || data.username || '',
         firstName: data.firstName || '',
         lastName: data.lastName || '',
-        name: [data.lastName, data.firstName].filter(Boolean).join(', ') || data.username || '',
+        name: formatPersonName(data.firstName, data.lastName) || data.username || '',
         role: normalizeRole(data.role),
         roleDisplayName: data.roleDisplayName || roleDisplayName(data.role),
         email: data.email || '',

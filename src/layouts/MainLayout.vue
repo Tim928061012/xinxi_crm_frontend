@@ -196,7 +196,8 @@ const handleLogout = async () => {
         color: #606266;
         
         &:hover {
-          background-color: #f0f0f0;
+          background-color: #f5f7fa;
+          color: #606266;
         }
       }
     }

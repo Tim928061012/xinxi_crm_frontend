@@ -54,11 +54,13 @@
               {{ formatDateTime(row.createdTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="Actions" width="150">
+          <el-table-column label="Actions" width="170" fixed="right">
             <template #default="{ row }">
-              <el-link type="primary" :underline="false" @click="goView(row)">View</el-link>
-              <el-divider direction="vertical" />
-              <el-link type="primary" :underline="false" @click="goEdit(row)">Edit</el-link>
+              <div class="table-actions">
+                <el-link type="primary" class="action-link" :underline="false" @click="goView(row)">View</el-link>
+                <span class="action-sep" aria-hidden="true">|</span>
+                <el-link type="primary" class="action-link" :underline="false" @click="goEdit(row)">Edit</el-link>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -85,6 +87,7 @@ import { accountApi } from '@/api/account'
 import { formatDateTime } from '@/utils/date'
 import { formatIntroducerDisplayId } from '@/utils/introducer-display-id'
 import { isAdminRole, roleDisplayName } from '@/utils/roles'
+import { formatPersonName } from '@/utils/name'
 
 const route = useRoute()
 const router = useRouter()
@@ -111,7 +114,7 @@ const loadIntroducers = async () => {
         if (!userId) return
         const firstName = (acc.firstName || acc.first_name || '') as string
         const lastName = (acc.lastName || acc.last_name || '') as string
-        const name = `${firstName}, ${lastName}`.trim() || (acc.name as string) || (acc.account as string) || ''
+        const name = formatPersonName(firstName, lastName) || (acc.name as string) || (acc.account as string) || ''
         const isActive = acc.isActive === true || acc.isActive === 'true' || acc.active === true
         accountMap.set(Number(userId), { name, isActive })
       })
@@ -131,7 +134,7 @@ const loadIntroducers = async () => {
       if (contactNature === 'Individual') {
         const firstName = (item.firstName || item.first_name || '') as string
         const lastName = (item.lastName || item.last_name || '') as string
-        introducerName = `${firstName}, ${lastName}`.trim()
+        introducerName = formatPersonName(firstName, lastName)
       } else {
         introducerName = (item.companyName || item.company_name || '') as string
       }
@@ -212,9 +215,9 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .introducer-page {
-  padding: 20px;
-  background-color: #f5f5f5;
-  min-height: 100vh;
+  padding: 20px 28px 28px;
+  background-color: var(--crm-surface-page);
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -226,27 +229,32 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     padding: 0;
     width: 100%;
     box-sizing: border-box;
 
     .user-info {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
-      color: #606266;
+      gap: 10px;
+      color: #1f2a37;
       font-size: 14px;
-      padding: 0;
+      line-height: 1;
+      padding: 8px 12px;
       margin: 0;
+      border-radius: 10px;
+      background: #e8eff6;
 
       .user-role-pill {
-        margin-left: 6px;
-        padding: 2px 8px;
-        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        margin-left: 2px;
+        padding: 0;
+        font-size: 13px;
+        line-height: 1;
+        font-weight: 500;
         color: #025189;
-        background: #e8f1fa;
-        border-radius: 4px;
       }
 
       :deep(.el-icon) {
@@ -265,6 +273,7 @@ onMounted(() => {
   .table-wrapper {
     width: 100%;
     flex: 1;
+    min-height: 420px;
     padding: 0;
     margin: 0;
     box-sizing: border-box;
@@ -273,9 +282,10 @@ onMounted(() => {
 
   .introducer-table {
     background-color: #fff;
-    border-radius: 4px;
+    border-radius: var(--crm-radius-lg);
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--crm-shadow-card);
+    border: 1px solid rgba(226, 232, 240, 0.9);
     width: 100%;
     box-sizing: border-box;
     margin: 0;
@@ -305,8 +315,9 @@ onMounted(() => {
           background-color: #025189 !important;
           color: #fff !important;
           border: none;
-          font-weight: 500;
-          padding: 12px 0;
+          font-weight: 600;
+          font-size: 14px;
+          padding: 10px 0;
           box-sizing: border-box;
         }
       }
@@ -330,7 +341,7 @@ onMounted(() => {
           }
 
           td {
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid #ebeef5;
             box-sizing: border-box;
           }
@@ -342,14 +353,28 @@ onMounted(() => {
       background-color: #fafafa;
     }
 
-    :deep(.el-link) {
+    .table-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0;
       font-size: 14px;
-      margin-right: 8px;
     }
 
-    :deep(.el-divider--vertical) {
-      margin: 0 8px;
-      height: 14px;
+    .action-sep {
+      color: #c0c4cc;
+      padding: 0 6px;
+      user-select: none;
+    }
+
+    .action-link {
+      font-weight: 500;
+    }
+
+    :deep(.el-table__body td.el-table-fixed-column--right),
+    :deep(.el-table__header th.el-table-fixed-column--right) {
+      padding-left: 8px !important;
+      padding-right: 8px !important;
     }
   }
 

@@ -12,9 +12,6 @@
           <el-option v-for="module in modules" :key="module.value" :label="module.label" :value="module.value" />
         </el-select>
       </el-form-item>
-      <el-form-item label="Title">
-        <el-input v-model="commentForm.title" maxlength="50" show-word-limit placeholder="Please enter title" />
-      </el-form-item>
       <el-form-item label="Description">
         <el-input
           v-model="commentForm.description"
@@ -37,7 +34,7 @@
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { workflowApi, type ClientType } from '@/api/user/workflow'
-import { COMMENT_MODULE_OPTIONS, getCommentModuleLabel } from '@/utils/comment-modules'
+import { COMMENT_MODULE_OPTIONS } from '@/utils/comment-modules'
 
 const modules = COMMENT_MODULE_OPTIONS
 
@@ -55,23 +52,16 @@ const emit = defineEmits<{
 const commentDialogVisible = ref(false)
 const commentForm = reactive({
   moduleName: 'BASIC',
-  title: '',
   description: ''
 })
 
-/** 自由添加：title 初始为空 */
 function openNewComment() {
   openAddComment({ freeForm: true })
 }
 
-function openAddComment(options?: { moduleName?: string; presetTitle?: string; freeForm?: boolean }) {
+function openAddComment(options?: { moduleName?: string; freeForm?: boolean }) {
   const mod = (options?.moduleName || props.contextDefaultModule || 'BASIC') as string
   commentForm.moduleName = mod
-  if (options?.freeForm) {
-    commentForm.title = ''
-  } else {
-    commentForm.title = options?.presetTitle ?? (getCommentModuleLabel(mod) || mod)
-  }
   commentForm.description = ''
   commentDialogVisible.value = true
 }
@@ -86,18 +76,17 @@ function closeNewComment() {
 }
 
 async function submitComment() {
-  if (!commentForm.title.trim() || !commentForm.description.trim()) {
-    ElMessage.warning('Please complete title and description')
+  if (!commentForm.description.trim()) {
+    ElMessage.warning('Please complete description')
     return
   }
-  if (commentForm.title.trim().length > 50 || commentForm.description.trim().length > 1000) {
-    ElMessage.warning('Title max 50 characters, description max 1000')
+  if (commentForm.description.trim().length > 1000) {
+    ElMessage.warning('Description max 1000 characters')
     return
   }
   try {
     await workflowApi.createComment(props.clientId, props.clientType, {
       moduleName: commentForm.moduleName,
-      title: commentForm.title.trim(),
       description: commentForm.description.trim()
     })
     ElMessage.success('Comment added')

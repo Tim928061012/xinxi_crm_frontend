@@ -1,108 +1,110 @@
 <template>
   <div class="client-detail-page" v-loading.fullscreen="pageLoading" element-loading-text="Loading client data...">
-    <!-- 顶部：左为姓名 +（流程节点），右为操作按钮 -->
-    <div class="top-header">
-      <div class="top-header__leading">
-        <el-button :icon="ArrowLeft" circle class="top-header__back" @click="handleBack" />
-        <h1 class="top-header__title">
-          {{ headerClientName }}
-          <span v-if="headerWorkflowStatusText" class="top-header__status">({{ headerWorkflowStatusText }})</span>
-        </h1>
-      </div>
-      <div class="top-header__actions">
-        <template v-if="isRoSignatureReviewInView">
-          <el-button
-            type="success"
-            @click="handleReviewDecision(true)"
-            :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
-          >
-            Approve
-          </el-button>
-          <el-button
-            type="danger"
-            plain
-            @click="handleReviewDecision(false)"
-            :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
-          >
-            Reject
-          </el-button>
-          <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
-            Progress
-          </el-button>
-        </template>
-        <!-- View 模式：普通用户与管理员均显示 Edit -->
-        <template v-else-if="isViewMode">
-          <el-button
-            v-if="canSubmitAction"
-            type="primary"
-            :disabled="workflowLoading || !clientDetailLoaded || pageLoading"
-            @click="handleHeaderSubmit"
-          >
-            Submit
-          </el-button>
-          <el-button v-if="canShowEditButton" type="primary" @click="handleEdit">
-            Edit
-          </el-button>
-          <el-button
-            v-if="clientId"
-            :class="['top-header__btn-progress', { 'top-header__btn-progress--muted': headerProgressMuted }]"
-            :disabled="!clientDetailLoaded || pageLoading"
-            @click="openProgressDialog"
-          >
-            Progress
-          </el-button>
-          <el-button v-if="canReviewAction" type="success" @click="enterReviewMode">
-            Review
-          </el-button>
-        </template>
-        <template v-else-if="isReviewMode">
-          <el-button
-            type="success"
-            @click="handleReviewDecision(true)"
-            :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
-          >
-            Approve
-          </el-button>
-          <el-button
-            type="danger"
-            plain
-            @click="handleReviewDecision(false)"
-            :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
-          >
-            Reject
-          </el-button>
-          <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
-            Progress
-          </el-button>
-        </template>
-        <!-- Edit/New 模式：显示保存按钮（管理员可编辑不可新建，故 admin 下仅 edit 会进入此处） -->
-        <template v-else-if="!isViewMode">
-          <el-button
-            type="primary"
-            @click="() => handleSave(false)"
-            :disabled="saving"
-          >
-            Save
-          </el-button>
-          <el-button
-            @click="() => handleSave(true)"
-            :disabled="saving"
-          >
-            Save & Close
-          </el-button>
-          <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
-            Progress
-          </el-button>
-        </template>
-        <span v-if="currentTabLastSaved" class="last-saved">
-          {{ currentTabLastSaved }}
-        </span>
-      </div>
-    </div>
-
     <!-- Tab 导航 + 主内容区（General～Fee 时若有评论则显示右侧栏） -->
-    <div class="client-tabs-shell">
-      <div class="client-tabs-shell__main">
+    <div class="client-tabs-shell" :class="{ 'is-comments-fill': commentsRailFillMainHeight }">
+      <div ref="tabsShellMainRef" class="client-tabs-shell__main">
+        <!-- 顶部：仅属于主内容列，避免跑到 comments 上方 -->
+        <div class="top-header">
+          <div class="top-header__leading">
+            <el-button :icon="ArrowLeft" circle class="top-header__back" @click="handleBack" />
+            <h1 class="top-header__title">
+              <span class="top-header__name">{{ headerClientName }}</span>
+              <template v-if="headerWorkflowStatusText">
+                <span class="top-header__sep" aria-hidden="true">|</span>
+                <span class="top-header__status">{{ headerWorkflowStatusText }}</span>
+              </template>
+              <template v-if="currentTabLastSaved">
+                <span class="top-header__sep" aria-hidden="true">|</span>
+                <span class="last-saved">{{ currentTabLastSaved }}</span>
+              </template>
+            </h1>
+          </div>
+          <div class="top-header__actions">
+            <template v-if="isRoSignatureReviewInView">
+              <el-button
+                type="success"
+                @click="handleReviewDecision(true)"
+                :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
+              >
+                Approve
+              </el-button>
+              <el-button
+                type="danger"
+                plain
+                @click="handleReviewDecision(false)"
+                :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
+              >
+                Reject
+              </el-button>
+              <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
+                Progress
+              </el-button>
+            </template>
+            <template v-else-if="isViewMode">
+              <el-button
+                v-if="canSubmitAction"
+                type="primary"
+                :disabled="workflowLoading || !clientDetailLoaded || pageLoading"
+                @click="handleHeaderSubmit"
+              >
+                Submit
+              </el-button>
+              <el-button v-if="canShowEditButton" type="primary" @click="handleEdit">
+                Edit
+              </el-button>
+              <el-button v-if="canReviewAction" type="success" @click="enterReviewMode">
+                Review
+              </el-button>
+              <el-button
+                v-if="clientId"
+                :class="['top-header__btn-progress', { 'top-header__btn-progress--muted': headerProgressMuted }]"
+                :disabled="!clientDetailLoaded || pageLoading"
+                @click="openProgressDialog"
+              >
+                Progress
+              </el-button>
+            </template>
+            <template v-else-if="isReviewMode">
+              <el-button
+                type="success"
+                @click="handleReviewDecision(true)"
+                :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
+              >
+                Approve
+              </el-button>
+              <el-button
+                type="danger"
+                plain
+                @click="handleReviewDecision(false)"
+                :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
+              >
+                Reject
+              </el-button>
+              <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
+                Progress
+              </el-button>
+            </template>
+            <template v-else-if="!isViewMode">
+              <el-button
+                type="primary"
+                @click="() => handleSave(false)"
+                :disabled="saving"
+              >
+                Save
+              </el-button>
+              <el-button
+                @click="() => handleSave(true)"
+                :disabled="saving"
+              >
+                Save & Close
+              </el-button>
+              <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
+                Progress
+              </el-button>
+            </template>
+          </div>
+        </div>
+
         <!-- 挂载在 tab 外，避免未进入 Comments 标签时 ref 为空导致「Add comment」无响应 -->
         <ClientAddCommentDialog
           v-if="clientId"
@@ -112,6 +114,19 @@
           :context-default-module="commentsContextModule"
           @changed="handleAddCommentDialogSuccess"
         />
+    <div class="client-tabs-wrap">
+      <button
+        v-if="commentsSideRailVisible"
+        type="button"
+        class="client-tabs__comment-toggle"
+        :aria-pressed="!commentsRailCollapsed"
+        @click="toggleCommentsRail"
+      >
+        <el-icon>
+          <component :is="commentsRailCollapsed ? View : Hide" />
+        </el-icon>
+        <span>{{ commentsRailCollapsed ? 'Show Comment' : 'Hide Comment' }}</span>
+      </button>
     <el-tabs v-model="activeTab" class="client-tabs">
       <el-tab-pane label="General" name="general">
         <div class="tab-content">
@@ -1986,20 +2001,19 @@
         </div>
       </el-tab-pane>
     </el-tabs>
+    </div>
       </div>
       <aside
-        v-if="commentsSideRailVisible"
+        v-if="commentsSideRailVisible && !commentsRailCollapsed"
         class="client-tabs-shell__rail"
-        :class="{ 'is-narrow': commentsRailCollapsed }"
+        :style="commentsRailFillMainHeight ? { minHeight: `${tabsMainHeight}px` } : undefined"
       >
         <ClientCommentsSidebar
           ref="commentsSidebarRef"
-          v-model:collapsed="commentsRailCollapsed"
           :client-id="clientId!"
           :client-type="currentClientType"
           :current-user-id="resolvedCurrentUserId"
           :default-module="commentsContextModule"
-          @open-comments-tab="goToCommentsTab"
           @count-updated="setCommentTotalCount"
           @changed="handleSidebarCommentsChanged"
         />
@@ -2164,7 +2178,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick, provide } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
-import { ArrowLeft, Plus, User, Phone, Message, Location, UploadFilled, Place } from '@element-plus/icons-vue'
+import { ArrowLeft, Hide, Plus, User, Phone, Message, Location, UploadFilled, Place, View } from '@element-plus/icons-vue'
 import JSZip from 'jszip'
 import crmUploadActionImg from '@/assets/crm-upload-action.png'
 import { useAuthStore } from '@/stores/auth'
@@ -2187,11 +2201,12 @@ import AddCommentButton from '@/components/common/AddCommentButton.vue'
 import BulkDownloadButton from '@/components/common/BulkDownloadButton.vue'
 import DocumentUploadLinkButton from '@/components/common/DocumentUploadLinkButton.vue'
 import { formatDateTime } from '@/utils/date'
+import { formatPersonName } from '@/utils/name'
 import { formatFileSizeMb } from '@/utils/file-size'
 import { getProgressLabel, isClientEditable, isPendingSubmissionStatus, normalizeProgressStatus } from '@/utils/client-progress'
 import { mapTabToCommentModule } from '@/utils/comment-modules'
 import { getClientBasePath, getClientListPath, isStandaloneClientRoute } from '@/utils/client-routes'
-import { isAdminRole, isReviewerOnlyEditInReviewRole, normalizeRole } from '@/utils/roles'
+import { isAdminRole, isOperationRole, isReviewerOnlyEditInReviewRole, normalizeRole } from '@/utils/roles'
 
 const route = useRoute()
 const router = useRouter()
@@ -2258,6 +2273,9 @@ const progressDialogVisible = ref(false)
 const clientRecordCreatedAt = ref<string>('')
 const workflowLoading = ref(false)
 const progressData = ref<ClientProgressData | null>(null)
+// 兜底状态：当 /progress 接口偶发失败时，仍可使用详情接口返回的状态展示表头
+const progressStatusFallback = ref<string>('')
+const progressInactiveFallback = ref<boolean>(false)
 
 /** Pending Signature 下上传签名权限与后端 availableActions 同源，避免前后端权限漂移 */
 const canUploadFormsInPendingSignature = computed(
@@ -2361,10 +2379,7 @@ const headerClientName = computed(() => {
     const n = (g.companyName || '').trim()
     return n || 'Client'
   }
-  const fn = (g.firstName || '').trim()
-  const ln = (g.lastName || '').trim()
-  const parts = [fn, ln].filter(Boolean)
-  return parts.length ? parts.join(' ') : 'Client'
+  return formatPersonName(g.firstName, g.lastName, 'Client')
 })
 
 /** Progress 弹窗 Client Id：与列表列 clientId（业务编号 CLI/CLC）一致 */
@@ -2383,8 +2398,11 @@ const progressDialogRmName = computed(() => {
 /** 顶栏括号内：当前流程状态节点 */
 const headerWorkflowStatusText = computed(() => {
   const p = progressData.value
-  if (!p) return ''
-  return (p.progressLabel || getProgressLabel(p.progressStatus, p.inactive) || '').trim()
+  if (p) {
+    return (p.progressLabel || getProgressLabel(p.progressStatus, p.inactive) || '').trim()
+  }
+  const fallback = getProgressLabel(progressStatusFallback.value, progressInactiveFallback.value).trim()
+  return fallback || ''
 })
 
 /** 非 Comments 标签时记录当前模块，便于 Comments 面板默认模块与「从模块发评论」一致 */
@@ -2412,11 +2430,22 @@ provide(CLIENT_COMMENT_DIALOG_INJECT_KEY, {
 })
 
 const commentsPanelRef = ref<{ loadComments: () => Promise<void> } | null>(null)
-const commentsSidebarRef = ref<InstanceType<typeof ClientCommentsSidebar> | null>(null)
+const commentsSidebarRef = ref<
+  | (InstanceType<typeof ClientCommentsSidebar> & {
+      getContentHeight?: () => number
+    })
+  | null
+>(null)
+const tabsShellMainRef = ref<HTMLElement | null>(null)
 
 /** 含回复的总条数，用于是否显示右侧评论栏（与侧栏内计数一致） */
 const commentTotalCount = ref(0)
 const commentsRailCollapsed = ref(false)
+const commentsRailFillMainHeight = ref(false)
+const tabsMainHeight = ref(0)
+const toggleCommentsRail = () => {
+  commentsRailCollapsed.value = !commentsRailCollapsed.value
+}
 
 const MAIN_TABS_WITH_COMMENTS_RAIL = ['general', 'kyc', 'risk', 'documents', 'fee'] as const
 
@@ -2453,25 +2482,35 @@ const setCommentTotalCount = (n: number) => {
   commentTotalCount.value = n
 }
 
+const updateCommentsRailHeightMode = () => {
+  if (!commentsSideRailVisible.value || commentsRailCollapsed.value) {
+    commentsRailFillMainHeight.value = false
+    tabsMainHeight.value = 0
+    return
+  }
+  const mainHeight = tabsShellMainRef.value?.offsetHeight || 0
+  const commentsHeight = commentsSidebarRef.value?.getContentHeight?.() || 0
+  tabsMainHeight.value = mainHeight
+  commentsRailFillMainHeight.value = commentsHeight >= mainHeight && mainHeight > 0
+}
+
 const handleCommentsChanged = () => {
   void loadCommentCount()
   commentsSidebarRef.value?.reload()
+  void nextTick(() => updateCommentsRailHeightMode())
 }
 
 /** 边栏内回复/删除后刷新：侧栏已有最新数据，只需同步总数与 Comments 标签页列表 */
 const handleSidebarCommentsChanged = () => {
   void loadCommentCount()
   void commentsPanelRef.value?.loadComments()
+  void nextTick(() => updateCommentsRailHeightMode())
 }
 
 /** 从全局弹窗提交新评论后刷新列表（Comments 页签可能未挂载过） */
 const handleAddCommentDialogSuccess = () => {
   handleCommentsChanged()
   void commentsPanelRef.value?.loadComments()
-}
-
-const goToCommentsTab = () => {
-  activeTab.value = 'comments'
 }
 
 /** Progress「提交签名」：跳到 Documents 上传 Forms 区签字件（后端校验 FORMS 文档） */
@@ -2499,9 +2538,9 @@ watch(
 )
 
 /** 从各 Tab 内「Add comment」打开弹窗，不跳转 Comments 标签（弹窗挂在 tab 外，append 到 body） */
-const openCommentFromModule = (module: string, presetTitle: string) => {
+const openCommentFromModule = (module: string, _presetTitle: string) => {
   nextTick(() => {
-    addCommentDialogRef.value?.openAddComment({ moduleName: module, presetTitle })
+    addCommentDialogRef.value?.openAddComment({ moduleName: module })
   })
 }
 
@@ -2918,6 +2957,9 @@ const loadClient = async () => {
     if (!data || !data.general) {
       throw new Error('Client detail response is incomplete')
     }
+    progressStatusFallback.value = String(data.progressStatus || data.progress_status || '').trim()
+    progressInactiveFallback.value =
+      data.inactive === true || data.isInactive === true || data.is_inactive === true
 
     const rawCreated =
       data.createdTime || data.created_time || data.createdAt || data.created_at
@@ -3228,6 +3270,8 @@ const loadClient = async () => {
 const loadProgress = async () => {
   if (!clientId.value) {
     progressData.value = null
+    progressStatusFallback.value = ''
+    progressInactiveFallback.value = false
     return
   }
 
@@ -3236,7 +3280,7 @@ const loadProgress = async () => {
     progressData.value = response.data || response
   } catch (error) {
     console.warn('Failed to load workflow progress:', error)
-    progressData.value = null
+    // 保留已有 progressData，避免顶部状态在网络抖动时闪空
   }
 }
 
@@ -3329,7 +3373,7 @@ const loadAccounts = async () => {
         account: item.username || item.account || '',
         firstName: firstName,
         lastName: lastName,
-        name: `${lastName}, ${firstName}`, // RM显示格式：lastName, firstName
+        name: formatPersonName(firstName, lastName),
         isActive,
         status: isActive ? 'enabled' : 'disabled',
         createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
@@ -3356,7 +3400,7 @@ const loadAccounts = async () => {
             account: item.username || item.account || '',
             firstName: firstName,
             lastName: lastName,
-            name: `${lastName}, ${firstName}`,
+            name: formatPersonName(firstName, lastName),
             isActive,
             status: isActive ? 'enabled' : 'disabled',
             createdTime: item.createdTime || item.created_time || item.createdAt || item.created_at || ''
@@ -3380,7 +3424,7 @@ const loadIntroducers = async () => {
       if (contactNature === 'Individual') {
         const firstName = item.firstName || item.first_name || ''
         const lastName = item.lastName || item.last_name || ''
-        introducerName = `${firstName}, ${lastName}`.trim()
+        introducerName = formatPersonName(firstName, lastName)
       } else {
         introducerName = item.companyName || item.company_name || ''
       }
@@ -3786,11 +3830,23 @@ const handleSave = async (closeAfter: boolean = false) => {
   })
 }
 
+const normalizeOptionalPhoneForWorkflow = (value: unknown): string => {
+  if (value === null || value === undefined) return ''
+  const text = String(value).trim()
+  return text
+}
+
 const buildWorkflowClientDetailPayload = () => ({
   contactNature: currentClientType.value,
   general: { ...(clientForm.general as any) },
-  contact: { ...clientForm.contact },
-  secondaryContact: { ...clientForm.secondaryContact },
+  contact: {
+    ...clientForm.contact,
+    mobilePhone: normalizeOptionalPhoneForWorkflow((clientForm.contact as any)?.mobilePhone)
+  },
+  secondaryContact: {
+    ...clientForm.secondaryContact,
+    mobilePhone: normalizeOptionalPhoneForWorkflow((clientForm.secondaryContact as any)?.mobilePhone)
+  },
   portfolios: clientForm.portfolios.map(item => ({ ...item }))
 })
 
@@ -3876,6 +3932,8 @@ const handleProgressUpdated = (progress: ClientProgressData) => {
 const FORMS_REQUIRED_BEFORE_SUBMIT_MSG =
   'Upload signed documents to the Forms module before submitting'
 const PROGRESS_UPDATED_MSG = 'Failed. Progress has been updated.'
+const OPERATION_SUBMIT_SIGNATURE_CONFIRM_MSG =
+  'Are you sure you want to submit signature now? This action will move the client to Signature Under Review.'
 
 /** 预览顶栏 Submit（Pending Submission 为提交初审；Pending Signature 为提交签名并进入 Signature Under Review） */
 const handleHeaderSubmit = async () => {
@@ -3888,6 +3946,20 @@ const handleHeaderSubmit = async () => {
     if (!documentsData.forms?.length) {
       ElMessage.warning(FORMS_REQUIRED_BEFORE_SUBMIT_MSG)
       return
+    }
+    if (isOperationRole(authStore.user?.role)) {
+      try {
+        await ElMessageBox.confirm(OPERATION_SUBMIT_SIGNATURE_CONFIRM_MSG, 'Confirm Submit', {
+          type: 'warning',
+          confirmButtonText: 'Submit',
+          cancelButtonText: 'Cancel'
+        })
+      } catch (error: unknown) {
+        if (error === 'cancel') return
+        const err = error as { message?: string }
+        ElMessage.error(err.message || 'Submit cancelled')
+        return
+      }
     }
     workflowLoading.value = true
     try {
@@ -4550,12 +4622,22 @@ watch(
   () => {
     if (!clientId.value) {
       progressData.value = null
+      progressStatusFallback.value = ''
+      progressInactiveFallback.value = false
       clientDetailLoaded.value = false
       return
     }
     void loadClient()
+    void nextTick(() => updateCommentsRailHeightMode())
   },
   { immediate: true }
+)
+
+watch(
+  [() => activeTab.value, () => commentsRailCollapsed.value, () => commentTotalCount.value],
+  () => {
+    void nextTick(() => updateCommentsRailHeightMode())
+  }
 )
 
 onMounted(() => {
@@ -4575,6 +4657,7 @@ onMounted(() => {
   background-color: var(--crm-surface-page);
   display: flex;
   flex-direction: column;
+  padding-bottom: 0;
 
   /* 顶栏：左标题 + 右操作 */
   .top-header {
@@ -4582,7 +4665,7 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     gap: 16px;
-    padding: 14px 24px 12px;
+    padding: 14px 0 12px;
     background-color: var(--crm-surface-page);
     border-bottom: none;
 
@@ -4601,30 +4684,48 @@ onMounted(() => {
     .top-header__title {
       margin: 0;
       font-size: 20px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--crm-text-primary, #0f172a);
       line-height: 1.35;
       word-break: break-word;
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .top-header__name {
+      font-weight: 500;
+    }
+
+    .top-header__sep {
+      color: #c0c4cc;
+      margin: 0 12px;
+      font-weight: 400;
     }
 
     .top-header__status {
-      font-weight: 500;
+      font-weight: 400;
       color: var(--crm-text-secondary, #475569);
     }
 
     .top-header__actions {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
       flex-wrap: wrap;
       justify-content: flex-end;
       flex-shrink: 0;
+
+      /* 与 Client 列表按钮组一致：用 gap 控制间距，去掉 Element Plus 默认相邻按钮 margin */
+      :deep(.el-button + .el-button) {
+        margin-left: 0;
+      }
     }
 
     .last-saved {
-      color: #909399;
+      color: #9ca3af;
       font-size: 13px;
-      margin-left: 4px;
+      font-weight: 400;
     }
 
     /* Pending Submission 预览：Progress 浅灰底深字，与主色 Submit/Edit 区分 */
@@ -4662,9 +4763,13 @@ onMounted(() => {
     flex: 0 1 auto;
     display: flex;
     flex-direction: row;
-    align-items: stretch;
-    margin: 4px 24px 12px;
+    align-items: flex-start;
+    margin: 4px 24px 0;
     gap: 0;
+
+    &.is-comments-fill {
+      align-items: stretch;
+    }
   }
 
   .client-tabs-shell__main {
@@ -4672,6 +4777,7 @@ onMounted(() => {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    align-self: stretch;
   }
 
   .client-tabs-shell__rail {
@@ -4679,14 +4785,17 @@ onMounted(() => {
     width: 300px;
     display: flex;
     flex-direction: column;
-    align-self: stretch;
+    align-self: flex-start;
     background-color: #fff;
-    border-radius: var(--crm-radius-md);
-    /* Comments 侧栏设计稿：细蓝边框 + 轻阴影 */
-    border: 1px solid rgba(2, 81, 137, 0.32);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    border-radius: 0;
+    /* 侧栏无边线，保持与内容区平滑衔接 */
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    border-bottom: none;
+    box-shadow: none;
     margin-left: 10px;
-    overflow: hidden;
+    overflow: visible;
 
     &.is-narrow {
       width: 44px;
@@ -4697,15 +4806,18 @@ onMounted(() => {
   .client-tabs {
     flex: 0 1 auto;
     width: 100%;
+    min-height: 100%;
     background-color: var(--crm-surface-page);
-    border-radius: var(--crm-radius-md);
+    border-radius: 0;
     padding: 0;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
 
     :deep(.el-tabs__header) {
       margin-bottom: 0 !important;
       background-color: #fff;
-      padding: 12px 16px 14px;
+      padding: 6px 188px 0 16px;
       border-radius: 6px 6px 0 0;
       border: none;
       border-bottom: none !important;
@@ -4713,36 +4825,93 @@ onMounted(() => {
     }
 
     :deep(.el-tabs__nav-wrap) {
+      margin-bottom: 0;
+
       &::after {
         display: none !important;
       }
     }
 
+    :deep(.el-tabs__active-bar) {
+      bottom: 0;
+      height: 2px;
+    }
+
     /* Element Plus 默认 el-tabs__content 为 overflow:hidden + flex-grow:1，在定高 flex 链下会裁切表单；
      * 改为随内容增高，由外层 layout 的 main 区域滚动。 */
     :deep(.el-tabs__content) {
-      flex-grow: 0;
+      flex: 1 1 auto;
       overflow: visible !important;
-      padding-top: 12px;
+      padding-top: 16px;
       background-color: var(--crm-surface-page);
       border: none;
       border-top: none !important;
+      display: flex;
+      flex-direction: column;
+    }
+
+    :deep(.el-tab-pane) {
+      height: 100%;
     }
 
     :deep(.el-tabs__item) {
-      font-size: 15px;
+      height: 34px;
+      line-height: 34px;
+      font-size: 14px;
       padding: 0 18px;
+    }
+  }
+
+  .client-tabs-wrap {
+    position: relative;
+  }
+
+  .client-tabs__comment-toggle {
+    position: absolute;
+    top: 6px;
+    right: 16px;
+    z-index: 2;
+    border: none;
+    background: transparent;
+    height: 34px;
+    line-height: 34px;
+    padding: 0 2px;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--crm-primary, #025189);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+
+    .el-icon {
+      font-size: 15px;
+    }
+
+    &:hover {
+      color: var(--crm-primary-hover, #0369a1);
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgba(2, 81, 137, 0.35);
+      outline-offset: 2px;
+      border-radius: 4px;
     }
   }
 
   /* 与 tab 标头同宽；上下间距收紧，小模块自适应 */
   .tab-content {
-    min-height: 280px;
+    min-height: 0;
+    height: 100%;
     overflow: visible !important;
     position: relative;
     background-color: var(--crm-surface-page);
-    padding: 12px 0;
-    border-radius: 0 0 4px 4px;
+    padding: 0;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   /* 与 KYC 统一：白底卡片、无边框、紧凑间距 */
@@ -4758,6 +4927,10 @@ onMounted(() => {
 
       &:first-child {
         margin-top: 0;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
       }
 
       .section-header {
@@ -5061,18 +5234,32 @@ onMounted(() => {
     min-width: 0;
   }
 
-  :deep(.crm-add-comment-btn) {
-    gap: 6px;
-    font-size: 13px;
+  :deep(.crm-add-comment-btn),
+  :deep(.crm-bulk-download-btn),
+  :deep(.crm-document-upload-link-btn) {
+    gap: 8px;
+    font-size: 14px;
     font-weight: 500;
+    line-height: 1.25;
+    color: var(--crm-primary, #025189);
 
-    .crm-add-comment-btn__icon {
-      width: 15px;
-      height: 15px;
+    &:hover {
+      color: var(--crm-primary-hover, #0369a1);
+    }
 
-      .el-icon {
-        font-size: 10px;
-      }
+    &:active {
+      color: #014d73;
+    }
+  }
+
+  :deep(.crm-add-comment-btn__icon),
+  :deep(.crm-bulk-download-btn__icon),
+  :deep(.crm-document-upload-link-btn__icon) {
+    width: 16px;
+    height: 16px;
+
+    .el-icon {
+      font-size: 16px;
     }
   }
 
@@ -5279,7 +5466,7 @@ onMounted(() => {
   /* Add Comment 放在白底模块内、字段网格上方（与其它 Tab 灰底→白卡分层一致） */
   .fee-schedule-comment-row {
     display: flex;
-    justify-content: flex-end;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: 16px;
   }

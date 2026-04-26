@@ -161,10 +161,11 @@ const handleLogout = async () => {
         padding-top: 11px;
         border-radius: 0;
         border-right: none;
+        color: #111827;
 
         &:hover {
-          background-color: #f3f4f6;
-          color: #111827;
+          background-color: #eef4fa;
+          color: #025189;
         }
       }
     }

@@ -242,6 +242,29 @@
             </el-table-column>
           </el-table>
         </div>
+        <div v-if="exportLoading || exportLastSummary" class="export-status-card">
+          <template v-if="exportLoading">
+            <div class="export-status-title">
+              Exporting {{ exportProgress.processed }}/{{ exportProgress.total }}
+              <span v-if="exportProgress.currentClient"> · {{ exportProgress.currentClient }}</span>
+            </div>
+            <el-progress :percentage="exportProgressPercent" :stroke-width="10" />
+            <div class="export-status-meta">
+              <span>Success: {{ exportProgress.succeeded }}</span>
+              <span>Partial: {{ exportProgress.degraded }}</span>
+              <span>Skipped: {{ exportProgress.skipped }}</span>
+            </div>
+          </template>
+          <template v-else-if="exportLastSummary">
+            <div class="export-status-title">Last export summary</div>
+            <div class="export-status-meta">
+              <span>Selected: {{ exportLastSummary.selected }}</span>
+              <span>Exported: {{ exportLastSummary.exported }}</span>
+              <span>Partial: {{ exportLastSummary.degraded }}</span>
+              <span>Skipped: {{ exportLastSummary.skipped }}</span>
+            </div>
+          </template>
+        </div>
       </div>
       <template #footer>
         <div class="export-footer">
@@ -298,6 +321,7 @@ import {
   getProgressSortWeight,
 } from '@/utils/client-progress'
 import { normalizeRole, roleDisplayName } from '@/utils/roles'
+import { formatPersonName } from '@/utils/name'
 
 interface AdminClientRow {
   id: number
@@ -332,6 +356,20 @@ const exportDialogSortBy = ref<'created-desc' | 'created-asc' | 'rm' | 'progress
 const exportSelectedIds = shallowRef(new Set<string>())
 const exportTableRowKey = (row: AdminClientRow) => clientExportRowKey(row)
 const EXPORT_JOB_MS = 120_000
+const exportProgress = reactive({
+  total: 0,
+  processed: 0,
+  succeeded: 0,
+  degraded: 0,
+  skipped: 0,
+  currentClient: ''
+})
+const exportProgressPercent = computed(() =>
+  exportProgress.total ? Math.round((exportProgress.processed / exportProgress.total) * 100) : 0
+)
+const exportLastSummary = ref<{ selected: number; exported: number; degraded: number; skipped: number } | null>(
+  null
+)
 const sortBy = ref<'created-desc' | 'created-asc' | 'rm' | 'progress'>('created-desc')
 const filters = reactive({
   contactNature: [] as ClientType[],
@@ -341,38 +379,53 @@ const filters = reactive({
 
 const rmOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.rm).filter(Boolean))).sort())
 const progressOptions = computed(() => Array.from(new Set(clientList.value.map(item => item.progressLabel).filter(Boolean))))
-const contactNatureOptionsWithCount = computed(() => {
-  const counts = new Map<ClientType, number>()
-  clientList.value.forEach(item => {
-    counts.set(item.contactNature, (counts.get(item.contactNature) || 0) + 1)
+
+const rowsForContactNatureFacet = computed(() =>
+  clientList.value.filter(item => {
+    if (filters.rm.length && !filters.rm.includes(item.rm)) return false
+    if (filters.progress.length && !filters.progress.includes(item.progressLabel)) return false
+    return true
   })
-  return (['Individual', 'Corporate'] as const).map(value => ({
-    value,
-    label: `${value}（${counts.get(value) || 0}）`
-  }))
-})
-const rmOptionsWithCount = computed(() => {
-  const counts = new Map<string, number>()
-  clientList.value.forEach(item => {
-    if (!item.rm) return
-    counts.set(item.rm, (counts.get(item.rm) || 0) + 1)
+)
+const rowsForRmFacet = computed(() =>
+  clientList.value.filter(item => {
+    if (filters.contactNature.length && !filters.contactNature.includes(item.contactNature)) return false
+    if (filters.progress.length && !filters.progress.includes(item.progressLabel)) return false
+    return true
   })
-  return rmOptions.value.map(value => ({
-    value,
-    label: `${value}（${counts.get(value) || 0}）`
-  }))
-})
-const progressOptionsWithCount = computed(() => {
-  const counts = new Map<string, number>()
-  clientList.value.forEach(item => {
-    if (!item.progressLabel) return
-    counts.set(item.progressLabel, (counts.get(item.progressLabel) || 0) + 1)
+)
+const rowsForProgressFacet = computed(() =>
+  clientList.value.filter(item => {
+    if (filters.contactNature.length && !filters.contactNature.includes(item.contactNature)) return false
+    if (filters.rm.length && !filters.rm.includes(item.rm)) return false
+    return true
   })
-  return progressOptions.value.map(value => ({
-    value,
-    label: `${value}（${counts.get(value) || 0}）`
-  }))
-})
+)
+
+const contactNatureOptionsWithCount = computed(() =>
+  (['Individual', 'Corporate'] as const)
+    .map(value => {
+      const count = rowsForContactNatureFacet.value.filter(item => item.contactNature === value).length
+      return { value, count, label: `${value}（${count}）` }
+    })
+    .filter(item => item.count > 0 || filters.contactNature.includes(item.value))
+)
+const rmOptionsWithCount = computed(() =>
+  rmOptions.value
+    .map(value => {
+      const count = rowsForRmFacet.value.filter(item => item.rm === value).length
+      return { value, count, label: `${value}（${count}）` }
+    })
+    .filter(item => item.count > 0 || filters.rm.includes(item.value))
+)
+const progressOptionsWithCount = computed(() =>
+  progressOptions.value
+    .map(value => {
+      const count = rowsForProgressFacet.value.filter(item => item.progressLabel === value).length
+      return { value, count, label: `${value}（${count}）` }
+    })
+    .filter(item => item.count > 0 || filters.progress.includes(item.value))
+)
 
 const filterRows = (
   list: AdminClientRow[],
@@ -460,7 +513,7 @@ const normalizeClient = (item: any): AdminClientRow => {
     } else {
       const firstName = item.firstName || item.first_name || ''
       const lastName = item.lastName || item.last_name || ''
-      clientName = lastName && firstName ? `${lastName}, ${firstName}` : (lastName || firstName || '')
+      clientName = formatPersonName(firstName, lastName)
     }
   }
 
@@ -561,6 +614,7 @@ const openExportDialog = () => {
   exportDialogFilters.progress = [...filters.progress]
   exportDialogSortBy.value = sortBy.value
   exportSelectedIds.value = new Set()
+  exportLastSummary.value = null
   exportDialogVisible.value = true
 }
 
@@ -579,6 +633,7 @@ async function runExportJob(fn: () => void | Promise<void>) {
     }
   } finally {
     exportLoading.value = false
+    exportProgress.currentClient = ''
   }
 }
 
@@ -641,6 +696,38 @@ const withExportRetry = async <T>(task: () => Promise<T>, maxAttempts = 3): Prom
   throw lastError
 }
 
+const EMPTY_KYC_INFO = { kycDate: '', kycStatus: '', nextReviewDate: '' }
+const EMPTY_RISK_PROFILE = {
+  investmentRiskRating: undefined,
+  remarks: '',
+  hongKongPI: false,
+  vulnerableClientAssessment: {
+    age65AndAbove: false,
+    physicalOrIntellectualDisabilities: false,
+    notProficientInEnglish: false,
+    educationPrimaryOrBelow: false,
+    vulnerableClient: false,
+    reviewDate: ''
+  },
+  investmentKnowledgeExperience: { types: [] }
+}
+const EMPTY_FEE_SCHEDULE = {
+  managementFee: { enabled: false, yearlyManagementFee: undefined, minimumManagementFee: undefined },
+  retrocession: { enabled: false },
+  performanceFee: { enabled: false, hurdleRate: undefined, profitSharedToXinXi: undefined },
+  others: { enabled: false, details: '' }
+}
+
+const toErrorText = (error: unknown): string => {
+  const e = error as { message?: string; response?: { data?: { message?: string } } }
+  return e?.response?.data?.message || e?.message || 'Unknown error'
+}
+
+const isMissingRecordError = (error: unknown): boolean => {
+  const msg = toErrorText(error).toLowerCase()
+  return msg.includes('not found') || msg.includes('no data') || msg.includes('不存在')
+}
+
 const handleExportList = async () => {
   if (!exportSelectedCount.value) {
     ElMessage.warning('Please select at least one client')
@@ -671,20 +758,55 @@ const handleExportSpec = async () => {
   }
   const rows = exportDisplayList.value.filter(r => exportSelectedIds.value.has(clientExportRowKey(r)))
   await runExportJob(async () => {
+    exportProgress.total = rows.length
+    exportProgress.processed = 0
+    exportProgress.succeeded = 0
+    exportProgress.degraded = 0
+    exportProgress.skipped = 0
+    exportProgress.currentClient = ''
     const blocks = []
     const blockMetas: Array<{ clientName: string }> = []
+    const degraded: string[] = []
+    const skipped: string[] = []
     for (const listRow of rows) {
-      const res = await withExportRetry(() =>
-        userClientApi.getClientById(listRow.id, listRow.contactNature, { skipErrorToast: true })
-      )
-      const client = ((res as { data?: Client }).data ?? res) as Client
-      const [kyc, risk, fee] = await Promise.all([
-        withExportRetry(() => kycApi.getKycInfo(listRow.id, listRow.contactNature, { skipErrorToast: true })),
-        withExportRetry(() => riskProfileApi.getRiskProfile(listRow.id, listRow.contactNature, { skipErrorToast: true })),
-        withExportRetry(() => feeScheduleApi.getFeeSchedule(listRow.id, listRow.contactNature, { skipErrorToast: true }))
-      ])
-      blocks.push(fillClientSpecExportRows(client, kyc, risk, fee))
-      blockMetas.push({ clientName: listRow.client || 'Client' })
+      const clientName = listRow.client || `Client-${listRow.id}`
+      exportProgress.currentClient = clientName
+      try {
+        const res = await withExportRetry(() =>
+          userClientApi.getClientById(listRow.id, listRow.contactNature, { skipErrorToast: true })
+        )
+        const client = ((res as { data?: Client }).data ?? res) as Client
+        const [kycRes, riskRes, feeRes] = await Promise.allSettled([
+          withExportRetry(() => kycApi.getKycInfo(listRow.id, listRow.contactNature, { skipErrorToast: true })),
+          withExportRetry(() => riskProfileApi.getRiskProfile(listRow.id, listRow.contactNature, { skipErrorToast: true })),
+          withExportRetry(() => feeScheduleApi.getFeeSchedule(listRow.id, listRow.contactNature, { skipErrorToast: true }))
+        ])
+        const kyc = kycRes.status === 'fulfilled' ? kycRes.value : EMPTY_KYC_INFO
+        const risk = riskRes.status === 'fulfilled' ? riskRes.value : EMPTY_RISK_PROFILE
+        const fee = feeRes.status === 'fulfilled' ? feeRes.value : EMPTY_FEE_SCHEDULE
+        const kycHardFail = kycRes.status === 'rejected' && !isMissingRecordError(kycRes.reason)
+        const riskHardFail = riskRes.status === 'rejected' && !isMissingRecordError(riskRes.reason)
+        const feeHardFail = feeRes.status === 'rejected' && !isMissingRecordError(feeRes.reason)
+        if (kycHardFail || riskHardFail || feeHardFail) {
+          degraded.push(clientName)
+          exportProgress.degraded++
+        }
+        blocks.push(fillClientSpecExportRows(client, kyc as any, risk as any, fee as any))
+        exportProgress.succeeded++
+        blockMetas.push({ clientName: listRow.client || 'Client' })
+      } catch (error) {
+        skipped.push(`${clientName}: ${toErrorText(error)}`)
+        exportProgress.skipped++
+      } finally {
+        exportProgress.processed++
+        if (exportProgress.processed % 3 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0))
+        }
+      }
+    }
+    if (!blocks.length) {
+      ElMessage.error('Export failed: no client details could be exported')
+      return
     }
     await new Promise<void>(resolve => setTimeout(resolve, 200))
     const ts = formatExportTimestamp()
@@ -703,7 +825,39 @@ const handleExportSpec = async () => {
     })
     const zipBlob = await zip.generateAsync({ type: 'blob' })
     downloadBlob(`ClientSpec_${ts}.zip`, zipBlob)
-    ElMessage.success('Export completed')
+    exportLastSummary.value = {
+      selected: rows.length,
+      exported: blocks.length,
+      degraded: degraded.length,
+      skipped: skipped.length
+    }
+    if (degraded.length || skipped.length) {
+      ElMessage.warning(
+        `Export completed with fallback. Partial fields missing: ${degraded.length}, skipped clients: ${skipped.length}.`
+      )
+      await ElMessageBox.alert(
+        [
+          `Selected: ${rows.length}`,
+          `Exported: ${blocks.length}`,
+          `Partial data clients: ${degraded.length}`,
+          `Skipped clients: ${skipped.length}`,
+          '',
+          degraded.length ? `Partial: ${degraded.slice(0, 10).join(', ')}` : '',
+          skipped.length ? `Skipped: ${skipped.slice(0, 5).join(' | ')}` : ''
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        'Export Summary',
+        { type: 'warning' }
+      )
+    } else {
+      ElMessage.success('Export completed')
+      await ElMessageBox.alert(
+        [`Selected: ${rows.length}`, `Exported: ${blocks.length}`, 'All client files exported successfully.'].join('\n'),
+        'Export Summary',
+        { type: 'success' }
+      )
+    }
   })
 }
 
@@ -798,19 +952,25 @@ onMounted(loadClients)
   }
 
   .user-info {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    color: #606266;
+    gap: 10px;
+    color: #1f2a37;
     font-size: 14px;
+    line-height: 1;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #e8eff6;
 
     .user-role-pill {
-      margin-left: 6px;
-      padding: 2px 8px;
-      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      margin-left: 2px;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1;
+      font-weight: 500;
       color: #025189;
-      background: #e8f1fa;
-      border-radius: 4px;
     }
 
     :deep(.el-icon) {
@@ -899,8 +1059,7 @@ onMounted(loadClients)
       &:hover .progress-label,
       &:focus-visible .progress-label {
         color: #0b63c5;
-        text-decoration: underline;
-        text-underline-offset: 2px;
+        text-decoration: none;
       }
     }
   }
@@ -976,7 +1135,7 @@ onMounted(loadClients)
 
   .client-name-link:hover {
     color: #025189 !important;
-    text-decoration: underline;
+    text-decoration: none;
   }
 
   .export-dialog-inner {
@@ -1039,5 +1198,27 @@ onMounted(loadClients)
 .export-buttons {
   display: flex;
   gap: 8px;
+}
+
+.export-status-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.export-status-title {
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.export-status-meta {
+  margin-top: 8px;
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #6b7280;
 }
 </style>

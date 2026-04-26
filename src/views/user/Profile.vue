@@ -1,8 +1,6 @@
 <template>
   <div class="profile-page">
     <div class="profile-container">
-      <h1 class="page-title">Profile</h1>
-
       <!-- Account Information Section -->
       <div class="section">
         <h2 class="section-title">Account</h2>
@@ -76,6 +74,7 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { authApi, type UserInfo, type ChangePasswordParams } from '@/api/auth'
 import { roleDisplayName } from '@/utils/roles'
+import { formatPersonName } from '@/utils/name'
 
 const authStore = useAuthStore()
 const passwordFormRef = ref<FormInstance>()
@@ -129,7 +128,7 @@ const loadUserInfo = async () => {
     userInfo.value = {
       id: data.id || data.userId || '',
       username: data.username || data.account || '',
-      name: data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim() || '',
+      name: data.name || formatPersonName(data.firstName, data.lastName) || '',
       role: data.role || 'user',
       roleDisplayName: data.roleDisplayName || roleDisplayName(data.role),
       email: data.email || '',
@@ -217,15 +216,6 @@ onMounted(() => {
     padding: 30px;
     box-shadow: var(--crm-shadow-card);
     border: 1px solid rgba(226, 232, 240, 0.9);
-
-    .page-title {
-      font-size: 24px;
-      font-weight: 600;
-      color: #025189; // 一级标题使用蓝色
-      margin: 0 0 30px 0;
-      padding-bottom: 15px;
-      border-bottom: 1px solid #ebeef5;
-    }
 
     .section {
       margin-bottom: 40px;

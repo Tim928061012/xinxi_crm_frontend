@@ -3,7 +3,7 @@
     ref="formRef"
     :model="fullForm"
     :rules="formRules"
-    label-width="240px"
+    label-width="180px"
     class="introducer-form introducer-general-form"
     :disabled="isViewMode"
   >
@@ -937,7 +937,9 @@ function formatDisplayValue(value: unknown): string {
 
 <style lang="scss" scoped>
 .introducer-general-form {
-  max-width: 1200px;
+  width: 100%;
+  max-width: none !important;
+  margin: 0;
 
   /* 标签与控件垂直居中对齐（与 Element Plus 默认行高 32px 一致） */
   :deep(.el-form-item) {
@@ -1012,6 +1014,8 @@ function formatDisplayValue(value: unknown): string {
     border-radius: 8px;
     margin-bottom: 20px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .section-header {
@@ -1034,8 +1038,8 @@ function formatDisplayValue(value: unknown): string {
 
   .form-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px 24px;
+    grid-template-columns: repeat(2, minmax(420px, 1fr));
+    gap: 16px 32px;
     margin-bottom: 16px;
     align-items: start;
 
@@ -1103,6 +1107,23 @@ function formatDisplayValue(value: unknown): string {
       :deep(.el-table__body tr.current-row > td) {
         background-color: #ffffff !important;
       }
+    }
+  }
+
+  @media (max-width: 1360px) {
+    :deep(.el-form-item__label) {
+      width: 160px !important;
+    }
+  }
+
+  @media (max-width: 1120px) {
+    .form-row {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    :deep(.el-form-item__label) {
+      width: 150px !important;
     }
   }
 }

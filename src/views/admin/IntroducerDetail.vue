@@ -19,7 +19,7 @@
     <div class="introducer-tabs-wrap">
       <el-tabs v-model="activeTab" class="introducer-tabs">
         <el-tab-pane label="General" name="general">
-          <div class="tab-content">
+          <div class="introducer-tab-content">
             <IntroducerDetailGeneral
               ref="generalFormRef"
               :full-form="fullForm"
@@ -40,7 +40,7 @@
         </el-tab-pane>
 
         <el-tab-pane label="KYC" name="kyc">
-          <div class="tab-content" v-loading.fullscreen="tabLoading.kyc" element-loading-text="Loading KYC data...">
+          <div class="introducer-tab-content" v-loading.fullscreen="tabLoading.kyc" element-loading-text="Loading KYC data...">
             <div class="kyc-information-card">
               <h3 class="kyc-information-title">Information</h3>
               <el-form label-width="200px" class="kyc-information-form">
@@ -157,7 +157,7 @@
         </el-tab-pane>
 
         <el-tab-pane label="Documents" name="documents">
-          <div class="tab-content" v-loading.fullscreen="tabLoading.documents" element-loading-text="Loading documents...">
+          <div class="introducer-tab-content" v-loading.fullscreen="tabLoading.documents" element-loading-text="Loading documents...">
             <div v-for="sec in documentSections" :key="sec.key" class="document-section">
               <div class="section-header">
                 <h3 class="section-title">{{ sec.title }}</h3>
@@ -186,7 +186,7 @@
         </el-tab-pane>
 
         <el-tab-pane label="Fee Schedule" name="fee">
-          <div class="tab-content" v-loading.fullscreen="tabLoading.fee" element-loading-text="Loading fee schedule...">
+          <div class="introducer-tab-content" v-loading.fullscreen="tabLoading.fee" element-loading-text="Loading fee schedule...">
             <el-form :model="feeScheduleData" label-width="250px" class="fee-schedule-form">
               <div class="form-section">
                 <!-- 2×2 网格：行1 Management | Referral，行2 Retrocessions | Others（与示意一致） -->
@@ -458,6 +458,7 @@ import { bankApi, type BankCentre } from '@/api/bank'
 import { formatDateTime } from '@/utils/date'
 import { formatFileSizeMb } from '@/utils/file-size'
 import { isAdminRole } from '@/utils/roles'
+import { formatPersonName } from '@/utils/name'
 
 const route = useRoute()
 const router = useRouter()
@@ -650,9 +651,7 @@ const formRules = computed<FormRules>(() => {
 const headerTitle = computed(() => {
   if (isNew.value) return 'New Introducer'
   if (fullForm.contactNature === 'Corporate') return (fullForm.general.companyName || '').trim() || 'Introducer'
-  const fn = (fullForm.general.firstName || '').trim()
-  const ln = (fullForm.general.lastName || '').trim()
-  const name = [fn, ln].filter(Boolean).join(' ')
+  const name = formatPersonName(fullForm.general.firstName, fullForm.general.lastName)
   return name || 'Introducer'
 })
 
@@ -837,7 +836,7 @@ async function loadAccountsForRM() {
         id: userId,
         userId,
         account: (item.username || item.account || '') as string,
-        name: `${firstName}, ${lastName}`.trim() || (item.account as string),
+        name: formatPersonName(firstName, lastName, (item.account as string) || ''),
         createdTime: (item.createdTime || item.created_time || item.createdAt || item.created_at || '') as string
       } as Account
     })
@@ -855,8 +854,8 @@ async function loadIntroducersIfNeeded() {
     const ln = (row.lastName || row.last_name || '') as string
     const company = (row.companyName || row.company_name || '') as string
     let label = ''
-    if (nature === 'Corporate' || company) label = company || `${fn} ${ln}`.trim()
-    else label = [fn, ln].filter(Boolean).join(' ') || company || `Introducer #${id}`
+    if (nature === 'Corporate' || company) label = company || formatPersonName(fn, ln)
+    else label = formatPersonName(fn, ln) || company || `Introducer #${id}`
     return {
       id,
       introducer: label,
@@ -1457,6 +1456,7 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .introducer-detail-page {
+  --introducer-page-x: 24px;
   min-height: 100%;
   background-color: var(--crm-surface-page, #f1f5f9);
   display: flex;
@@ -1469,7 +1469,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 14px 24px 12px;
+  padding: 14px var(--introducer-page-x) 12px;
   background-color: var(--crm-surface-page, #f1f5f9);
 
   .top-header__leading {
@@ -1499,7 +1499,7 @@ onMounted(() => {
 }
 
 .introducer-tabs-wrap {
-  margin: 4px 24px 12px;
+  margin: 4px var(--introducer-page-x) 12px;
 }
 
 .introducer-tabs {
@@ -1510,25 +1510,40 @@ onMounted(() => {
 
   :deep(.el-tabs__header) {
     margin: 0;
-    padding: 12px 16px 0;
+    padding: 12px var(--introducer-page-x) 0;
     background: #fff;
     border-radius: 6px 6px 0 0;
   }
 
   :deep(.el-tabs__content) {
-    padding: 12px 0;
+    padding: 0;
     background: var(--crm-surface-page, #f1f5f9);
+  }
+
+  :deep(.el-tabs__item) {
+    color: #111827;
+    font-weight: 600;
+  }
+
+  :deep(.el-tabs__item.is-active) {
+    color: #025189;
+  }
+
+  :deep(.el-tabs__active-bar) {
+    background: #025189;
   }
 }
 
-.tab-content {
+.introducer-tab-content {
   min-height: 200px;
-  padding: 12px 16px 20px;
+  padding: 16px var(--introducer-page-x) 24px;
   background: var(--crm-surface-page, #f1f5f9);
 }
 
-.introducer-form {
-  max-width: 960px;
+@media (max-width: 960px) {
+  .introducer-detail-page {
+    --introducer-page-x: 16px;
+  }
 }
 
 .form-section {

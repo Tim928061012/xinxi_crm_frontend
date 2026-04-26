@@ -99,7 +99,8 @@
               :class="{
                 'step-circle--done': isStepCompleted(index),
                 'step-circle--current': isCurrentStep(index),
-                'step-circle--pending': isStepPending(index)
+                'step-circle--pending': isStepPending(index),
+                'step-circle--inactive-failed': isInactiveFailedStep(index)
               }"
             >
               <el-icon v-if="isStepCompleted(index)" class="step-check-icon"><Check /></el-icon>
@@ -328,6 +329,10 @@ function stepRowInlineActions(index: number): { label: string; value: string }[]
     if (st === 'ACTIVE' || index === WORKFLOW_STATUS_ORDER.length - 1) {
       result.push({ label: 'Activate', value: 'ACTIVATE' })
     }
+  }
+  // Withdraw 统一固定在当前步骤行右侧，不走顶部全局区
+  if (actions.includes('WITHDRAW') && !result.some(item => item.value === 'WITHDRAW')) {
+    result.push({ label: 'Withdraw', value: 'WITHDRAW' })
   }
   return result
 }
@@ -742,6 +747,12 @@ const toDisplayDate = (value?: string | null) => {
     color: #9ca3af;
     border: 1px solid #e5e7eb;
   }
+
+  &--inactive-failed {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
 }
 
 .step-check-icon {
@@ -753,7 +764,7 @@ const toDisplayDate = (value?: string | null) => {
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, calc(-50% - 1px));
   line-height: 1;
 }
 
@@ -782,6 +793,7 @@ const toDisplayDate = (value?: string | null) => {
   justify-content: space-between;
   gap: 16px;
   min-height: 28px;
+  width: min(100%, 760px);
 }
 
 .step-title {
@@ -848,7 +860,8 @@ const toDisplayDate = (value?: string | null) => {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  margin-right: 22px;
+  margin-left: auto;
+  margin-right: 0;
 }
 
 .step-details {

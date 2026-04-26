@@ -61,18 +61,19 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="Actions" width="220">
+      <el-table-column label="Actions" width="220" fixed="right">
         <template #default="{ row }">
-          <!-- Admin 账号不允许 Edit，只允许 Reset Password -->
-          <template v-if="!isSystemAdmin(row)">
-            <el-link type="primary" @click="handleEdit(row)" :underline="false">
-              Edit
+          <div class="table-actions">
+            <template v-if="!isSystemAdmin(row)">
+              <el-link type="primary" class="action-link" @click="handleEdit(row)" :underline="false">
+                Edit
+              </el-link>
+              <span class="action-sep" aria-hidden="true">|</span>
+            </template>
+            <el-link type="primary" class="action-link" @click="handleResetPassword(row)" :underline="false">
+              Reset Password
             </el-link>
-            <el-divider direction="vertical" />
-          </template>
-          <el-link type="primary" @click="handleResetPassword(row)" :underline="false">
-            Reset Password
-          </el-link>
+          </div>
         </template>
       </el-table-column>
       </el-table>
@@ -158,6 +159,7 @@ import { useAuthStore } from '@/stores/auth'
 import { accountApi, type Account, type CreateAccountParams, type UpdateAccountParams } from '@/api/account'
 import { formatDateTime } from '@/utils/date'
 import { isAdminRole, roleDisplayName } from '@/utils/roles'
+import { formatPersonName } from '@/utils/name'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -221,9 +223,8 @@ const loadAccounts = async () => {
         account: item.username || item.account || '', // 后端返回 username，映射到前端的 account
         firstName: firstName,
         lastName: lastName,
-        // Admin 账号 Name 固定为 "System Administrator"，不可编辑
-        // 其他账号：两个都有 -> "firstName, lastName"，只有一个 -> 只显示该字段，避免多余逗号
-        name: isAdmin ? 'System Administrator' : (firstName && lastName ? `${firstName}, ${lastName}` : (firstName || lastName || '')),
+        // Admin 账号 Name 固定为 "System Administrator"，其他账号统一 "lastName, firstName"
+        name: isAdmin ? 'System Administrator' : formatPersonName(firstName, lastName),
         role: item.role || item.userRole || '', // 后端返回的角色，用于判断是否为 admin
         roleDisplayName: roleDisplayName(item.role || item.userRole || ''),
         isActive: isActive, // 后端返回的 isActive 字段
@@ -398,9 +399,9 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .account-page {
-  padding: 20px;
-  background-color: #f5f5f5;
-  min-height: 100vh;
+  padding: 20px 28px 28px;
+  background-color: var(--crm-surface-page);
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -412,27 +413,32 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     padding: 0;
     width: 100%;
     box-sizing: border-box;
 
     .user-info {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
-      color: #606266;
+      gap: 10px;
+      color: #1f2a37;
       font-size: 14px;
-      padding: 0;
+      line-height: 1;
+      padding: 8px 12px;
       margin: 0;
+      border-radius: 10px;
+      background: #e8eff6;
 
       .user-role-pill {
-        margin-left: 6px;
-        padding: 2px 8px;
-        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        margin-left: 2px;
+        padding: 0;
+        font-size: 13px;
+        line-height: 1;
+        font-weight: 500;
         color: #025189;
-        background: #e8f1fa;
-        border-radius: 4px;
       }
 
       :deep(.el-icon) {
@@ -451,6 +457,7 @@ onMounted(() => {
   .table-wrapper {
     width: 100%;
     flex: 1;
+    min-height: 420px;
     padding: 0;
     margin: 0;
     box-sizing: border-box;
@@ -459,9 +466,10 @@ onMounted(() => {
 
   .account-table {
     background-color: #fff;
-    border-radius: 4px;
+    border-radius: var(--crm-radius-lg);
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--crm-shadow-card);
+    border: 1px solid rgba(226, 232, 240, 0.9);
     width: 100%;
     box-sizing: border-box;
     margin: 0;
@@ -491,8 +499,9 @@ onMounted(() => {
           background-color: #025189 !important;
           color: #fff !important;
           border: none;
-          font-weight: 500;
-          padding: 12px 0;
+          font-weight: 600;
+          font-size: 14px;
+          padding: 10px 0;
           box-sizing: border-box;
         }
       }
@@ -516,7 +525,7 @@ onMounted(() => {
           }
           
           td {
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid #ebeef5;
             box-sizing: border-box;
           }
@@ -528,14 +537,28 @@ onMounted(() => {
       background-color: #fafafa;
     }
 
-    :deep(.el-link) {
+    .table-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0;
       font-size: 14px;
-      margin-right: 8px;
     }
 
-    :deep(.el-divider--vertical) {
-      margin: 0 8px;
-      height: 14px;
+    .action-sep {
+      color: #c0c4cc;
+      padding: 0 6px;
+      user-select: none;
+    }
+
+    .action-link {
+      font-weight: 500;
+    }
+
+    :deep(.el-table__body td.el-table-fixed-column--right),
+    :deep(.el-table__header th.el-table-fixed-column--right) {
+      padding-left: 8px !important;
+      padding-right: 8px !important;
     }
   }
 }
