@@ -238,7 +238,10 @@ watch(
   gap: 16px;
   width: 100%;
   margin: 0;
-  padding: 0 0 0 36px;
+  padding: 16px 36px;
+  background-color: #fff;
+  border-radius: 4px;
+  box-sizing: border-box;
 }
 
 .comments-toolbar {

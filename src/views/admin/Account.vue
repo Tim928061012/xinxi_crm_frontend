@@ -7,7 +7,6 @@
         New Account
       </el-button>
       <div class="user-info">
-        <el-icon><User /></el-icon>
         <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
         <span v-if="authStore.user?.roleDisplayName || authStore.user?.role" class="user-role-pill">
           {{ authStore.user?.roleDisplayName || roleDisplayName(authStore.user?.role) }}
@@ -46,17 +45,8 @@
               :disabled="isSystemAdmin(row)"
               @change="handleStatusChange(row)"
             />
-            <span
-              :style="{
-                color:
-                  isSystemAdmin(row)
-                    ? '#909399'
-                    : row.isActive
-                      ? '#67c23a'
-                      : '#909399'
-              }"
-            >
-              {{ row.isActive ? 'enabled' : 'disabled' }}
+            <span :style="{ color: '#909399' }">
+              {{ row.isActive ? 'Enabled' : 'Disabled' }}
             </span>
           </div>
         </template>
@@ -82,6 +72,7 @@
     <!-- 新建账户模态框 -->
     <el-dialog
       v-model="newAccountDialogVisible"
+      class="crm-compact-dialog"
       title="New Account"
       width="500px"
       :close-on-click-modal="false"
@@ -90,6 +81,7 @@
         ref="newAccountFormRef"
         :model="newAccountForm"
         :rules="accountFormRules"
+        label-position="left"
         label-width="120px"
       >
         <el-form-item label="Account" prop="account" required>
@@ -119,6 +111,7 @@
     <!-- 编辑账户模态框 -->
     <el-dialog
       v-model="editAccountDialogVisible"
+      class="crm-compact-dialog"
       title="Edit Account"
       width="500px"
       :close-on-click-modal="false"
@@ -127,6 +120,7 @@
         ref="editAccountFormRef"
         :model="editAccountForm"
         :rules="accountFormRules"
+        label-position="left"
         label-width="120px"
       >
         <el-form-item label="Account" prop="account" required>
@@ -154,7 +148,7 @@
 import { ref, reactive, onMounted, watch, onActivated } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, User } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { accountApi, type Account, type CreateAccountParams, type UpdateAccountParams } from '@/api/account'
 import { formatDateTime } from '@/utils/date'
@@ -223,7 +217,7 @@ const loadAccounts = async () => {
         account: item.username || item.account || '', // 后端返回 username，映射到前端的 account
         firstName: firstName,
         lastName: lastName,
-        // Admin 账号 Name 固定为 "System Administrator"，其他账号统一 "lastName, firstName"
+        // Admin 账号 Name 固定为 "System Administrator"，其他账号统一 "firstName, lastName"
         name: isAdmin ? 'System Administrator' : formatPersonName(firstName, lastName),
         role: item.role || item.userRole || '', // 后端返回的角色，用于判断是否为 admin
         roleDisplayName: roleDisplayName(item.role || item.userRole || ''),
@@ -441,16 +435,6 @@ onMounted(() => {
         color: #025189;
       }
 
-      :deep(.el-icon) {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: #d9dde3;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #5a6473;
-      }
     }
   }
 
@@ -563,31 +547,35 @@ onMounted(() => {
   }
 }
 
-:deep(.el-dialog) {
-  border-radius: 4px;
+:deep(.crm-compact-dialog.el-dialog) {
+  border-radius: 8px;
 
   .el-dialog__header {
-    padding: 20px 20px 10px;
-    border-bottom: 1px solid #e4e7ed;
+    padding: 8px 16px 6px;
+    border-bottom: none;
     position: relative;
 
     .el-dialog__title {
+      display: block;
+      margin: 0;
       font-size: 18px;
-      font-weight: 600;
+      font-weight: 500;
+      color: #303133;
     }
 
     .el-dialog__headerbtn {
-      top: 20px;
-      right: 20px;
+      top: -12px;
+      right: -12px;
     }
   }
 
   .el-dialog__body {
-    padding: 20px;
+    padding: 4px 24px 2px;
   }
 
   .el-form-item {
-    margin-bottom: 20px;
+    margin-bottom: 14px;
+    align-items: flex-start;
 
     .el-form-item__label {
       &::before {
@@ -595,6 +583,9 @@ onMounted(() => {
         color: #f56c6c;
         margin-right: 4px;
       }
+      justify-content: flex-start;
+      text-align: left;
+      padding-right: 12px;
       pointer-events: none !important; // 禁用 label 的点击聚焦行为
       cursor: default !important; // 将鼠标指针改为默认样式
     }
@@ -602,14 +593,31 @@ onMounted(() => {
     .el-input__wrapper {
       border-radius: 4px;
     }
+
+    .el-form-item__content {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      min-width: 0;
+    }
+  }
+
+  .el-form-item__error {
+    position: static;
+    padding-top: 4px;
+    line-height: 16px;
+    min-height: 16px;
+    white-space: normal;
   }
 
   .el-dialog__footer {
-    padding: 10px 20px 20px;
-    border-top: 1px solid #e4e7ed;
+    padding: 6px 24px 14px;
+    border-top: none;
 
     .el-button {
-      padding: 10px 20px;
+      min-width: 96px;
+      height: 36px;
+      padding: 0 18px;
       border-radius: 4px;
     }
   }

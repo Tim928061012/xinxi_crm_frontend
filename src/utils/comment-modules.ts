@@ -36,11 +36,11 @@ export const COMMENT_MODULE_OPTIONS: { label: string; value: CommentModuleCode }
   { label: 'Overview', value: 'RISK_OVERVIEW' },
   { label: 'Vulnerable Client Assessment', value: 'RISK_VULNERABLE_CLIENT' },
   { label: 'Investment Knowledge & Experience', value: 'RISK_INVESTMENT_KNOWLEDGE' },
-  { label: 'Upload Identity Proof', value: 'DOCS_IDENTITY' },
-  { label: 'Upload Address Proof', value: 'DOCS_ADDRESS' },
-  { label: 'Upload Forms', value: 'DOCS_FORMS' },
-  { label: 'Upload XinXi Statements', value: 'DOCS_STATEMENTS' },
-  { label: 'Upload Others Documents', value: 'DOCS_OTHERS' },
+  { label: 'Identity Proof', value: 'DOCS_IDENTITY' },
+  { label: 'Address Proof', value: 'DOCS_ADDRESS' },
+  { label: 'Forms', value: 'DOCS_FORMS' },
+  { label: 'XinXi Statements', value: 'DOCS_STATEMENTS' },
+  { label: 'Others Documents', value: 'DOCS_OTHERS' },
   { label: 'Fee Schedule', value: 'FEE_SCHEDULE' }
 ]
 

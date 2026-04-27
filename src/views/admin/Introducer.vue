@@ -6,7 +6,6 @@
         New Introducer
       </el-button>
       <div class="user-info">
-        <el-icon><User /></el-icon>
         <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
         <span v-if="authStore.user?.roleDisplayName || authStore.user?.role" class="user-role-pill">
           {{ authStore.user?.roleDisplayName || roleDisplayName(authStore.user?.role) }}
@@ -43,8 +42,8 @@
                   :inactive-value="false"
                   @change="handleStatusChange(row)"
                 />
-                <span :style="{ color: row.isActive ? '#67c23a' : '#909399' }">
-                  {{ row.isActive ? 'enabled' : 'disabled' }}
+                <span :style="{ color: '#909399' }">
+                  {{ row.isActive ? 'Enabled' : 'Disabled' }}
                 </span>
               </div>
             </template>
@@ -80,7 +79,7 @@
 import { ref, onMounted, watch, onActivated } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, User } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { introducerApi, type Introducer } from '@/api/introducer'
 import { accountApi } from '@/api/account'
@@ -257,16 +256,6 @@ onMounted(() => {
         color: #025189;
       }
 
-      :deep(.el-icon) {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: #d9dde3;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #5a6473;
-      }
     }
   }
 

@@ -1,12 +1,14 @@
 <template>
   <div class="client-detail-page" v-loading.fullscreen="pageLoading" element-loading-text="Loading client data...">
     <!-- Tab 导航 + 主内容区（General～Fee 时若有评论则显示右侧栏） -->
-    <div class="client-tabs-shell" :class="{ 'is-comments-fill': commentsRailFillMainHeight }">
+    <div
+      class="client-tabs-shell"
+      :class="{ 'is-comments-fill': commentsRailFillMainHeight, 'has-comments-rail': commentsRailLayoutActive }"
+    >
       <div ref="tabsShellMainRef" class="client-tabs-shell__main">
         <!-- 顶部：仅属于主内容列，避免跑到 comments 上方 -->
         <div class="top-header">
           <div class="top-header__leading">
-            <el-button :icon="ArrowLeft" circle class="top-header__back" @click="handleBack" />
             <h1 class="top-header__title">
               <span class="top-header__name">{{ headerClientName }}</span>
               <template v-if="headerWorkflowStatusText">
@@ -59,7 +61,7 @@
               <el-button v-if="canShowEditButton" type="primary" @click="handleEdit">
                 Edit
               </el-button>
-              <el-button v-if="canReviewAction" type="success" @click="enterReviewMode">
+              <el-button v-if="canReviewAction" type="primary" @click="enterReviewMode">
                 Review
               </el-button>
               <el-button
@@ -1576,7 +1578,7 @@
           <!-- Identity Proof -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Upload Identity Proof</h3>
+              <h3 class="section-title">Identity Proof</h3>
               <div class="section-header-actions">
                 <DocumentUploadLinkButton
                   v-if="!isViewMode"
@@ -1589,7 +1591,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCS_IDENTITY', 'Upload Identity Proof')"
+                  @click="openCommentFromModule('DOCS_IDENTITY', 'Identity Proof')"
                 />
               </div>
             </div>
@@ -1626,7 +1628,7 @@
           <!-- Address Proof -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Upload Address Proof</h3>
+              <h3 class="section-title">Address Proof</h3>
               <div class="section-header-actions">
                 <DocumentUploadLinkButton
                   v-if="!isViewMode"
@@ -1639,7 +1641,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCS_ADDRESS', 'Upload Address Proof')"
+                  @click="openCommentFromModule('DOCS_ADDRESS', 'Address Proof')"
                 />
               </div>
             </div>
@@ -1676,7 +1678,7 @@
           <!-- Forms -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Upload Forms</h3>
+              <h3 class="section-title">Forms</h3>
               <div class="section-header-actions">
                 <DocumentUploadLinkButton
                   v-if="!isViewMode || canUploadFormsInPendingSignature"
@@ -1689,7 +1691,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCS_FORMS', 'Upload Forms')"
+                  @click="openCommentFromModule('DOCS_FORMS', 'Forms')"
                 />
               </div>
             </div>
@@ -1729,7 +1731,7 @@
           <!-- XinXi Statements -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Upload XinXi Statements</h3>
+              <h3 class="section-title">XinXi Statements</h3>
               <div class="section-header-actions">
                 <DocumentUploadLinkButton
                   v-if="!isViewMode"
@@ -1742,7 +1744,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCS_STATEMENTS', 'Upload XinXi Statements')"
+                  @click="openCommentFromModule('DOCS_STATEMENTS', 'XinXi Statements')"
                 />
               </div>
             </div>
@@ -1777,7 +1779,7 @@
           <!-- Others Documents -->
           <div class="document-section">
             <div class="section-header">
-              <h3 class="section-title">Upload Others Documents</h3>
+              <h3 class="section-title">Others Documents</h3>
               <div class="section-header-actions">
                 <DocumentUploadLinkButton
                   v-if="!isViewMode"
@@ -1790,7 +1792,7 @@
                 />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
-                  @click="openCommentFromModule('DOCS_OTHERS', 'Upload Others Documents')"
+                  @click="openCommentFromModule('DOCS_OTHERS', 'Others Documents')"
                 />
               </div>
             </div>
@@ -2171,7 +2173,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick, provide } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
-import { ArrowLeft, Hide, Plus, User, Phone, Message, Location, UploadFilled, Place, View } from '@element-plus/icons-vue'
+import { Hide, Plus, User, Phone, Message, Location, UploadFilled, Place, View } from '@element-plus/icons-vue'
 import JSZip from 'jszip'
 import crmUploadActionImg from '@/assets/crm-upload-action.png'
 import { useAuthStore } from '@/stores/auth'
@@ -2198,7 +2200,7 @@ import { formatPersonName } from '@/utils/name'
 import { formatFileSizeMb } from '@/utils/file-size'
 import { getProgressLabel, isClientEditable, normalizeProgressStatus } from '@/utils/client-progress'
 import { mapTabToCommentModule } from '@/utils/comment-modules'
-import { getClientBasePath, getClientListPath, isStandaloneClientRoute } from '@/utils/client-routes'
+import { getClientBasePath, getClientListPath } from '@/utils/client-routes'
 import { isAdminRole, isOperationRole, isReviewerOnlyEditInReviewRole, normalizeRole } from '@/utils/roles'
 
 const route = useRoute()
@@ -2460,9 +2462,11 @@ const tabsShellMainRef = ref<HTMLElement | null>(null)
 /** 含回复的总条数，用于是否显示右侧评论栏（与侧栏内计数一致） */
 const commentTotalCount = ref(0)
 const commentsRailCollapsed = ref(false)
+const commentsRailUserToggled = ref(false)
 const commentsRailFillMainHeight = ref(false)
 const tabsMainHeight = ref(0)
 const toggleCommentsRail = () => {
+  commentsRailUserToggled.value = true
   commentsRailCollapsed.value = !commentsRailCollapsed.value
 }
 
@@ -2482,23 +2486,45 @@ const commentsSideRailVisible = computed(() => {
   return (MAIN_TABS_WITH_COMMENTS_RAIL as readonly string[]).includes(activeTab.value)
 })
 
+const commentsRailLayoutActive = computed(() => commentsSideRailVisible.value && !commentsRailCollapsed.value)
+
 const loadCommentCount = async () => {
   if (!clientId.value) {
     commentTotalCount.value = 0
+    if (!commentsRailUserToggled.value) {
+      commentsRailCollapsed.value = true
+    }
     return
   }
   try {
     const response = await workflowApi.getComments(clientId.value, currentClientType.value)
     const raw = (response as { data?: ClientComment[] }).data
     const list = Array.isArray(raw) ? raw : []
-    commentTotalCount.value = countCommentTree(list)
+    const nextCount = countCommentTree(list)
+    const prevCount = commentTotalCount.value
+    commentTotalCount.value = nextCount
+    if (nextCount === 0 && !commentsRailUserToggled.value) {
+      // No comments: keep the rail hidden by default.
+      commentsRailCollapsed.value = true
+    } else if (prevCount === 0 && !commentsRailUserToggled.value) {
+      commentsRailCollapsed.value = false
+    }
   } catch {
     commentTotalCount.value = 0
+    if (!commentsRailUserToggled.value) {
+      commentsRailCollapsed.value = true
+    }
   }
 }
 
 const setCommentTotalCount = (n: number) => {
+  const prevCount = commentTotalCount.value
   commentTotalCount.value = n
+  if (n === 0 && !commentsRailUserToggled.value) {
+    commentsRailCollapsed.value = true
+  } else if (prevCount === 0 && !commentsRailUserToggled.value) {
+    commentsRailCollapsed.value = false
+  }
 }
 
 const updateCommentsRailHeightMode = () => {
@@ -2597,7 +2623,10 @@ watch(clientId, id => {
   }
   if (!id) {
     commentTotalCount.value = 0
+    commentsRailUserToggled.value = false
     clientDetailLoaded.value = false
+  } else {
+    commentsRailUserToggled.value = false
   }
 })
 
@@ -2865,11 +2894,11 @@ const documentUploadTitle = computed(() => {
     return kycUploadDocumentType.value === 'NAME_SCREENING' ? 'Name Screening Documents' : 'Supporting Documents'
   }
   const titles: Record<DocumentType, string> = {
-    identity: 'Upload Identity Proof',
-    address: 'Upload Address Proof',
-    forms: 'Upload Forms',
-    statements: 'Upload XinXi Statements',
-    others: 'Upload Others Documents'
+    identity: 'Identity Proof',
+    address: 'Address Proof',
+    forms: 'Forms',
+    statements: 'XinXi Statements',
+    others: 'Others Documents'
   }
   return titles[documentUploadType.value]
 })
@@ -3503,17 +3532,6 @@ const loadBanks = async () => {
   } catch (error) {
     console.error('Failed to load banks:', error)
   }
-}
-
-// 处理函数
-const handleBack = () => {
-  const listPath = getClientListPath(route.path)
-  if (isStandaloneClientRoute(route.path)) {
-    window.close()
-    void router.push(listPath)
-    return
-  }
-  router.push(listPath)
 }
 
 const openProgressDialog = () => {
@@ -4708,7 +4726,7 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     gap: 16px;
-    padding: 14px 0 12px;
+    padding: 12px 0;
     background-color: var(--crm-surface-page);
     border-bottom: none;
 
@@ -4718,10 +4736,7 @@ onMounted(() => {
       gap: 12px;
       min-width: 0;
       flex: 1;
-    }
-
-    .top-header__back {
-      flex-shrink: 0;
+      min-height: 32px;
     }
 
     .top-header__title {
@@ -4729,26 +4744,38 @@ onMounted(() => {
       font-size: 20px;
       font-weight: 500;
       color: var(--crm-text-primary, #0f172a);
-      line-height: 1.35;
+      line-height: 32px;
       word-break: break-word;
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      min-height: 32px;
     }
 
     .top-header__name {
       font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
     }
 
     .top-header__sep {
       color: #c0c4cc;
       margin: 0 12px;
       font-weight: 400;
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      line-height: 32px;
     }
 
     .top-header__status {
       font-weight: 400;
       color: var(--crm-text-secondary, #475569);
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      line-height: 32px;
     }
 
     .top-header__actions {
@@ -4763,12 +4790,25 @@ onMounted(() => {
       :deep(.el-button + .el-button) {
         margin-left: 0;
       }
+
+      :deep(.el-button) {
+        height: 32px;
+        min-height: 32px;
+        padding-top: 0;
+        padding-bottom: 0;
+        display: inline-flex;
+        align-items: center;
+      }
     }
 
     .last-saved {
       color: #9ca3af;
       font-size: 13px;
       font-weight: 400;
+      line-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
     }
 
   }
@@ -4791,6 +4831,11 @@ onMounted(() => {
    * 勿对 shell 使用 flex:1 + min-height:0，否则在 UserLayout 的定高 main 内会把中间区锁在视口高度内，
    * 长表单无法撑开页面，外层 .main-content 也无法滚动。由内容自然撑高，整页滚动交给 layout。 */
   .client-tabs-shell {
+    --comments-rail-width: 300px;
+    --comments-rail-gap: 8px;
+    --comments-actions-top: 12px;
+    --comments-actions-height: 32px;
+    --comments-actions-bottom-gap: 8px;
     flex: 0 1 auto;
     display: flex;
     flex-direction: row;
@@ -4813,24 +4858,51 @@ onMounted(() => {
 
   .client-tabs-shell__rail {
     flex-shrink: 0;
-    width: 300px;
+    width: var(--comments-rail-width);
     display: flex;
     flex-direction: column;
     align-self: flex-start;
     background-color: #fff;
-    border-radius: 0;
+    border-radius: 8px;
     /* 侧栏无边线，保持与内容区平滑衔接 */
     border-left: none;
     border-right: none;
     border-top: none;
     border-bottom: none;
     box-shadow: none;
-    margin-left: 10px;
-    overflow: visible;
+    margin-left: var(--comments-rail-gap);
+    /* 右侧评论区从顶栏按钮下方开始，对齐图二布局 */
+    margin-top: calc(
+      var(--comments-actions-top) +
+      var(--comments-actions-height) +
+      var(--comments-actions-bottom-gap) +
+      6px
+    );
+    overflow: hidden;
 
     &.is-narrow {
       width: 44px;
     }
+  }
+
+  .client-tabs-shell.has-comments-rail .top-header {
+    position: relative;
+    min-height: calc(
+      var(--comments-actions-top) +
+      var(--comments-actions-height) +
+      var(--comments-actions-bottom-gap)
+    );
+  }
+
+  .client-tabs-shell.has-comments-rail .top-header__actions {
+    position: absolute;
+    top: var(--comments-actions-top);
+    right: calc(-1 * (var(--comments-rail-width) + var(--comments-rail-gap)));
+    margin-right: 0;
+    padding-right: 0;
+    height: var(--comments-actions-height);
+    align-items: center;
+    flex-wrap: nowrap;
   }
 
   /* 顶部 Tab 与内容区域：无内边距（不 flex:1 撑满视口，避免长页被裁切无法滚动） */
@@ -4839,7 +4911,7 @@ onMounted(() => {
     width: 100%;
     min-height: 100%;
     background-color: var(--crm-surface-page);
-    border-radius: 0;
+    border-radius: 8px;
     padding: 0;
     box-shadow: none;
     display: flex;
@@ -4849,18 +4921,29 @@ onMounted(() => {
       margin-bottom: 0 !important;
       background-color: #fff;
       padding: 6px 188px 0 16px;
-      border-radius: 6px 6px 0 0;
+      border-radius: 8px;
       border: none;
       border-bottom: none !important;
       box-shadow: none;
+      overflow: hidden;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
     }
 
     :deep(.el-tabs__nav-wrap) {
       margin-bottom: 0;
+      display: flex;
+      align-items: center;
 
       &::after {
         display: none !important;
       }
+    }
+
+    :deep(.el-tabs__nav) {
+      align-items: center;
+      min-height: 34px;
     }
 
     :deep(.el-tabs__active-bar) {
@@ -4873,7 +4956,7 @@ onMounted(() => {
     :deep(.el-tabs__content) {
       flex: 1 1 auto;
       overflow: visible !important;
-      padding-top: 16px;
+      padding-top: 8px;
       background-color: var(--crm-surface-page);
       border: none;
       border-top: none !important;
@@ -4888,13 +4971,19 @@ onMounted(() => {
     :deep(.el-tabs__item) {
       height: 34px;
       line-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       font-size: 14px;
       padding: 0 18px;
+      box-sizing: border-box;
+      transform: translateY(-3px);
     }
   }
 
   .client-tabs-wrap {
     position: relative;
+    border-radius: 8px;
   }
 
   .client-tabs__comment-toggle {
@@ -4916,6 +5005,7 @@ onMounted(() => {
     font-weight: 500;
     line-height: 1;
     cursor: pointer;
+    transform: translateY(-3px);
 
     .el-icon {
       font-size: 15px;
@@ -4949,7 +5039,7 @@ onMounted(() => {
   .client-form {
     .form-section {
       margin-top: 0;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
       padding: 16px 36px;
       background-color: #fff;
       border: none;
@@ -5103,7 +5193,7 @@ onMounted(() => {
 
 // KYC Information 卡片（小模块白底，与 tab 标头左右对齐）
 .kyc-information-card {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   padding: 16px 36px;
   background-color: #fff;
   border: none;
@@ -5229,7 +5319,7 @@ onMounted(() => {
 
 // Document Section：单层白卡片（标题 + 可选表格），与浅灰 tab 底分层
 .document-section {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   padding: 16px 36px;
   background-color: #fff;
   border: none;
@@ -5320,7 +5410,7 @@ onMounted(() => {
   position: relative;
 
   .form-section {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
     padding: 16px 36px;
     background-color: #fff;
     border: none;
@@ -5481,7 +5571,7 @@ onMounted(() => {
 // Fee Schedule Form（与 KYC 统一：白底卡片、无边框、紧凑间距）
 .fee-schedule-form {
   .form-section {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
     padding: 16px 36px;
     background-color: #fff;
     border: none;

@@ -7,7 +7,6 @@
         New Bank & Centre
       </el-button>
       <div class="user-info">
-        <el-icon><User /></el-icon>
         <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
         <span v-if="authStore.user?.roleDisplayName || authStore.user?.role" class="user-role-pill">
           {{ authStore.user?.roleDisplayName || roleDisplayName(authStore.user?.role) }}
@@ -40,8 +39,8 @@
                   :inactive-value="false"
                   @change="handleStatusChange(row)"
                 />
-                <span :style="{ color: row.isActive ? '#67c23a' : '#909399' }">
-                  {{ row.isActive ? 'enabled' : 'disabled' }}
+                <span :style="{ color: '#909399' }">
+                  {{ row.isActive ? 'Enabled' : 'Disabled' }}
                 </span>
               </div>
             </template>
@@ -79,6 +78,7 @@
     <!-- 新建银行模态框 -->
     <el-dialog
       v-model="newBankDialogVisible"
+      class="crm-compact-dialog"
       title="New Bank & Centre"
       width="500px"
       :close-on-click-modal="false"
@@ -87,6 +87,7 @@
         ref="newBankFormRef"
         :model="newBankForm"
         :rules="newBankFormRules"
+        label-position="left"
         label-width="140px"
       >
         <el-form-item label="Bank" prop="bank" required>
@@ -109,9 +110,9 @@
               class="booking-centre-item"
             >
               <el-input
+                class="booking-centre-input"
                 v-model="centre.name"
                 :placeholder="`Booking Centre ${index + 1}`"
-                style="flex: 1; margin-right: 8px;"
               />
               <!-- 新建时：只允许删除未保存的 Booking Centre，不提供启用/禁用开关 -->
               <el-button
@@ -123,16 +124,18 @@
                 @click="removeBookingCentre('new', index)"
               />
             </div>
-            <el-button
-              type="text"
-              :icon="Plus"
-              @click="addBookingCentre('new')"
-              class="add-booking-centre-btn"
-            >
-              Add a new Booking Centre
-            </el-button>
           </div>
         </el-form-item>
+        <div class="booking-centre-add-row">
+          <el-button
+            type="text"
+            :icon="Plus"
+            @click="addBookingCentre('new')"
+            class="add-booking-centre-btn"
+          >
+            Add a new Booking Centre
+          </el-button>
+        </div>
       </el-form>
       <template #footer>
         <el-button @click="newBankDialogVisible = false">Cancel</el-button>
@@ -143,6 +146,7 @@
     <!-- 编辑银行模态框 -->
     <el-dialog
       v-model="editBankDialogVisible"
+      class="crm-compact-dialog"
       title="New Bank & Centre"
       width="500px"
       :close-on-click-modal="false"
@@ -151,6 +155,7 @@
         ref="editBankFormRef"
         :model="editBankForm"
         :rules="editBankFormRules"
+        label-position="left"
         label-width="140px"
       >
         <el-form-item label="Bank" prop="bank" required>
@@ -173,9 +178,9 @@
               class="booking-centre-item"
             >
               <el-input
+                class="booking-centre-input"
                 v-model="centre.name"
                 :placeholder="`Booking Centre ${index + 1}`"
-                style="flex: 1; margin-right: 8px;"
               />
               <!-- 编辑时：已存在的 Centre 只能启用/禁用，不能删除；新添加的 Centre 只能删除，不能启用/禁用 -->
               <div
@@ -200,16 +205,18 @@
                 @click="removeBookingCentre('edit', index)"
               />
             </div>
-            <el-button
-              type="text"
-              :icon="Plus"
-              @click="addBookingCentre('edit')"
-              class="add-booking-centre-btn"
-            >
-              Add a new Booking Centre
-            </el-button>
           </div>
         </el-form-item>
+        <div class="booking-centre-add-row">
+          <el-button
+            type="text"
+            :icon="Plus"
+            @click="addBookingCentre('edit')"
+            class="add-booking-centre-btn"
+          >
+            Add a new Booking Centre
+          </el-button>
+        </div>
       </el-form>
       <template #footer>
         <el-button @click="editBankDialogVisible = false">Cancel</el-button>
@@ -259,7 +266,7 @@
 import { ref, reactive, onMounted, watch, onActivated, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, User, Minus } from '@element-plus/icons-vue'
+import { Plus, Minus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { bankApi, type BankCentre, type CreateBankCentreParams, type UpdateBankCentreParams, type BookingCentre } from '@/api/bank'
 import { formatDateTime } from '@/utils/date'
@@ -631,16 +638,6 @@ onMounted(() => {
         color: #025189;
       }
 
-      :deep(.el-icon) {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: #d9dde3;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #5a6473;
-      }
     }
   }
 
@@ -766,7 +763,17 @@ onMounted(() => {
     .booking-centre-item {
       display: flex;
       align-items: center;
-      margin-bottom: 12px;
+      gap: 8px;
+      margin-bottom: 0;
+
+      & + .booking-centre-item {
+        margin-top: 12px;
+      }
+
+      .booking-centre-input {
+        flex: 1;
+        min-width: 0;
+      }
 
       .centre-status {
         display: flex;
@@ -776,29 +783,36 @@ onMounted(() => {
       }
     }
   }
+
+  .booking-centre-add-row {
+    margin: -4px 0 8px 140px;
+  }
 }
 
-:deep(.el-dialog) {
-  border-radius: 4px;
+:deep(.crm-compact-dialog.el-dialog) {
+  border-radius: 8px;
 
   .el-dialog__header {
-    padding: 20px 20px 10px;
-    border-bottom: 1px solid #e4e7ed;
+    padding: 4px 12px 4px;
+    border-bottom: none;
     position: relative;
 
     .el-dialog__title {
+      display: block;
+      margin: 0;
       font-size: 18px;
-      font-weight: 600;
+      font-weight: 500;
+      color: #303133;
     }
 
     .el-dialog__headerbtn {
-      top: 20px;
-      right: 20px;
+      top: -12px;
+      right: -12px;
     }
   }
 
   .el-dialog__body {
-    padding: 20px;
+    padding: 16px 24px 2px;
     
     .add-booking-centre-btn {
       padding: 0;
@@ -832,12 +846,16 @@ onMounted(() => {
   // Booking Centre 字段的星号间距在外部定义，确保优先级
 
   .el-form-item {
-    margin-bottom: 20px;
+    margin-bottom: 14px;
+    align-items: flex-start;
 
     .el-form-item__label {
       line-height: 1.2;
       word-break: break-word;
       white-space: normal;
+      justify-content: flex-start;
+      text-align: left;
+      padding-right: 12px;
       pointer-events: none !important; // 禁用 label 的点击聚焦行为
       cursor: default !important; // 将鼠标指针改为默认样式
     }
@@ -845,14 +863,31 @@ onMounted(() => {
     .el-input__wrapper {
       border-radius: 4px;
     }
+
+    .el-form-item__content {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      min-width: 0;
+    }
+  }
+
+  .el-form-item__error {
+    position: static;
+    padding-top: 4px;
+    line-height: 16px;
+    min-height: 16px;
+    white-space: normal;
   }
 
   .el-dialog__footer {
-    padding: 10px 20px 20px;
-    border-top: 1px solid #e4e7ed;
+    padding: 6px 24px 14px;
+    border-top: none;
 
     .el-button {
-      padding: 10px 20px;
+      min-width: 96px;
+      height: 36px;
+      padding: 0 18px;
       border-radius: 4px;
     }
   }
@@ -867,9 +902,11 @@ onMounted(() => {
 
 // 方法2: 使用负 margin 来进一步缩小间距（如果方法1不够）
 :deep(.el-dialog .booking-centre-form-item.is-required .el-form-item__label .booking-centre-label) {
-  margin-left: -3px !important; // 使用负 margin 抵消剩余的间距
+  margin-left: 0 !important;
   padding-left: 0 !important;
-  display: inline !important;
+  display: inline-flex !important;
+  flex-direction: column;
+  align-items: flex-start;
   vertical-align: baseline;
 }
 </style>

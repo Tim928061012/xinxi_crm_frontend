@@ -9,7 +9,6 @@
         <el-button :disabled="!clientList.length" @click="openExportDialog">Export Client</el-button>
       </div>
       <div class="user-info">
-        <el-icon><User /></el-icon>
         <span>{{ authStore.user?.name || authStore.user?.username || authStore.user?.account || 'User' }}</span>
         <span class="user-role">{{ authStore.user?.roleDisplayName || '' }}</span>
       </div>
@@ -316,7 +315,7 @@
 import { computed, onActivated, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, User } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
 import JSZip from 'jszip'
 import { useAuthStore } from '@/stores/auth'
 import { userClientApi, type Client } from '@/api/user/client'
@@ -522,15 +521,20 @@ function resetExportDialogFilters() {
 const normalizeClient = (item: any): ClientListRow => {
   const contactNature = (item.clientType || item.contactNature || item.contact_nature || 'Individual') as ClientType
 
-  let clientName = item.clientName || item.client_name || ''
-  if (!clientName) {
-    if (contactNature === 'Corporate') {
-      clientName = item.chineseCompanyName || item.chinese_company_name || item.companyName || item.company_name || ''
-    } else {
-      const firstName = item.firstName || item.first_name || ''
-      const lastName = item.lastName || item.last_name || ''
-      clientName = formatPersonName(firstName, lastName)
-    }
+  let clientName = ''
+  if (contactNature === 'Corporate') {
+    clientName =
+      item.chineseCompanyName ||
+      item.chinese_company_name ||
+      item.companyName ||
+      item.company_name ||
+      item.clientName ||
+      item.client_name ||
+      ''
+  } else {
+    const firstName = item.firstName || item.first_name || ''
+    const lastName = item.lastName || item.last_name || ''
+    clientName = formatPersonName(firstName, lastName, item.clientName || item.client_name || '')
   }
 
   const rmFirstName = item.rmFirstName || item.rm_first_name || ''
@@ -538,7 +542,7 @@ const normalizeClient = (item: any): ClientListRow => {
   const rmName =
     item.rmName ||
     item.rm_name ||
-    (rmLastName && rmFirstName ? `${rmLastName}, ${rmFirstName}` : (rmLastName || rmFirstName || ''))
+    formatPersonName(rmFirstName, rmLastName)
 
   const inactive = item.inactive === true || item.isInactive === true || item.is_inactive === true
   const progressStatus = item.progressStatus || item.progress_status || ''

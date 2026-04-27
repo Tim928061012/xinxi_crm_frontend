@@ -5,7 +5,6 @@
         <el-button :disabled="!clientList.length" @click="openExportDialog">Export Client</el-button>
       </div>
       <div class="user-info">
-        <el-icon><User /></el-icon>
         <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
         <span v-if="authStore.user?.roleDisplayName || authStore.user?.role" class="user-role-pill">
           {{ authStore.user?.roleDisplayName || roleDisplayName(authStore.user?.role) }}
@@ -300,7 +299,6 @@
 import { computed, onActivated, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { User } from '@element-plus/icons-vue'
 import JSZip from 'jszip'
 import { useAuthStore } from '@/stores/auth'
 import { adminClientApi } from '@/api/client'
@@ -506,15 +504,20 @@ function resetExportDialogFilters() {
 
 const normalizeClient = (item: any): AdminClientRow => {
   const contactNature = (item.clientType || item.contactNature || item.contact_nature || 'Individual') as ClientType
-  let clientName = item.clientName || item.client_name || ''
-  if (!clientName) {
-    if (contactNature === 'Corporate') {
-      clientName = item.chineseCompanyName || item.chinese_company_name || item.companyName || item.company_name || ''
-    } else {
-      const firstName = item.firstName || item.first_name || ''
-      const lastName = item.lastName || item.last_name || ''
-      clientName = formatPersonName(firstName, lastName)
-    }
+  let clientName = ''
+  if (contactNature === 'Corporate') {
+    clientName =
+      item.chineseCompanyName ||
+      item.chinese_company_name ||
+      item.companyName ||
+      item.company_name ||
+      item.clientName ||
+      item.client_name ||
+      ''
+  } else {
+    const firstName = item.firstName || item.first_name || ''
+    const lastName = item.lastName || item.last_name || ''
+    clientName = formatPersonName(firstName, lastName, item.clientName || item.client_name || '')
   }
 
   const rmFirstName = item.rmFirstName || item.rm_first_name || ''
@@ -522,7 +525,7 @@ const normalizeClient = (item: any): AdminClientRow => {
   const rmName =
     item.rmName ||
     item.rm_name ||
-    (rmLastName && rmFirstName ? `${rmLastName}, ${rmFirstName}` : (rmLastName || rmFirstName || ''))
+    formatPersonName(rmFirstName, rmLastName)
 
   const inactive = item.inactive === true || item.isInactive === true || item.is_inactive === true
   const progressStatus = item.progressStatus || item.progress_status || ''
@@ -973,16 +976,6 @@ onMounted(loadClients)
       color: #025189;
     }
 
-    :deep(.el-icon) {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background-color: #d9dde3;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #5a6473;
-    }
   }
 
   .reset-btn.el-button {

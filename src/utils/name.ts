@@ -5,9 +5,9 @@ export const formatPersonName = (
 ): string => {
   const first = (firstName || '').trim()
   const last = (lastName || '').trim()
-  if (last && first) return `${last}, ${first}`
-  if (last) return last
+  if (first && last) return `${first}, ${last}`
   if (first) return first
+  if (last) return last
   return fallback
 }
 
