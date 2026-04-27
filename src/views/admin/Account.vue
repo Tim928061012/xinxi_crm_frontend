@@ -18,9 +18,10 @@
     <div class="table-wrapper">
       <el-table
         :data="accountList"
-        stripe
         class="account-table"
         style="width: 100%"
+        :row-style="crmTableRowStyle"
+        :cell-style="crmTableCellStyle"
       >
       <el-table-column prop="account" label="Account" width="180" />
       <el-table-column prop="name" label="Name" width="200" />
@@ -36,7 +37,7 @@
       </el-table-column>
       <el-table-column label="Status" width="150">
         <template #default="{ row }">
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="table-status-cell">
             <!-- admin 账号状态开关置灰不可修改 -->
             <el-switch
               v-model="row.isActive"
@@ -157,6 +158,9 @@ import { formatPersonName } from '@/utils/name'
 
 const route = useRoute()
 const authStore = useAuthStore()
+
+const crmTableRowStyle = () => ({ height: '41.31px' })
+const crmTableCellStyle = () => ({ paddingTop: '4px', paddingBottom: '4px' })
 
 const accountList = ref<Account[]>([])
 const newAccountDialogVisible = ref(false)
@@ -449,6 +453,9 @@ onMounted(() => {
   }
 
   .account-table {
+    --crm-table-header-bg: #004080;
+    --crm-table-header-text: #ffffff;
+    --crm-table-border: #e4e7ed;
     background-color: #fff;
     border-radius: var(--crm-radius-lg);
     overflow: hidden;
@@ -467,59 +474,43 @@ onMounted(() => {
     :deep(.el-table__inner-wrapper) {
       width: 100% !important;
       box-sizing: border-box;
-    }
 
-    :deep(.el-table__header-wrapper) {
-      width: 100% !important;
-      box-sizing: border-box;
-      
-      .el-table__header {
-        width: 100% !important;
-        background-color: #025189;
-        color: #fff;
-        box-sizing: border-box;
-
-        th {
-          background-color: #025189 !important;
-          color: #fff !important;
-          border: none;
-          font-weight: 600;
-          font-size: 14px;
-          padding: 10px 0;
-          box-sizing: border-box;
-        }
+      &::before {
+        display: none;
       }
     }
 
-    :deep(.el-table__body-wrapper) {
-      width: 100% !important;
-      box-sizing: border-box;
-      
-      .el-table__body {
-        width: 100% !important;
-        box-sizing: border-box;
-        
-        tr {
-          background-color: #fff;
-          width: 100% !important;
-          box-sizing: border-box;
-          
-          &:hover {
-            background-color: #f5f7fa;
-          }
-          
-          td {
-            padding: 10px 0;
-            border-bottom: 1px solid #ebeef5;
-            box-sizing: border-box;
-          }
-        }
-      }
+    :deep(.el-table__header-wrapper th.el-table__cell) {
+      background: var(--crm-table-header-bg) !important;
+      color: var(--crm-table-header-text) !important;
+      font-weight: 600;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 8px 0 !important;
     }
 
-    :deep(.el-table__row--striped) {
-      background-color: #fafafa;
+    :deep(.el-table__header-wrapper th.el-table__cell .cell) {
+      color: var(--crm-table-header-text) !important;
     }
+
+    :deep(.el-table__body-wrapper td.el-table__cell) {
+      border-color: var(--crm-table-border);
+      padding: 4px 0 !important;
+    }
+
+    :deep(.el-table__body-wrapper td.el-table__cell .cell) {
+      line-height: 24px !important;
+    }
+
+    :deep(.el-table__body-wrapper tr) {
+      background: #fff;
+      height: 41.31px;
+    }
+
+    :deep(.el-table__body-wrapper tbody tr:hover > td.el-table__cell) {
+      background: #f5f9fc !important;
+    }
+
 
     .table-actions {
       display: inline-flex;
@@ -544,6 +535,15 @@ onMounted(() => {
       padding-left: 8px !important;
       padding-right: 8px !important;
     }
+  }
+
+  .table-status-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    line-height: 24px;
+    white-space: nowrap;
   }
 }
 
