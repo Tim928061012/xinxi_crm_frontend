@@ -636,7 +636,7 @@ const handleDelete = async (row: ClientListRow) => {
         showClose: false
       }
     )
-    await userClientApi.deleteClient(row.id)
+    await userClientApi.deleteClient(row.id, row.contactNature)
     ElMessage.success('Client deleted successfully')
     await loadClients()
   } catch (error: any) {

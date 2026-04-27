@@ -273,7 +273,7 @@ const actionButtons = computed(() => {
   if (!progress.value) return []
   const actionMap: Record<string, { label: string; type?: 'primary' | 'warning' | 'success' | 'danger' | 'info'; plain?: boolean }> = {
     SUBMIT: { label: 'Submit', type: 'primary' },
-    WITHDRAW: { label: 'Withdraw', type: 'warning', plain: true },
+    WITHDRAW: { label: 'Withdraw', type: 'danger', plain: true },
     SUBMIT_SIGNATURE: { label: 'Submit Signature', type: 'primary' },
     REVIEW: { label: 'Review', type: 'success' },
     DEACTIVATE: { label: 'Deactivate', type: 'danger', plain: true },
@@ -496,6 +496,23 @@ const loadProgress = async () => {
   }
 }
 
+const isConfirmDismissed = (error: unknown) => error === 'cancel' || error === 'close'
+
+const confirmSubmitOrWithdraw = async (action: string) => {
+  if (action !== 'SUBMIT' && action !== 'WITHDRAW') return
+  await ElMessageBox.confirm(
+    action === 'SUBMIT'
+      ? 'Are you sure you want to submit this client for review?'
+      : 'Are you sure you want to withdraw this client?',
+    action === 'SUBMIT' ? 'Confirm Submit' : 'Confirm Withdraw',
+    {
+      type: 'warning',
+      confirmButtonText: action === 'SUBMIT' ? 'Submit' : 'Withdraw',
+      cancelButtonText: 'Cancel'
+    }
+  )
+}
+
 const handleAction = async (action: string) => {
   if (!props.clientId || !props.clientType) return
   if (action === 'REVIEW') {
@@ -529,15 +546,7 @@ const handleAction = async (action: string) => {
   }
 
   try {
-    if (action === 'SUBMIT' || action === 'WITHDRAW') {
-      await ElMessageBox.confirm(
-        action === 'SUBMIT'
-          ? 'Are you sure you want to submit this client for review?'
-          : 'Are you sure you want to withdraw this client?',
-        action === 'SUBMIT' ? 'Confirm Submit' : 'Confirm Withdraw',
-        { type: 'warning' }
-      )
-    }
+    await confirmSubmitOrWithdraw(action)
     if (action === 'DEACTIVATE' || action === 'ACTIVATE') {
       await ElMessageBox.confirm(
         `Are you sure you want to ${action === 'DEACTIVATE' ? 'deactivate' : 'activate'} this client?`,
@@ -551,7 +560,7 @@ const handleAction = async (action: string) => {
     ElMessage.success('Success!')
     emit('updated', progress.value)
   } catch (error: any) {
-    if (error === 'cancel') return
+    if (isConfirmDismissed(error)) return
     const msg =
       error?.response?.data?.message ||
       error?.response?.data?.msg ||
@@ -851,6 +860,8 @@ const toDisplayDate = (value?: string | null) => {
   }
 
   &.el-button--danger {
+    --el-button-text-color: #c44545;
+    --el-button-hover-text-color: #af3d3d;
     --el-button-hover-bg-color: transparent;
   }
 }

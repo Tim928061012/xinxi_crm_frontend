@@ -2,6 +2,11 @@
 :root {
   --crm-primary: #025189;
   --crm-primary-hover: #0369a1;
+  --crm-approve: #3a9473;
+  --crm-approve-hover: #328066;
+  --crm-reject: #c44545;
+  --crm-reject-hover: #af3d3d;
+  --crm-progress-neutral: #e5e6eb;
   --crm-surface-page: #f1f5f9;
   --crm-surface-card: #ffffff;
   --crm-sidebar-bg: #ffffff;
@@ -106,6 +111,68 @@ html, body {
   &.is-disabled {
     background-color: #a0c4d3 !important;
     border-color: #a0c4d3 !important;
+  }
+}
+
+.el-button--success {
+  background-color: var(--crm-approve) !important;
+  border-color: var(--crm-approve) !important;
+
+  &:hover,
+  &:focus {
+    background-color: var(--crm-approve-hover) !important;
+    border-color: var(--crm-approve-hover) !important;
+  }
+}
+
+.el-button--danger {
+  background-color: var(--crm-reject) !important;
+  border-color: var(--crm-reject) !important;
+
+  &:hover,
+  &:focus {
+    background-color: var(--crm-reject-hover) !important;
+    border-color: var(--crm-reject-hover) !important;
+  }
+}
+
+/* 审批相关按钮全局统一：页面按钮与确认弹窗按钮共用同一 class */
+.el-button.crm-approve-btn {
+  background-color: var(--crm-approve) !important;
+  border-color: var(--crm-approve) !important;
+  color: #fff !important;
+
+  &:hover,
+  &:focus {
+    background-color: var(--crm-approve-hover) !important;
+    border-color: var(--crm-approve-hover) !important;
+    color: #fff !important;
+  }
+}
+
+.el-button.crm-reject-btn {
+  background-color: var(--crm-reject) !important;
+  border-color: var(--crm-reject) !important;
+  color: #fff !important;
+
+  &:hover,
+  &:focus {
+    background-color: var(--crm-reject-hover) !important;
+    border-color: var(--crm-reject-hover) !important;
+    color: #fff !important;
+  }
+}
+
+.el-button.crm-progress-btn {
+  background-color: var(--crm-progress-neutral) !important;
+  border-color: var(--crm-progress-neutral) !important;
+  color: #4b5563 !important;
+
+  &:hover,
+  &:focus {
+    background-color: #d9dbe2 !important;
+    border-color: #d9dbe2 !important;
+    color: #374151 !important;
   }
 }
 

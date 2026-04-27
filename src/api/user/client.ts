@@ -124,8 +124,9 @@ export const userClientApi = {
   },
 
   // 删除客户
-  deleteClient(id: number) {
-    return request.delete(`/user/clients/${id}`)
+  deleteClient(id: number, clientType?: 'Individual' | 'Corporate') {
+    const params = clientType ? { clientType } : {}
+    return request.delete(`/user/clients/${id}`, { params })
   }
 }
 

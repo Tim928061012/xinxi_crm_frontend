@@ -23,6 +23,7 @@
             <template v-if="isRoSignatureReviewInView">
               <el-button
                 type="success"
+                class="crm-approve-btn"
                 @click="handleReviewDecision(true)"
                 :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
               >
@@ -31,12 +32,18 @@
               <el-button
                 type="danger"
                 plain
+                class="crm-reject-btn"
                 @click="handleReviewDecision(false)"
                 :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
               >
                 Reject
               </el-button>
-              <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
+              <el-button
+                v-if="clientId"
+                class="crm-progress-btn"
+                :disabled="!clientDetailLoaded || pageLoading"
+                @click="openProgressDialog"
+              >
                 Progress
               </el-button>
             </template>
@@ -57,7 +64,7 @@
               </el-button>
               <el-button
                 v-if="clientId"
-                :class="['top-header__btn-progress', { 'top-header__btn-progress--muted': headerProgressMuted }]"
+                class="crm-progress-btn"
                 :disabled="!clientDetailLoaded || pageLoading"
                 @click="openProgressDialog"
               >
@@ -67,6 +74,7 @@
             <template v-else-if="isReviewMode">
               <el-button
                 type="success"
+                class="crm-approve-btn"
                 @click="handleReviewDecision(true)"
                 :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
               >
@@ -75,12 +83,18 @@
               <el-button
                 type="danger"
                 plain
+                class="crm-reject-btn"
                 @click="handleReviewDecision(false)"
                 :disabled="saving || workflowLoading || !clientDetailLoaded || pageLoading"
               >
                 Reject
               </el-button>
-              <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
+              <el-button
+                v-if="clientId"
+                class="crm-progress-btn"
+                :disabled="!clientDetailLoaded || pageLoading"
+                @click="openProgressDialog"
+              >
                 Progress
               </el-button>
             </template>
@@ -98,7 +112,12 @@
               >
                 Save & Close
               </el-button>
-              <el-button v-if="clientId" :disabled="!clientDetailLoaded || pageLoading" @click="openProgressDialog">
+              <el-button
+                v-if="clientId"
+                class="crm-progress-btn"
+                :disabled="!clientDetailLoaded || pageLoading"
+                @click="openProgressDialog"
+              >
                 Progress
               </el-button>
             </template>
@@ -2177,7 +2196,7 @@ import DocumentUploadLinkButton from '@/components/common/DocumentUploadLinkButt
 import { formatDateTime } from '@/utils/date'
 import { formatPersonName } from '@/utils/name'
 import { formatFileSizeMb } from '@/utils/file-size'
-import { getProgressLabel, isClientEditable, isPendingSubmissionStatus, normalizeProgressStatus } from '@/utils/client-progress'
+import { getProgressLabel, isClientEditable, normalizeProgressStatus } from '@/utils/client-progress'
 import { mapTabToCommentModule } from '@/utils/comment-modules'
 import { getClientBasePath, getClientListPath, isStandaloneClientRoute } from '@/utils/client-routes'
 import { isAdminRole, isOperationRole, isReviewerOnlyEditInReviewRole, normalizeRole } from '@/utils/roles'
@@ -2361,13 +2380,6 @@ const canSubmitAction = computed(() => {
   }
   return actions.includes('SUBMIT')
 })
-/** Pending Submission 预览稿：Progress 为浅灰次要按钮 */
-const headerProgressMuted = computed(
-  () =>
-    isViewMode.value &&
-    !!clientId.value &&
-    isPendingSubmissionStatus(progressData.value?.progressStatus, progressData.value?.inactive)
-)
 const canShowEditButton = computed(() => {
   if (!clientId.value || !isViewMode.value) return false
   // 权限矩阵：Admin 在各阶段均不提供资料编辑入口
@@ -2929,11 +2941,14 @@ const portfolioFormRules = computed<FormRules>(() => {
 /** 防止路由快速切换或 Strict Mode 下重复 loadClient 导致后发先至污染表单 */
 let loadClientGeneration = 0
 
-async function fetchClientDetailWithRetry(id: number) {
+async function fetchClientDetailWithRetry(id: number, preferredType?: ClientType) {
   const maxAttempts = 3
   let lastErr: unknown
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
+      if (preferredType) {
+        return await userClientApi.getClientById(id, preferredType)
+      }
       return await userClientApi.getClientById(id)
     } catch (error) {
       lastErr = error
@@ -2956,8 +2971,15 @@ const loadClient = async () => {
   clientDetailLoaded.value = false
   pageLoading.value = true
   try {
-    // 不传 clientType：后端按 id 自动判断 Individual/Corporate，避免 URL 与库不一致时间歇性报错
-    const response = await fetchClientDetailWithRetry(clientId.value)
+    // 优先按当前页面类型加载，避免 Individual/Corporate 出现同 ID 时后端按 id 自动判断造成误判
+    // 若页面类型与后端不一致，再降级走按 id 自动判断，保证兼容旧链接
+    let response
+    try {
+      response = await fetchClientDetailWithRetry(clientId.value, currentClientType.value)
+    } catch (typedError: unknown) {
+      response = await fetchClientDetailWithRetry(clientId.value)
+      console.warn('Typed client detail fetch failed, fallback to id-only lookup:', typedError)
+    }
     if (gen !== loadClientGeneration) return
 
     const data = response.data || response
@@ -3893,7 +3915,8 @@ const handleReviewDecision = async (approve: boolean) => {
       {
         type: approve ? 'warning' : 'error',
         confirmButtonText: approve ? 'Approve' : 'Reject',
-        cancelButtonText: 'Cancel'
+        cancelButtonText: 'Cancel',
+        confirmButtonClass: approve ? 'crm-approve-btn' : 'crm-reject-btn'
       }
     )
   } catch (error) {
@@ -3945,6 +3968,9 @@ const FORMS_REQUIRED_BEFORE_SUBMIT_MSG =
 const PROGRESS_UPDATED_MSG = 'Failed. Progress has been updated.'
 const OPERATION_SUBMIT_SIGNATURE_CONFIRM_MSG =
   'Are you sure you want to submit signature now? This action will move the client to Signature Under Review.'
+const HEADER_SUBMIT_CONFIRM_MSG = 'Are you sure you want to submit this client for review?'
+
+const isConfirmDismissed = (error: unknown) => error === 'cancel' || error === 'close'
 
 /** 预览顶栏 Submit（Pending Submission 为提交初审；Pending Signature 为提交签名并进入 Signature Under Review） */
 const handleHeaderSubmit = async () => {
@@ -4006,10 +4032,16 @@ const handleHeaderSubmit = async () => {
   }
   workflowLoading.value = true
   try {
+    await ElMessageBox.confirm(HEADER_SUBMIT_CONFIRM_MSG, 'Confirm Submit', {
+      type: 'warning',
+      confirmButtonText: 'Submit',
+      cancelButtonText: 'Cancel'
+    })
     await workflowApi.submit(clientId.value, currentClientType.value)
     await loadProgress()
     ElMessage.success('Submitted successfully')
   } catch (error: unknown) {
+    if (isConfirmDismissed(error)) return
     const err = error as { message?: string; response?: { data?: { message?: string } } }
     ElMessage.error(err.response?.data?.message || err.message || 'Submit failed')
   } finally {
@@ -4739,18 +4771,6 @@ onMounted(() => {
       font-weight: 400;
     }
 
-    /* Pending Submission 预览：Progress 浅灰底深字，与主色 Submit/Edit 区分 */
-    .top-header__btn-progress--muted {
-      background-color: #eceff1;
-      border-color: #dcdfe6;
-      color: #606266;
-
-      &:hover {
-        background-color: #e4e7ed;
-        border-color: #c0c4cc;
-        color: #303133;
-      }
-    }
   }
 
   /* General / Risk 等：标题行 + 模块内 Add comment */
@@ -5627,8 +5647,8 @@ onMounted(() => {
 /* Delete 按钮红底白字（无论 Element Plus 默认主题如何，都强制覆盖） */
 :deep(.kyc-delete-confirm-dialog .el-button--primary),
 :deep(.kyc-delete-confirm-btn) {
-  background-color: #f56c6c !important;
-  border-color: #f56c6c !important;
+  background-color: #c44545 !important;
+  border-color: #c44545 !important;
   color: #fff !important;
 }
 
@@ -5636,8 +5656,9 @@ onMounted(() => {
 :deep(.kyc-delete-confirm-dialog .el-button--primary:focus),
 :deep(.kyc-delete-confirm-btn:hover),
 :deep(.kyc-delete-confirm-btn:focus) {
-  background-color: #f78989 !important;
-  border-color: #f78989 !important;
+  background-color: #af3d3d !important;
+  border-color: #af3d3d !important;
   color: #fff !important;
 }
+
 </style>

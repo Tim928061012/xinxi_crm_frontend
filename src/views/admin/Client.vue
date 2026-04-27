@@ -593,7 +593,7 @@ const handleDelete = async (row: AdminClientRow) => {
         center: true
       }
     )
-    await adminClientApi.deleteClient(row.id)
+    await adminClientApi.deleteClient(row.id, row.contactNature)
     ElMessage.success('Client deleted successfully')
     await loadClients()
   } catch (error: any) {
