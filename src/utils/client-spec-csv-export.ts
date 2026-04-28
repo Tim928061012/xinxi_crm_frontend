@@ -64,27 +64,27 @@ export const CLIENT_SPEC_CSV_TEMPLATE_ROWS: ReadonlyArray<readonly [string, stri
   ['', '', '4. Education primary or below and has no investment', '', ''],
   ['', '', 'Vulnerable Client', '', ''],
   ['', '', 'Review Date (dd/mm/yyyy)', '', ''],
-  ['', 'Investment Knowledge & Experience', 'Alternative Investments', 'yes', 'no'],
-  ['', '', 'Bonds', 'yes', 'no'],
-  ['', '', 'Bonds With Special Features', 'yes', 'no'],
-  ['', '', 'Commodities', 'yes', 'no'],
-  ['', '', 'Deposits (including foreign currency deposits)', 'yes', 'no'],
-  ['', '', 'Equities', 'yes', 'no'],
-  ['', '', 'Equity Funds / Money Market Funds', 'yes', 'no'],
-  ['', '', 'Synthetic ETF / Futures-based ETF / Leveraged and Inverse Products', 'yes', 'no'],
-  ['', '', 'Other Mutual Funds', 'yes', 'no'],
-  ['', '', 'Derivatives', 'yes', 'no'],
-  ['', '', 'Foreign Exchange (e.g. Spot)', 'yes', 'no'],
-  ['', '', 'Security Tokens', 'yes', 'no'],
-  ['', '', 'Margin/Leveraged Trading', 'yes', 'no'],
-  ['Fee Schedule', '-', 'Management Fee', 'yes', ''],
+  ['', 'Investment Knowledge & Experience', 'Alternative Investments', 'Yes', 'No'],
+  ['', '', 'Bonds', 'Yes', 'No'],
+  ['', '', 'Bonds With Special Features', 'Yes', 'No'],
+  ['', '', 'Commodities', 'Yes', 'No'],
+  ['', '', 'Deposits (including foreign currency deposits)', 'Yes', 'No'],
+  ['', '', 'Equities', 'Yes', 'No'],
+  ['', '', 'Equity Funds / Money Market Funds', 'Yes', 'No'],
+  ['', '', 'Synthetic ETF / Futures-based ETF / Leveraged and Inverse Products', 'Yes', 'No'],
+  ['', '', 'Other Mutual Funds', 'Yes', 'No'],
+  ['', '', 'Derivatives', 'Yes', 'No'],
+  ['', '', 'Foreign Exchange (e.g. Spot)', 'Yes', 'No'],
+  ['', '', 'Security Tokens', 'Yes', 'No'],
+  ['', '', 'Margin/Leveraged Trading', 'Yes', 'No'],
+  ['Fee Schedule', '-', 'Management Fee', 'Yes', 'No'],
   ['', '', 'Yearly Management Fee (%)', '', ''],
   ['', '', 'Minimum Management Fee (p.a.)', '', ''],
-  ['', '', 'Retrocession', 'yes', ''],
-  ['', '', 'Performance Fee', 'yes', ''],
+  ['', '', 'Retrocession', 'Yes', 'No'],
+  ['', '', 'Performance Fee', 'Yes', 'No'],
   ['', '', 'Hurdle Rate (%)', '', ''],
   ['', '', 'Profit shared to XinXi (%)', '', ''],
-  ['', '', 'Others', 'yes', ''],
+  ['', '', 'Others', 'Yes', 'No'],
   ['', '', 'Details', '', '']
 ]
 
@@ -108,8 +108,8 @@ function fmt(value: unknown): string {
 }
 
 function yn(b: boolean | undefined): string {
-  if (b === true) return 'yes'
-  return ''
+  if (b === true) return 'Yes'
+  return 'No'
 }
 
 /** 将常见日期串规范为 dd/mm/yyyy（已为该格式则原样返回） */
@@ -274,8 +274,8 @@ export function fillClientSpecExportRows(
       row[i][3] = yn(t.knowledge)
       row[i][4] = yn(t.experience)
     } else {
-      row[i][3] = ''
-      row[i][4] = ''
+      row[i][3] = 'No'
+      row[i][4] = 'No'
     }
   }
 

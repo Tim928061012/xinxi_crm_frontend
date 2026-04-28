@@ -691,9 +691,10 @@ const toDisplayDate = (value?: string | null) => {
   user-select: none;
 }
 
-/* Tab 面板按当前激活项展示，避免 Timeline 底部出现过大留白 */
+/* Flowchart / Timeline 固定同高，不再按内容自适配 */
 .progress-tab-panels {
   display: block;
+  height: 360px;
 }
 
 .tab-panel--inactive {
@@ -702,11 +703,16 @@ const toDisplayDate = (value?: string | null) => {
 
 .flowchart-panel {
   padding: 4px 0 8px 4px;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .timeline-panel {
   padding: 8px 0;
   padding-left: var(--progress-track-indent);
+  height: 100%;
+  overflow-y: auto;
   box-sizing: border-box;
 }
 
