@@ -18,6 +18,8 @@
   --crm-text-muted: #64748b;
   --crm-radius-lg: 12px;
   --crm-radius-md: 8px;
+  /* 白底模块 / 弹窗统一小圆角（与 Client 详情 form-section 等一致） */
+  --crm-radius-sm: 4px;
   --crm-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
   /* 文档 Upload 文本按钮（设计稿深蓝、无底色） */
   --crm-upload-action-color: #004b8d;
@@ -294,7 +296,7 @@ html, body {
 // 文档上传弹窗（标准稿：白底、圆角、浅灰边、轻阴影、虚线拖拽区、云上传图标、页脚靠右）
 .document-upload-dialog.el-dialog {
   padding: 0;
-  border-radius: 8px;
+  border-radius: var(--crm-radius-sm, 4px);
   border: 1px solid #e4e7ed;
   box-shadow:
     0 8px 24px rgba(15, 23, 42, 0.1),
@@ -356,7 +358,7 @@ html, body {
     padding: 28px 20px;
     box-sizing: border-box;
     border: 2px dashed #dcdfe6 !important;
-    border-radius: 8px;
+    border-radius: var(--crm-radius-sm, 4px);
     background-color: #fafbfc !important;
     transition:
       border-color 0.2s,
@@ -997,4 +999,10 @@ html, body {
 
 .el-overlay-dialog .el-dialog {
   margin: 0 !important;
+  border-radius: var(--crm-radius-sm, 4px) !important;
+}
+
+/* MessageBox / 确认框与业务白卡小圆角一致 */
+.el-message-box {
+  border-radius: var(--crm-radius-sm, 4px) !important;
 }

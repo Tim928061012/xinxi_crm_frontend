@@ -4,11 +4,12 @@
     title="Add Comment"
     width="560px"
     append-to-body
+    :close-on-click-modal="!submitting"
     @close="closeNewComment"
   >
     <el-form :model="commentForm" label-width="110px">
       <el-form-item label="Module">
-        <el-select v-model="commentForm.moduleName" style="width: 100%">
+        <el-select v-model="commentForm.moduleName" style="width: 100%" :disabled="submitting">
           <el-option v-for="module in modules" :key="module.value" :label="module.label" :value="module.value" />
         </el-select>
       </el-form-item>
@@ -20,12 +21,13 @@
           maxlength="1000"
           show-word-limit
           placeholder="Please enter description"
+          :disabled="submitting"
         />
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="closeNewComment">Cancel</el-button>
-      <el-button type="primary" @click="submitComment">Submit</el-button>
+      <el-button :disabled="submitting" @click="closeNewComment">Cancel</el-button>
+      <el-button type="primary" :loading="submitting" :disabled="submitting" @click="submitComment">Submit</el-button>
     </template>
   </el-dialog>
 </template>
@@ -50,6 +52,7 @@ const emit = defineEmits<{
 }>()
 
 const commentDialogVisible = ref(false)
+const submitting = ref(false)
 const commentForm = reactive({
   moduleName: 'BASIC',
   description: ''
@@ -72,10 +75,12 @@ defineExpose({
 })
 
 function closeNewComment() {
+  if (submitting.value) return
   commentDialogVisible.value = false
 }
 
 async function submitComment() {
+  if (submitting.value) return
   if (!commentForm.description.trim()) {
     ElMessage.warning('Please complete description')
     return
@@ -84,6 +89,7 @@ async function submitComment() {
     ElMessage.warning('Description max 1000 characters')
     return
   }
+  submitting.value = true
   try {
     await workflowApi.createComment(props.clientId, props.clientType, {
       moduleName: commentForm.moduleName,
@@ -95,6 +101,8 @@ async function submitComment() {
   } catch (error: unknown) {
     const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message) : ''
     ElMessage.error(msg || 'Failed to create comment')
+  } finally {
+    submitting.value = false
   }
 }
 </script>

@@ -1012,7 +1012,7 @@ function formatDisplayValue(value: unknown): string {
     background: #fff;
     padding: 20px 24px;
     border-radius: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 8px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
     width: 100%;
     box-sizing: border-box;
@@ -1022,14 +1022,14 @@ function formatDisplayValue(value: unknown): string {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
   }
 
   .section-title {
     font-size: 18px;
     font-weight: 600;
     color: #303133;
-    margin: 0 0 16px 0;
+    margin: 0 0 8px 0;
   }
 
   .section-header .section-title {
@@ -1040,7 +1040,7 @@ function formatDisplayValue(value: unknown): string {
     display: grid;
     grid-template-columns: repeat(2, minmax(420px, 1fr));
     gap: 16px 32px;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
     align-items: start;
 
     .el-form-item {
@@ -1079,7 +1079,7 @@ function formatDisplayValue(value: unknown): string {
   }
 
   .portfolio-section {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
 
     .portfolio-table {
       margin-left: 0;

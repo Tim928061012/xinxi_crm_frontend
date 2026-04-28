@@ -2,7 +2,6 @@
   <div class="introducer-detail-page" v-loading.fullscreen="pageLoading" element-loading-text="Loading...">
     <div class="top-header">
       <div class="top-header__leading">
-        <el-button :icon="ArrowLeft" circle class="top-header__back" @click="handleBack" />
         <h1 class="top-header__title">{{ headerTitle }}</h1>
       </div>
       <div class="top-header__actions">
@@ -434,7 +433,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Plus, UploadFilled } from '@element-plus/icons-vue'
+import { Plus, UploadFilled } from '@element-plus/icons-vue'
 import crmUploadActionImg from '@/assets/crm-upload-action.png'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import IntroducerDetailGeneral from './IntroducerDetailGeneral.vue'
@@ -508,8 +507,14 @@ const introducerNumericId = computed(() => {
   return Number.isNaN(n) ? null : n
 })
 
-const isViewMode = computed(() => route.name === 'IntroducerView')
-const isNew = computed(() => route.name === 'IntroducerNew')
+const isStandaloneIntroducerRoute = computed(() => route.path.startsWith('/standalone/introducer'))
+const introducerBasePath = computed(() => (isStandaloneIntroducerRoute.value ? '/standalone/introducer' : '/introducer'))
+const isViewMode = computed(
+  () => route.name === 'IntroducerView' || route.name === 'StandaloneIntroducerView'
+)
+const isNew = computed(
+  () => route.name === 'IntroducerNew' || route.name === 'StandaloneIntroducerNew'
+)
 
 const documentSections: { key: keyof IntroducerDocumentsData; title: string }[] = [
   { key: 'identity', title: 'Identity Proof' },
@@ -957,13 +962,9 @@ async function loadDetail() {
   }
 }
 
-function handleBack() {
-  router.push('/introducer')
-}
-
 function goEdit() {
   if (!introducerNumericId.value) return
-  router.push(`/introducer/${introducerNumericId.value}/edit`)
+  router.push(`${introducerBasePath.value}/${introducerNumericId.value}/edit`)
 }
 
 function openRmDialog() {
@@ -1402,7 +1403,8 @@ async function handleSave(closeAfter: boolean) {
       if (closeAfter) {
         router.push('/introducer')
       } else {
-        router.replace(`/introducer/${newId}/edit`)
+        // 与 Client 一致：Save 后进入详情预览页（非 edit）
+        router.replace(`${introducerBasePath.value}/${newId}`)
       }
       return
     }
@@ -1431,7 +1433,12 @@ async function handleSave(closeAfter: boolean) {
     if (closeAfter) {
       router.push('/introducer')
     } else {
-      await loadDetail()
+      // 与 Client 一致：编辑页 Save 后切到详情预览页
+      if (route.path.includes('/edit')) {
+        router.replace(`${introducerBasePath.value}/${introducerNumericId.value}`)
+      } else {
+        await loadDetail()
+      }
     }
   } catch (error: unknown) {
     const err = error as { message?: string; response?: { data?: { message?: string } } }
@@ -1461,7 +1468,7 @@ onMounted(() => {
   background-color: var(--crm-surface-page, #f1f5f9);
   display: flex;
   flex-direction: column;
-  padding-bottom: 24px;
+  padding-bottom: 0;
 }
 
 .top-header {
@@ -1469,7 +1476,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 14px var(--introducer-page-x) 12px;
+  padding: 12px var(--introducer-page-x);
   background-color: var(--crm-surface-page, #f1f5f9);
 
   .top-header__leading {
@@ -1483,46 +1490,85 @@ onMounted(() => {
   .top-header__title {
     margin: 0;
     font-size: 20px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--crm-text-primary, #0f172a);
-    line-height: 1.35;
+    line-height: 32px;
     word-break: break-word;
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
   }
 
   .top-header__actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     flex-wrap: wrap;
+    justify-content: flex-end;
     flex-shrink: 0;
+
+    :deep(.el-button + .el-button) {
+      margin-left: 0;
+    }
+
+    :deep(.el-button) {
+      height: 32px;
+      min-height: 32px;
+      padding-top: 0;
+      padding-bottom: 0;
+      display: inline-flex;
+      align-items: center;
+    }
   }
 }
 
 .introducer-tabs-wrap {
-  margin: 4px var(--introducer-page-x) 12px;
+  margin: 4px var(--introducer-page-x) 0;
 }
 
 .introducer-tabs {
-  background: #fff;
+  background: var(--crm-surface-page, #f1f5f9);
   border-radius: var(--crm-radius-md, 8px);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
   padding: 0;
 
   :deep(.el-tabs__header) {
-    margin: 0;
-    padding: 12px var(--introducer-page-x) 0;
+    margin-bottom: 0 !important;
+    padding: 6px 16px 0;
     background: #fff;
-    border-radius: 6px 6px 0 0;
+    border-radius: 8px;
+    border: none;
+    border-bottom: none !important;
+    box-shadow: none;
+    overflow: hidden;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+  }
+
+  :deep(.el-tabs__nav-wrap) {
+    display: flex;
+    align-items: center;
+  }
+
+  :deep(.el-tabs__nav) {
+    min-height: 34px;
+    display: flex;
+    align-items: center;
   }
 
   :deep(.el-tabs__content) {
-    padding: 0;
-    background: var(--crm-surface-page, #f1f5f9);
+    padding-top: 8px;
+    background: transparent;
   }
 
   :deep(.el-tabs__item) {
     color: #111827;
     font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
 
   :deep(.el-tabs__item.is-active) {
@@ -1536,8 +1582,8 @@ onMounted(() => {
 
 .introducer-tab-content {
   min-height: 200px;
-  padding: 16px var(--introducer-page-x) 24px;
-  background: var(--crm-surface-page, #f1f5f9);
+  padding: 0;
+  background: transparent;
 }
 
 @media (max-width: 960px) {
@@ -1584,7 +1630,7 @@ onMounted(() => {
   background: #fff;
   padding: 16px 20px;
   border-radius: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 .kyc-information-title {
   margin: 0 0 12px;
@@ -1602,7 +1648,7 @@ onMounted(() => {
   gap: 16px;
 }
 .kyc-section {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   background: #fff;
   padding: 12px 16px;
   border-radius: 4px;
@@ -1619,7 +1665,7 @@ onMounted(() => {
   font-weight: 600;
 }
 .document-section {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   background: #fff;
   padding: 12px 16px;
   border-radius: 4px;

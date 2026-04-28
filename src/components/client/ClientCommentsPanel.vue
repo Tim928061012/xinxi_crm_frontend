@@ -1,7 +1,7 @@
 <template>
   <div class="comments-panel">
     <div class="comments-toolbar">
-      <AddCommentButton @click="onToolbarAddComment" />
+      <AddCommentButton :disabled="mutationSubmitting" @click="onToolbarAddComment" />
     </div>
 
     <div v-loading.fullscreen="loading">
@@ -20,7 +20,13 @@
               <div class="comment-item__meta-row">
                 <span class="comment-item__meta">{{ authorAtLine(comment) }}</span>
                 <div class="comment-item__actions">
-                  <button type="button" class="icon-action" aria-label="Reply" @click="toggleReply(comment.commentId)">
+                  <button
+                    type="button"
+                    class="icon-action"
+                    aria-label="Reply"
+                    :disabled="mutationSubmitting"
+                    @click="toggleReply(comment.commentId)"
+                  >
                     <el-icon><ChatDotRound /></el-icon>
                   </button>
                   <button
@@ -28,6 +34,7 @@
                     type="button"
                     class="icon-action"
                     aria-label="Delete"
+                    :disabled="mutationSubmitting"
                     @click="deleteComment(comment)"
                   >
                     <el-icon><Delete /></el-icon>
@@ -45,8 +52,16 @@
                   placeholder="Please enter reply"
                 />
                 <div class="reply-actions">
-                  <el-button size="small" @click="cancelReply">Cancel</el-button>
-                  <el-button type="primary" size="small" @click="submitReply(comment.commentId)">Submit Reply</el-button>
+                  <el-button size="small" :disabled="mutationSubmitting" @click="cancelReply">Cancel</el-button>
+                  <el-button
+                    type="primary"
+                    size="small"
+                    :loading="mutationSubmitting"
+                    :disabled="mutationSubmitting"
+                    @click="submitReply(comment.commentId)"
+                  >
+                    Submit Reply
+                  </el-button>
                 </div>
               </div>
 
@@ -61,6 +76,7 @@
                         type="button"
                         class="icon-action"
                         aria-label="Delete"
+                        :disabled="mutationSubmitting"
                         @click="deleteComment(reply)"
                       >
                         <el-icon><Delete /></el-icon>
@@ -103,6 +119,7 @@ const emit = defineEmits<{
 const commentDialog = inject(CLIENT_COMMENT_DIALOG_INJECT_KEY, null)
 
 const loading = ref(false)
+const mutationSubmitting = ref(false)
 const comments = ref<ClientComment[]>([])
 const replyTargetId = ref<number | null>(null)
 const replyText = ref('')
@@ -134,6 +151,7 @@ const loadComments = async () => {
 }
 
 function onToolbarAddComment() {
+  if (mutationSubmitting.value || loading.value) return
   commentDialog?.openNewComment()
 }
 
@@ -160,6 +178,7 @@ const cancelReply = () => {
 }
 
 const submitReply = async (commentId: number) => {
+  if (mutationSubmitting.value) return
   if (!replyText.value.trim()) {
     ElMessage.warning('Please enter reply')
     return
@@ -168,6 +187,7 @@ const submitReply = async (commentId: number) => {
     ElMessage.warning('Reply max 1000 characters')
     return
   }
+  mutationSubmitting.value = true
   try {
     await workflowApi.replyComment(props.clientId, props.clientType, commentId, {
       description: replyText.value.trim()
@@ -177,6 +197,8 @@ const submitReply = async (commentId: number) => {
     await loadComments()
   } catch (error: any) {
     ElMessage.error(error.message || 'Failed to create reply')
+  } finally {
+    mutationSubmitting.value = false
   }
 }
 
@@ -193,11 +215,13 @@ const canDeleteComment = (comment: ClientComment): boolean => {
 }
 
 const deleteComment = async (comment: ClientComment) => {
+  if (mutationSubmitting.value) return
   if (!canDeleteComment(comment)) {
     ElMessage.warning('You can only delete your own comments')
     return
   }
 
+  mutationSubmitting.value = true
   try {
     await ElMessageBox.confirm('Are you sure you want to delete this comment?', 'Confirm', { type: 'warning' })
     await workflowApi.deleteComment(props.clientId, props.clientType, comment.commentId)
@@ -206,6 +230,8 @@ const deleteComment = async (comment: ClientComment) => {
   } catch (error: any) {
     if (error === 'cancel') return
     ElMessage.error(error.message || 'Failed to delete comment')
+  } finally {
+    mutationSubmitting.value = false
   }
 }
 
@@ -238,7 +264,7 @@ watch(
   gap: 16px;
   width: 100%;
   margin: 0;
-  padding: 16px 36px;
+  padding: 16px;
   background-color: #fff;
   border-radius: 4px;
   box-sizing: border-box;
@@ -246,7 +272,9 @@ watch(
 
 .comments-toolbar {
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
   gap: 12px;
 }
 

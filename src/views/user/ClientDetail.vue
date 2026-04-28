@@ -2305,7 +2305,8 @@ const tabLastSaved: Record<string, string> = reactive({
   kyc: '',
   risk: '',
   documents: '',
-  fee: ''
+  fee: '',
+  comments: ''
 })
 const currentTabLastSaved = computed(() => tabLastSaved[activeTab.value] || '')
 
@@ -2363,6 +2364,11 @@ const deriveClientRelationshipStatus = (
 const syncClientRelationshipStatusFromProgress = () => {
   const g = clientForm.general as { clientRelationshipStatus?: string } | null
   if (!g) return
+  // 新建客户无 workflow：固定为 Prospecting，与后端草稿阶段一致且不可由用户修改
+  if (!clientId.value) {
+    g.clientRelationshipStatus = 'Prospecting'
+    return
+  }
   const resolvedStatus = deriveClientRelationshipStatus(
     progressData.value?.progressStatus || progressStatusFallback.value,
     g.clientRelationshipStatus
@@ -2724,6 +2730,7 @@ const clientForm = reactive<Omit<CreateClientParams, 'secondaryContact'> & { sec
   general: {
     contactType: 'Client',
     contactNature: 'Individual',
+    clientRelationshipStatus: 'Prospecting',
     firstName: '',
     lastName: '',
     rm: '',
@@ -3097,6 +3104,7 @@ const loadClient = async () => {
       if (!tabLastSaved.risk) tabLastSaved.risk = tabLastSaved.general
       if (!tabLastSaved.documents) tabLastSaved.documents = tabLastSaved.general
       if (!tabLastSaved.fee) tabLastSaved.fee = tabLastSaved.general
+      if (!tabLastSaved.comments) tabLastSaved.comments = tabLastSaved.general
     }
 
     // 处理 Contact 信息
@@ -3332,6 +3340,7 @@ const loadProgress = async () => {
     progressData.value = null
     progressStatusFallback.value = ''
     progressInactiveFallback.value = false
+    syncClientRelationshipStatusFromProgress()
     return
   }
 
@@ -3589,6 +3598,7 @@ const handleContactNatureChange = () => {
     clientForm.general = {
       contactType: 'Client',
       contactNature: 'Individual',
+      clientRelationshipStatus: 'Prospecting',
       firstName: '',
       lastName: '',
       rm: prev.rm || '',
@@ -3602,6 +3612,7 @@ const handleContactNatureChange = () => {
     clientForm.general = {
       contactType: 'Client',
       contactNature: 'Corporate',
+      clientRelationshipStatus: 'Prospecting',
       companyName: '',
       rm: prev.rm || '',
       rmUserId: prev.rmUserId, // 保留已选择的 RM ID
@@ -3710,6 +3721,7 @@ const handleSave = async (closeAfter: boolean = false) => {
           tabLastSaved.risk = label
           tabLastSaved.documents = label
           tabLastSaved.fee = label
+          tabLastSaved.comments = label
 
           // Save & Close：返回列表（根据当前路由前缀区分 admin 和 user）
           if (closeAfter) {
@@ -3847,6 +3859,7 @@ const handleSave = async (closeAfter: boolean = false) => {
           tabLastSaved.risk = label
           tabLastSaved.documents = label
           tabLastSaved.fee = label
+          tabLastSaved.comments = label
           
           // 根据是否 Save & Close 决定跳转逻辑（根据当前路由前缀区分 admin 和 user）
           if (currentClientId) {
@@ -4686,6 +4699,7 @@ watch(
       progressStatusFallback.value = ''
       progressInactiveFallback.value = false
       clientDetailLoaded.value = false
+      syncClientRelationshipStatusFromProgress()
       return
     }
     void loadClient()
@@ -4736,7 +4750,7 @@ onMounted(() => {
       gap: 12px;
       min-width: 0;
       flex: 1;
-      min-height: 32px;
+      min-height: 33px;
     }
 
     .top-header__title {
@@ -4744,29 +4758,39 @@ onMounted(() => {
       font-size: 20px;
       font-weight: 500;
       color: var(--crm-text-primary, #0f172a);
-      line-height: 32px;
+      line-height: 33px;
       word-break: break-word;
       display: flex;
       align-items: center;
       flex-wrap: nowrap;
-      min-height: 32px;
+      min-height: 33px;
     }
 
     .top-header__name {
       font-weight: 500;
       display: inline-flex;
       align-items: center;
-      min-height: 32px;
+      min-height: 33px;
+      line-height: 33px;
     }
 
     .top-header__sep {
-      color: #c0c4cc;
       margin: 0 12px;
-      font-weight: 400;
       display: inline-flex;
       align-items: center;
-      min-height: 32px;
-      line-height: 32px;
+      justify-content: center;
+      min-height: 33px;
+      line-height: 1;
+      font-size: 0;
+      color: transparent;
+
+      &::before {
+        content: '';
+        display: block;
+        width: 1px;
+        height: 19px;
+        background: #c0c4cc;
+      }
     }
 
     .top-header__status {
@@ -4774,8 +4798,8 @@ onMounted(() => {
       color: var(--crm-text-secondary, #475569);
       display: inline-flex;
       align-items: center;
-      min-height: 32px;
-      line-height: 32px;
+      min-height: 33px;
+      line-height: 33px;
     }
 
     .top-header__actions {
@@ -4805,10 +4829,10 @@ onMounted(() => {
       color: #9ca3af;
       font-size: 13px;
       font-weight: 400;
-      line-height: 32px;
+      line-height: 33px;
       display: inline-flex;
       align-items: center;
-      min-height: 32px;
+      min-height: 33px;
     }
 
   }
@@ -4827,12 +4851,31 @@ onMounted(() => {
     }
   }
 
+  /*
+   * 全页「+ Comment」（.crm-add-comment-btn）：Basic/Contact/Documents/KYC 等模块标题行。
+   * Comments / Fee Schedule 等 Tab 另见下：取消全局 translate，分别与右内边距或表单左列对齐。
+   */
+  :deep(.crm-add-comment-btn) {
+    transform: translateX(21px);
+  }
+
+  .client-tabs-wrap .client-tabs :deep(#pane-comments .crm-add-comment-btn) {
+    transform: none;
+  }
+
+  /* Fee Schedule：+ Comment 独占一行左对齐，与下方 el-form-item 标签列对齐，不用全局右移 */
+  .client-tabs-wrap .client-tabs :deep(#pane-fee .crm-add-comment-btn) {
+    transform: none;
+  }
+
   /* 主内容 + 可选右侧评论栏
    * 勿对 shell 使用 flex:1 + min-height:0，否则在 UserLayout 的定高 main 内会把中间区锁在视口高度内，
    * 长表单无法撑开页面，外层 .main-content 也无法滚动。由内容自然撑高，整页滚动交给 layout。 */
   .client-tabs-shell {
     --comments-rail-width: 300px;
     --comments-rail-gap: 8px;
+    /* 与侧栏标题、Comments 面板右侧内边距一致：控件距白底右缘 15px */
+    --comments-inline-edge: 15px;
     --comments-actions-top: 12px;
     --comments-actions-height: 32px;
     --comments-actions-bottom-gap: 8px;
@@ -4863,7 +4906,7 @@ onMounted(() => {
     flex-direction: column;
     align-self: flex-start;
     background-color: #fff;
-    border-radius: 8px;
+    border-radius: var(--crm-radius-sm, 4px);
     /* 侧栏无边线，保持与内容区平滑衔接 */
     border-left: none;
     border-right: none;
@@ -4876,7 +4919,7 @@ onMounted(() => {
       var(--comments-actions-top) +
       var(--comments-actions-height) +
       var(--comments-actions-bottom-gap) +
-      6px
+      6px - 2px
     );
     overflow: hidden;
 
@@ -4911,7 +4954,7 @@ onMounted(() => {
     width: 100%;
     min-height: 100%;
     background-color: var(--crm-surface-page);
-    border-radius: 8px;
+    border-radius: var(--crm-radius-sm, 4px);
     padding: 0;
     box-shadow: none;
     display: flex;
@@ -4921,7 +4964,7 @@ onMounted(() => {
       margin-bottom: 0 !important;
       background-color: #fff;
       padding: 6px 188px 0 16px;
-      border-radius: 8px;
+      border-radius: var(--crm-radius-sm, 4px);
       border: none;
       border-bottom: none !important;
       box-shadow: none;
@@ -4983,19 +5026,19 @@ onMounted(() => {
 
   .client-tabs-wrap {
     position: relative;
-    border-radius: 8px;
+    border-radius: var(--crm-radius-sm, 4px);
   }
 
   .client-tabs__comment-toggle {
     position: absolute;
     top: 6px;
-    right: 16px;
+    right: var(--comments-inline-edge);
     z-index: 2;
     border: none;
     background: transparent;
     height: 34px;
     line-height: 34px;
-    padding: 0 2px;
+    padding: 0;
     margin: 0;
     display: inline-flex;
     align-items: center;
@@ -5022,6 +5065,32 @@ onMounted(() => {
     }
   }
 
+  /*
+   * Comments 标签：与 Tab 行共用 client-tabs-wrap 宽度参考。
+   * Hide/Show 为 position:absolute; right: var(--comments-inline-edge)；
+   * 此处将面板左右留白与 Tab 头一致（左 16px、右同变量），工具栏 flex-end，使 +Comment 与 Hide 右缘对齐。
+   */
+  .client-tabs-wrap .client-tabs :deep(#pane-comments) .tab-content {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .client-tabs-wrap .client-tabs :deep(#pane-comments .comments-panel) {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 16px var(--comments-inline-edge, 15px) 16px 16px;
+  }
+
+  .client-tabs-wrap .client-tabs :deep(#pane-comments .comments-toolbar) {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+    margin-right: 0;
+  }
+
   /* 与 tab 标头同宽；上下间距收紧，小模块自适应 */
   .tab-content {
     min-height: 0;
@@ -5043,7 +5112,7 @@ onMounted(() => {
       padding: 16px 36px;
       background-color: #fff;
       border: none;
-      border-radius: 4px;
+      border-radius: var(--crm-radius-sm, 4px);
       box-sizing: border-box;
 
       &:first-child {
@@ -5197,7 +5266,7 @@ onMounted(() => {
   padding: 16px 36px;
   background-color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--crm-radius-sm, 4px);
   box-sizing: border-box;
   min-width: 0;
 }
@@ -5300,7 +5369,7 @@ onMounted(() => {
     padding: 12px 36px;
     background-color: #fff;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--crm-radius-sm, 4px);
   }
 
   .kyc-upload-title {
@@ -5323,7 +5392,7 @@ onMounted(() => {
   padding: 16px 36px;
   background-color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--crm-radius-sm, 4px);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   box-sizing: border-box;
 
@@ -5390,7 +5459,7 @@ onMounted(() => {
     --el-table-header-bg-color: #f5f7fa;
     --el-table-bg-color: #fff;
     --el-table-tr-bg-color: #fff;
-    border-radius: 4px;
+    border-radius: var(--crm-radius-sm, 4px);
     overflow: hidden;
 
     .el-table__header-wrapper th.el-table__cell {
@@ -5414,7 +5483,7 @@ onMounted(() => {
     padding: 16px 36px;
     background-color: #fff;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--crm-radius-sm, 4px);
     box-sizing: border-box;
 
     .section-title {
@@ -5575,7 +5644,7 @@ onMounted(() => {
     padding: 16px 36px;
     background-color: #fff;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--crm-radius-sm, 4px);
     box-sizing: border-box;
 
     :deep(.el-form-item__label) {

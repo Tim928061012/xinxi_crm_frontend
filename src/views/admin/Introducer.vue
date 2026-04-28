@@ -62,9 +62,9 @@
           <el-table-column label="Actions" width="170" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
-                <el-link type="primary" class="action-link" :underline="false" @click="goView(row)">View</el-link>
+                <el-link type="primary" class="action-link" :underline="false" @click.prevent="goView(row)">View</el-link>
                 <span class="action-sep" aria-hidden="true">|</span>
-                <el-link type="primary" class="action-link" :underline="false" @click="goEdit(row)">Edit</el-link>
+                <el-link type="primary" class="action-link" :underline="false" @click.prevent="goEdit(row)">Edit</el-link>
               </div>
             </template>
           </el-table-column>
@@ -103,9 +103,14 @@ const crmTableCellStyle = () => ({ paddingTop: '4px', paddingBottom: '4px' })
 const introducerList = ref<Introducer[]>([])
 const loading = ref(false)
 
-const goNew = () => router.push('/introducer/new')
-const goView = (row: Introducer) => router.push(`/introducer/${row.id}`)
-const goEdit = (row: Introducer) => router.push(`/introducer/${row.id}/edit`)
+const openIntroducerTab = (path: string) => {
+  const url = router.resolve({ path }).href
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+const goNew = () => openIntroducerTab('/standalone/introducer/new')
+const goView = (row: Introducer) => openIntroducerTab(`/standalone/introducer/${row.id}`)
+const goEdit = (row: Introducer) => openIntroducerTab(`/standalone/introducer/${row.id}/edit`)
 
 const loadIntroducers = async () => {
   loading.value = true

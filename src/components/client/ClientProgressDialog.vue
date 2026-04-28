@@ -595,7 +595,8 @@ const toDisplayDate = (value?: string | null) => {
 }
 
 .progress-dialog {
-  max-height: min(780px, calc(100vh - 160px));
+  /* 固定上限与视口侧各 +100px，与下方 Flowchart/Timeline 区增高一致，避免底部步骤被裁切 */
+  max-height: min(1140px, calc(100vh - 100px));
   overflow-x: hidden;
   overflow-y: auto;
   /* 与 .flowchart-panel 左 padding 一致，使信息区与步骤序号圆点左缘对齐 */
@@ -691,10 +692,10 @@ const toDisplayDate = (value?: string | null) => {
   user-select: none;
 }
 
-/* Flowchart / Timeline 固定同高，不再按内容自适配 */
+/* Flowchart / Timeline 固定同高（+100px 便于 6 步流程完整展示） */
 .progress-tab-panels {
   display: block;
-  height: 360px;
+  height: 580px;
 }
 
 .tab-panel--inactive {
@@ -942,7 +943,7 @@ const toDisplayDate = (value?: string | null) => {
 
 <style lang="scss">
 .client-progress-dialog.el-dialog {
-  border-radius: 8px;
+  border-radius: var(--crm-radius-sm, 4px);
   overflow: hidden;
 }
 

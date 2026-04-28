@@ -548,7 +548,7 @@ onMounted(() => {
 }
 
 :deep(.crm-compact-dialog.el-dialog) {
-  border-radius: 8px;
+  border-radius: var(--crm-radius-sm, 4px);
 
   .el-dialog__header {
     padding: 8px 16px 6px;

@@ -290,6 +290,36 @@ const routes: RouteRecordRaw[] = [
           title: '客户编辑',
           roles: ['admin']
         }
+      },
+      {
+        path: 'introducer/new',
+        name: 'StandaloneIntroducerNew',
+        component: () => import('@/views/admin/IntroducerDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '新建介绍人',
+          roles: ['admin']
+        }
+      },
+      {
+        path: 'introducer/:id(\\d+)',
+        name: 'StandaloneIntroducerView',
+        component: () => import('@/views/admin/IntroducerDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '介绍人详情',
+          roles: ['admin']
+        }
+      },
+      {
+        path: 'introducer/:id(\\d+)/edit',
+        name: 'StandaloneIntroducerEdit',
+        component: () => import('@/views/admin/IntroducerDetail.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '编辑介绍人',
+          roles: ['admin']
+        }
       }
     ]
   },
@@ -333,6 +363,15 @@ router.beforeEach((to, from, next) => {
       return
     }
     if (to.path.startsWith('/standalone/client')) {
+      if (!isAdminRole(userRole)) {
+        next({ name: 'UserClient' })
+        NProgress.done()
+        return
+      }
+      next()
+      return
+    }
+    if (to.path.startsWith('/standalone/introducer')) {
       if (!isAdminRole(userRole)) {
         next({ name: 'UserClient' })
         NProgress.done()

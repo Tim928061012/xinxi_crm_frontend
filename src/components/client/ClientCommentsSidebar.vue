@@ -8,6 +8,7 @@
             type="button"
             class="head-icon-btn head-icon-btn--add"
             aria-label="Comment"
+            :disabled="mutationSubmitting"
             @click="onAddComment"
           >
             <el-icon><CirclePlus /></el-icon>
@@ -39,6 +40,7 @@
                       type="button"
                       class="thread-icon-action"
                       aria-label="Reply"
+                      :disabled="mutationSubmitting"
                       @click="toggleReply(thread.comment.commentId)"
                     >
                       <el-icon><ChatDotRound /></el-icon>
@@ -48,6 +50,7 @@
                       type="button"
                       class="thread-icon-action"
                       aria-label="Delete"
+                      :disabled="mutationSubmitting"
                       @click="deleteComment(thread.comment)"
                     >
                       <el-icon><Delete /></el-icon>
@@ -66,8 +69,16 @@
                   placeholder="Reply..."
                 />
                 <div class="sidebar-reply-box__actions">
-                  <el-button size="small" @click="cancelReply">Cancel</el-button>
-                  <el-button type="primary" size="small" @click="submitReply(thread.comment.commentId)">Submit</el-button>
+                  <el-button size="small" :disabled="mutationSubmitting" @click="cancelReply">Cancel</el-button>
+                  <el-button
+                    type="primary"
+                    size="small"
+                    :loading="mutationSubmitting"
+                    :disabled="mutationSubmitting"
+                    @click="submitReply(thread.comment.commentId)"
+                  >
+                    Submit
+                  </el-button>
                 </div>
               </div>
 
@@ -86,6 +97,7 @@
                         type="button"
                         class="thread-icon-action"
                         aria-label="Delete"
+                        :disabled="mutationSubmitting"
                         @click="deleteComment(reply)"
                       >
                         <el-icon><Delete /></el-icon>
@@ -128,6 +140,7 @@ const emit = defineEmits<{
 const commentDialog = inject(CLIENT_COMMENT_DIALOG_INJECT_KEY, null)
 
 const loading = ref(false)
+const mutationSubmitting = ref(false)
 const comments = ref<ClientComment[]>([])
 const replyTargetId = ref<number | null>(null)
 const replyText = ref('')
@@ -214,6 +227,7 @@ const loadComments = async () => {
 }
 
 function onAddComment() {
+  if (mutationSubmitting.value || loading.value) return
   const mod = (props.defaultModule || 'BASIC').trim() || 'BASIC'
   if (commentDialog?.openAddComment) {
     commentDialog.openAddComment({
@@ -243,6 +257,7 @@ const cancelReply = () => {
 }
 
 const submitReply = async (commentId: number) => {
+  if (mutationSubmitting.value) return
   const text = replyText.value.trim()
   if (!text) {
     ElMessage.warning('Please enter reply')
@@ -252,6 +267,7 @@ const submitReply = async (commentId: number) => {
     ElMessage.warning('Reply max 1000 characters')
     return
   }
+  mutationSubmitting.value = true
   try {
     await workflowApi.replyComment(props.clientId, props.clientType, commentId, { description: text })
     ElMessage.success('Reply added')
@@ -261,6 +277,8 @@ const submitReply = async (commentId: number) => {
   } catch (error: unknown) {
     const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message) : ''
     ElMessage.error(msg || 'Failed to add reply')
+  } finally {
+    mutationSubmitting.value = false
   }
 }
 
@@ -277,11 +295,13 @@ const canDeleteComment = (comment: ClientComment): boolean => {
 }
 
 const deleteComment = async (comment: ClientComment) => {
+  if (mutationSubmitting.value) return
   if (!canDeleteComment(comment)) {
     ElMessage.warning('You can only delete your own comments')
     return
   }
 
+  mutationSubmitting.value = true
   try {
     await ElMessageBox.confirm('Are you sure you want to delete this comment?', 'Confirm', { type: 'warning' })
     await workflowApi.deleteComment(props.clientId, props.clientType, comment.commentId)
@@ -293,6 +313,8 @@ const deleteComment = async (comment: ClientComment) => {
     if (error === 'cancel') return
     const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message) : ''
     ElMessage.error(msg || 'Failed to delete comment')
+  } finally {
+    mutationSubmitting.value = false
   }
 }
 
@@ -347,7 +369,8 @@ $divider: #ebeef5;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 14px 14px 12px;
+  /* 横向与 ClientDetail「Show/Hide Comment」共用 --comments-inline-edge（由 .client-tabs-shell 定义） */
+  padding: 14px var(--comments-inline-edge, 15px) 12px;
   border-bottom: 1px solid $divider;
   flex-shrink: 0;
 

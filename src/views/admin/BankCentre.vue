@@ -785,12 +785,13 @@ onMounted(() => {
   }
 
   .booking-centre-add-row {
-    margin: -4px 0 8px 140px;
+    /* 仅与 label 列对齐；与上一字段的竖直间距由上一项 el-form-item 的 margin-bottom 承担 */
+    margin: 0 0 0 140px;
   }
 }
 
 :deep(.crm-compact-dialog.el-dialog) {
-  border-radius: 8px;
+  border-radius: var(--crm-radius-sm, 4px);
 
   .el-dialog__header {
     padding: 4px 12px 4px;
@@ -812,7 +813,8 @@ onMounted(() => {
   }
 
   .el-dialog__body {
-    padding: 16px 24px 2px;
+    /* 与表单项间距统一，避免首行与行间视觉不一致 */
+    padding: 18px 24px 8px;
     
     .add-booking-centre-btn {
       padding: 0;
@@ -842,15 +844,19 @@ onMounted(() => {
       }
     }
   }
-  
-  // Booking Centre 字段的星号间距在外部定义，确保优先级
 
   .el-form-item {
-    margin-bottom: 14px;
-    align-items: flex-start;
+    /* 行间统一间距：Bank ↔ Booking Centre ↔ 下方「添加」区均为 18px */
+    margin-bottom: 18px;
+
+    /* 单行标签（如 Bank）与输入框垂直居中；多行 Booking Centre 见下条 */
+    align-items: center;
+
+    &.booking-centre-form-item {
+      align-items: flex-start;
+    }
 
     .el-form-item__label {
-      line-height: 1.2;
       word-break: break-word;
       white-space: normal;
       justify-content: flex-start;
@@ -858,6 +864,21 @@ onMounted(() => {
       padding-right: 12px;
       pointer-events: none !important; // 禁用 label 的点击聚焦行为
       cursor: default !important; // 将鼠标指针改为默认样式
+    }
+
+    /* 与 Element 默认 medium 输入框高度对齐，标签文字相对输入框垂直居中 */
+    &:not(.booking-centre-form-item) .el-form-item__label {
+      display: flex;
+      align-items: center;
+      min-height: var(--el-component-size, 32px);
+      line-height: 1.35;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    &.booking-centre-form-item .el-form-item__label {
+      line-height: 1.25;
+      padding-top: 6px;
     }
 
     .el-input__wrapper {
@@ -893,21 +914,11 @@ onMounted(() => {
   }
 }
 
-// 在 :deep(.el-dialog) 外部定义，确保样式优先级足够高
-// 针对 Booking Centre 字段，彻底解决星号间距问题
-// 方法1: 缩小 ::before 的 margin-right
-:deep(.el-dialog .booking-centre-form-item.is-required .el-form-item__label::before) {
-  margin-right: 0px !important; // 完全移除间距
-}
-
-// 方法2: 使用负 margin 来进一步缩小间距（如果方法1不够）
-:deep(.el-dialog .booking-centre-form-item.is-required .el-form-item__label .booking-centre-label) {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
+/* Booking Centre 多行标签：与 Bank 共用 is-required 的 * + margin-right:4px，不在此单独改星号间距 */
+:deep(.el-dialog .booking-centre-form-item .el-form-item__label .booking-centre-label) {
   display: inline-flex !important;
   flex-direction: column;
   align-items: flex-start;
-  vertical-align: baseline;
 }
 </style>
 
