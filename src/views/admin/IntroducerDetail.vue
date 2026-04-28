@@ -1549,6 +1549,10 @@ onMounted(() => {
   :deep(.el-tabs__nav-wrap) {
     display: flex;
     align-items: center;
+
+    &::after {
+      display: none !important;
+    }
   }
 
   :deep(.el-tabs__nav) {

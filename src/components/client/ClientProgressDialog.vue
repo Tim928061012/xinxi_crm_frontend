@@ -264,8 +264,7 @@ const displayCreatedBy = computed(() => {
   // 历史脏数据/缺日志场景下回退到最早一条日志的 actorName
   const firstLog = logs[0]
   if (firstLog?.actorName?.trim()) return firstLog.actorName.trim()
-  // 最后兜底：沿用原字段（兼容尚未补齐历史日志的数据）
-  if (props.rmName?.trim()) return props.rmName.trim()
+  // 不再回退 RM，避免 Created By 显示错人
   return '-'
 })
 
@@ -595,10 +594,13 @@ const toDisplayDate = (value?: string | null) => {
 }
 
 .progress-dialog {
-  /* 固定上限与视口侧各 +100px，与下方 Flowchart/Timeline 区增高一致，避免底部步骤被裁切 */
-  max-height: min(1140px, calc(100vh - 100px));
+  /* 在 +1/3 方案上额外增加 30px */
+  max-height: min(1070px, calc(100vh - 170px));
   overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   /* 与 .flowchart-panel 左 padding 一致，使信息区与步骤序号圆点左缘对齐 */
   --progress-track-indent: 4px;
 }
@@ -692,10 +694,9 @@ const toDisplayDate = (value?: string | null) => {
   user-select: none;
 }
 
-/* Flowchart / Timeline 固定同高（+100px 便于 6 步流程完整展示） */
+/* 单滚动容器：由 .progress-dialog 负责滚动，避免内外双滚动导致“分离感” */
 .progress-tab-panels {
   display: block;
-  height: 580px;
 }
 
 .tab-panel--inactive {
@@ -704,16 +705,14 @@ const toDisplayDate = (value?: string | null) => {
 
 .flowchart-panel {
   padding: 4px 0 8px 4px;
-  height: 100%;
-  overflow-y: auto;
+  overflow: visible;
   box-sizing: border-box;
 }
 
 .timeline-panel {
   padding: 8px 0;
   padding-left: var(--progress-track-indent);
-  height: 100%;
-  overflow-y: auto;
+  overflow: visible;
   box-sizing: border-box;
 }
 
