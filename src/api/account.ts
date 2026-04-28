@@ -1,4 +1,5 @@
 import request from './request'
+import type { AxiosResponse } from 'axios'
 
 export interface Account {
   id: number
@@ -35,15 +36,67 @@ export interface UpdateAccountParams {
   role?: string
 }
 
+const ACCOUNT_CACHE_TTL_MS = 60 * 1000
+const RM_CACHE_TTL_MS = 60 * 1000
+
+let accountsCache: AxiosResponse | null = null
+let accountsCacheAt = 0
+let accountsInFlight: Promise<AxiosResponse> | null = null
+
+let rmsCache: AxiosResponse | null = null
+let rmsCacheAt = 0
+let rmsInFlight: Promise<AxiosResponse> | null = null
+
+const clearAccountApiCache = () => {
+  accountsCache = null
+  accountsCacheAt = 0
+  accountsInFlight = null
+  rmsCache = null
+  rmsCacheAt = 0
+  rmsInFlight = null
+}
+
 export const accountApi = {
   // 获取账户列表（需要Admin权限）
   getAccounts(params?: any) {
-    return request.get('/system-users', { params })
+    // 带筛选参数的查询不走缓存，避免参数污染
+    if (params && Object.keys(params).length > 0) {
+      return request.get('/system-users', { params })
+    }
+    const now = Date.now()
+    if (accountsCache && now - accountsCacheAt < ACCOUNT_CACHE_TTL_MS) {
+      return Promise.resolve(accountsCache)
+    }
+    if (accountsInFlight) {
+      return accountsInFlight
+    }
+    accountsInFlight = request.get('/system-users', { params }).then(res => {
+      accountsCache = res
+      accountsCacheAt = Date.now()
+      return res
+    }).finally(() => {
+      accountsInFlight = null
+    })
+    return accountsInFlight
   },
 
   // 获取RM列表（所有非admin用户，普通用户可访问）
   getRMs() {
-    return request.get('/system-users/rm-list')
+    const now = Date.now()
+    if (rmsCache && now - rmsCacheAt < RM_CACHE_TTL_MS) {
+      return Promise.resolve(rmsCache)
+    }
+    if (rmsInFlight) {
+      return rmsInFlight
+    }
+    rmsInFlight = request.get('/system-users/rm-list').then(res => {
+      rmsCache = res
+      rmsCacheAt = Date.now()
+      return res
+    }).finally(() => {
+      rmsInFlight = null
+    })
+    return rmsInFlight
   },
 
   // 获取账户详情
@@ -60,26 +113,26 @@ export const accountApi = {
       lastName: data.lastName,
       role: data.role
     }
-    return request.post('/system-users', requestData)
+    return request.post('/system-users', requestData).finally(() => clearAccountApiCache())
   },
 
   // 更新账户
   updateAccount(id: number, data: UpdateAccountParams) {
-    return request.put(`/system-users/${id}`, data)
+    return request.put(`/system-users/${id}`, data).finally(() => clearAccountApiCache())
   },
 
   // 删除账户
   deleteAccount(id: number) {
-    return request.delete(`/system-users/${id}`)
+    return request.delete(`/system-users/${id}`).finally(() => clearAccountApiCache())
   },
 
   // 更新账户状态
   updateAccountStatus(id: number, active: boolean) {
-    return request.put(`/system-users/${id}/active`, { active })
+    return request.put(`/system-users/${id}/active`, { active }).finally(() => clearAccountApiCache())
   },
 
   // 重置密码
   resetPassword(id: number) {
-    return request.post(`/system-users/${id}/reset-password`)
+    return request.post(`/system-users/${id}/reset-password`).finally(() => clearAccountApiCache())
   }
 }

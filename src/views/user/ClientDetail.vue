@@ -3315,8 +3315,10 @@ const loadClient = async () => {
       })
     }
 
-    await loadCommentCount()
-    await loadProgress()
+    await Promise.all([
+      loadCommentCount(),
+      loadProgress()
+    ])
     if (gen !== loadClientGeneration) return
     clientDetailLoaded.value = true
   } catch (error: any) {
@@ -5169,6 +5171,21 @@ onMounted(() => {
             cursor: default;
           }
         }
+      }
+
+      :deep(.el-form-item__content) {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        min-width: 0;
+      }
+
+      :deep(.el-form-item__error) {
+        position: static;
+        padding-top: 4px;
+        line-height: 16px;
+        min-height: 16px;
+        white-space: normal;
       }
 
       // View 模式文本样式

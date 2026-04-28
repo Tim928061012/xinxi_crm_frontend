@@ -280,6 +280,7 @@ const crmTableRowStyle = () => ({ height: '41.31px' })
 const crmTableCellStyle = () => ({ paddingTop: '4px', paddingBottom: '4px' })
 const bankList = ref<BankCentre[]>([])
 const loading = ref(false)
+let bankLoadingPromise: Promise<void> | null = null
 const newBankDialogVisible = ref(false)
 const editBankDialogVisible = ref(false)
 const viewDialogVisible = ref(false)
@@ -334,6 +335,10 @@ const editBankFormRules: FormRules = {
 
 // 加载银行列表
 const loadBanks = async () => {
+  if (bankLoadingPromise) {
+    return bankLoadingPromise
+  }
+  bankLoadingPromise = (async () => {
   loading.value = true
   try {
     const response = await bankApi.getBanks()
@@ -373,10 +378,11 @@ const loadBanks = async () => {
     }
     bankList.value = []
   } finally {
-    // 添加最小延迟，避免闪烁
-    await new Promise(resolve => setTimeout(resolve, 300))
     loading.value = false
+    bankLoadingPromise = null
   }
+  })()
+  return bankLoadingPromise
 }
 
 // 新建银行

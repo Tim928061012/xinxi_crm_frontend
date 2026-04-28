@@ -102,6 +102,10 @@ const crmTableRowStyle = () => ({ height: '41.31px' })
 const crmTableCellStyle = () => ({ paddingTop: '4px', paddingBottom: '4px' })
 const introducerList = ref<Introducer[]>([])
 const loading = ref(false)
+let introducerLoadingPromise: Promise<void> | null = null
+let cachedAccountMap: Map<number, { name: string; isActive: boolean }> | null = null
+let cachedAccountMapAt = 0
+const ACCOUNT_CACHE_TTL_MS = 60 * 1000
 
 const openIntroducerTab = (path: string) => {
   const url = router.resolve({ path }).href
@@ -112,28 +116,49 @@ const goNew = () => openIntroducerTab('/standalone/introducer/new')
 const goView = (row: Introducer) => openIntroducerTab(`/standalone/introducer/${row.id}`)
 const goEdit = (row: Introducer) => openIntroducerTab(`/standalone/introducer/${row.id}/edit`)
 
+const buildAccountMap = (accounts: Record<string, unknown>[]) => {
+  const map = new Map<number, { name: string; isActive: boolean }>()
+  accounts.forEach((acc: Record<string, unknown>) => {
+    const userId = acc.userId || acc.user_id || acc.id
+    if (!userId) return
+    const firstName = (acc.firstName || acc.first_name || '') as string
+    const lastName = (acc.lastName || acc.last_name || '') as string
+    const name = formatPersonName(firstName, lastName, (acc.account as string) || '')
+    const isActive = acc.isActive === true || acc.isActive === 'true' || acc.active === true
+    map.set(Number(userId), { name, isActive })
+  })
+  return map
+}
+
+const getAccountMap = async () => {
+  const now = Date.now()
+  if (cachedAccountMap && now - cachedAccountMapAt < ACCOUNT_CACHE_TTL_MS) {
+    return cachedAccountMap
+  }
+  try {
+    const accountResponse = await accountApi.getAccounts()
+    const accounts = accountResponse.data || accountResponse || []
+    cachedAccountMap = buildAccountMap(accounts as Record<string, unknown>[])
+    cachedAccountMapAt = now
+    return cachedAccountMap
+  } catch (error) {
+    console.warn('Failed to load accounts for RM mapping:', error)
+    return cachedAccountMap ?? new Map<number, { name: string; isActive: boolean }>()
+  }
+}
+
 const loadIntroducers = async () => {
+  if (introducerLoadingPromise) {
+    return introducerLoadingPromise
+  }
+  introducerLoadingPromise = (async () => {
   loading.value = true
   try {
-    const response = await introducerApi.getIntroducers()
-    const data = response.data || response || []
-
-    let accountMap = new Map<number, { name: string; isActive: boolean }>()
-    try {
-      const accountResponse = await accountApi.getAccounts()
-      const accounts = accountResponse.data || accountResponse || []
-      accounts.forEach((acc: Record<string, unknown>) => {
-        const userId = acc.userId || acc.user_id || acc.id
-        if (!userId) return
-        const firstName = (acc.firstName || acc.first_name || '') as string
-        const lastName = (acc.lastName || acc.last_name || '') as string
-        const name = formatPersonName(firstName, lastName, (acc.account as string) || '')
-        const isActive = acc.isActive === true || acc.isActive === 'true' || acc.active === true
-        accountMap.set(Number(userId), { name, isActive })
-      })
-    } catch (error) {
-      console.warn('Failed to load accounts for RM mapping:', error)
-    }
+    const [introducerResponse, accountMap] = await Promise.all([
+      introducerApi.getIntroducers(),
+      getAccountMap()
+    ])
+    const data = introducerResponse.data || introducerResponse || []
 
     introducerList.value = data.map((item: Record<string, unknown>) => {
       const introducerId = item.introducerId || item.id
@@ -187,9 +212,11 @@ const loadIntroducers = async () => {
     }
     introducerList.value = []
   } finally {
-    await new Promise(resolve => setTimeout(resolve, 300))
     loading.value = false
+    introducerLoadingPromise = null
   }
+  })()
+  return introducerLoadingPromise
 }
 
 const handleStatusChange = async (row: Introducer) => {

@@ -23,19 +23,19 @@
         :row-style="crmTableRowStyle"
         :cell-style="crmTableCellStyle"
       >
-      <el-table-column prop="account" label="Account" width="180" />
-      <el-table-column prop="name" label="Name" width="200" />
-      <el-table-column label="Role" width="140">
+      <el-table-column prop="account" label="Account" width="190" />
+      <el-table-column prop="name" label="Name" width="230" />
+      <el-table-column label="Role" width="130">
         <template #default="{ row }">
           {{ roleDisplayName(row.role) }}
         </template>
       </el-table-column>
-      <el-table-column label="Created Time" width="200">
+      <el-table-column label="Created Time" width="210">
         <template #default="{ row }">
           {{ formatDateTime(row.createdTime) }}
         </template>
       </el-table-column>
-      <el-table-column label="Status" width="150">
+      <el-table-column label="Status" min-width="165">
         <template #default="{ row }">
           <div class="table-status-cell">
             <!-- admin 账号状态开关置灰不可修改 -->
@@ -52,7 +52,7 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="Actions" width="220" fixed="right">
+      <el-table-column label="Actions" width="200" fixed="right">
         <template #default="{ row }">
           <div class="table-actions">
             <template v-if="!isSystemAdmin(row)">
@@ -163,6 +163,7 @@ const crmTableRowStyle = () => ({ height: '41.31px' })
 const crmTableCellStyle = () => ({ paddingTop: '4px', paddingBottom: '4px' })
 
 const accountList = ref<Account[]>([])
+let accountLoadingPromise: Promise<void> | null = null
 const newAccountDialogVisible = ref(false)
 const editAccountDialogVisible = ref(false)
 const newAccountFormRef = ref<FormInstance>()
@@ -202,6 +203,10 @@ const isSystemAdmin = (row: Pick<Account, 'account' | 'role'> | any) =>
 
 // 加载账户列表
 const loadAccounts = async () => {
+  if (accountLoadingPromise) {
+    return accountLoadingPromise
+  }
+  accountLoadingPromise = (async () => {
   try {
     const response = await accountApi.getAccounts()
     const data = response.data || response || []
@@ -238,6 +243,10 @@ const loadAccounts = async () => {
     }
     accountList.value = []
   }
+  })().finally(() => {
+    accountLoadingPromise = null
+  })
+  return accountLoadingPromise
 }
 
 // 新建账户
@@ -514,10 +523,11 @@ onMounted(() => {
 
     .table-actions {
       display: inline-flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
       gap: 0;
       font-size: 14px;
+      white-space: nowrap;
     }
 
     .action-sep {

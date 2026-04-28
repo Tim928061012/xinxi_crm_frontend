@@ -162,6 +162,14 @@ request.interceptors.response.use(
     if (response) {
       const status = response.status
       const message = response?.data?.msg || response?.data?.message || error?.message
+      const method = String(config?.method || 'get').toLowerCase()
+      const isGateway = status === 502 || status === 503 || status === 504
+      const retryable = isGateway && method === 'get'
+      const retryCount = Number((config as { __retryCount?: number })?.__retryCount || 0)
+      if (retryable && retryCount < 1) {
+        ;(config as { __retryCount?: number }).__retryCount = retryCount + 1
+        return new Promise((resolve) => setTimeout(resolve, 250)).then(() => request(config))
+      }
 
       if (isAccountDisabledMessage(message)) {
         ;(error as any).isAuthError = true

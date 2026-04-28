@@ -694,9 +694,10 @@ const toDisplayDate = (value?: string | null) => {
   user-select: none;
 }
 
-/* 单滚动容器：由 .progress-dialog 负责滚动，避免内外双滚动导致“分离感” */
+/* Flowchart / Timeline 统一固定高度，避免切换时容器跳动 */
 .progress-tab-panels {
   display: block;
+  height: 510px;
 }
 
 .tab-panel--inactive {
@@ -705,14 +706,16 @@ const toDisplayDate = (value?: string | null) => {
 
 .flowchart-panel {
   padding: 4px 0 8px 4px;
-  overflow: visible;
+  height: 100%;
+  overflow-y: auto;
   box-sizing: border-box;
 }
 
 .timeline-panel {
   padding: 8px 0;
   padding-left: var(--progress-track-indent);
-  overflow: visible;
+  height: 100%;
+  overflow-y: auto;
   box-sizing: border-box;
 }
 

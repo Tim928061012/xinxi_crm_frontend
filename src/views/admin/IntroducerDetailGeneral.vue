@@ -948,6 +948,21 @@ function formatDisplayValue(value: unknown): string {
     margin-bottom: 0;
   }
 
+  :deep(.el-form-item__content) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  :deep(.el-form-item__error) {
+    position: static;
+    padding-top: 4px;
+    line-height: 16px;
+    min-height: 16px;
+    white-space: normal;
+  }
+
   :deep(.el-form-item__label) {
     color: #606266;
     font-weight: 500;
