@@ -122,7 +122,7 @@ const loadIntroducers = async () => {
         if (!userId) return
         const firstName = (acc.firstName || acc.first_name || '') as string
         const lastName = (acc.lastName || acc.last_name || '') as string
-        const name = formatPersonName(firstName, lastName) || (acc.name as string) || (acc.account as string) || ''
+        const name = formatPersonName(firstName, lastName, (acc.account as string) || '')
         const isActive = acc.isActive === true || acc.isActive === 'true' || acc.active === true
         accountMap.set(Number(userId), { name, isActive })
       })

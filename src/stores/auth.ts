@@ -69,8 +69,8 @@ export const useAuthStore = defineStore('auth', () => {
         role: normalized,
         roleDisplayName: roleDisplayName(normalized),
         name:
-          rawUserData.name ||
           formatPersonName(rawUserData.firstName, rawUserData.lastName) ||
+          rawUserData.name ||
           rawUserData.username
       }
 
@@ -166,6 +166,12 @@ export const useAuthStore = defineStore('auth', () => {
       const nr = normalizeRole(parsed.role)
       user.value = {
         ...parsed,
+        name:
+          formatPersonName(parsed.firstName, parsed.lastName) ||
+          parsed.name ||
+          parsed.username ||
+          parsed.account ||
+          '',
         role: nr,
         roleDisplayName: roleDisplayName(nr)
       }

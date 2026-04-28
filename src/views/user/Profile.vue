@@ -128,7 +128,7 @@ const loadUserInfo = async () => {
     userInfo.value = {
       id: data.id || data.userId || '',
       username: data.username || data.account || '',
-      name: data.name || formatPersonName(data.firstName, data.lastName) || '',
+      name: formatPersonName(data.firstName, data.lastName) || data.name || '',
       role: data.role || 'user',
       roleDisplayName: data.roleDisplayName || roleDisplayName(data.role),
       email: data.email || '',

@@ -522,10 +522,11 @@ const normalizeClient = (item: any): AdminClientRow => {
 
   const rmFirstName = item.rmFirstName || item.rm_first_name || ''
   const rmLastName = item.rmLastName || item.rm_last_name || ''
-  const rmName =
-    item.rmName ||
-    item.rm_name ||
-    formatPersonName(rmFirstName, rmLastName)
+  const rmName = formatPersonName(
+    rmFirstName,
+    rmLastName,
+    (item.rmName || item.rm_name || '') as string
+  )
 
   const inactive = item.inactive === true || item.isInactive === true || item.is_inactive === true
   const progressStatus = item.progressStatus || item.progress_status || ''
