@@ -1136,13 +1136,13 @@
               <div class="section-header">
                 <h3 class="section-title">Portfolio</h3>
                 <div class="portfolio-header-actions">
+                  <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleNewPortfolio">
+                    New Portfolio
+                  </el-button>
                   <AddCommentButton
                     v-if="showModuleCommentEntry"
                     @click="openCommentFromModule('PORTFOLIO', 'Portfolio')"
                   />
-                  <el-button v-if="!isViewMode" type="primary" :icon="Plus" @click="handleNewPortfolio">
-                    New Portfolio
-                  </el-button>
                 </div>
               </div>
 
@@ -1259,13 +1259,15 @@
                   v-if="canBulkDownloadModule && kycData.documents.length"
                   @click="bulkDownloadKycList(kycData.documents, 'Supporting Documents')"
                 />
+                <DocumentUploadLinkButton
+                  v-if="!isViewMode"
+                  aria-label="Upload"
+                  @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')"
+                />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
                   @click="openCommentFromModule('KYC_SUPPORTING_DOCUMENTS', 'Supporting Documents')"
                 />
-                <el-button v-if="!isViewMode" class="crm-upload-action crm-upload-action--asset" type="primary" link aria-label="Upload" @click="handleUploadKYCDocument('SUPPORTING_DOCUMENT')">
-                  <img class="crm-upload-action__asset" :src="crmUploadActionImg" alt="" />
-                </el-button>
               </div>
             </div>
             <el-table
@@ -1302,13 +1304,15 @@
                   v-if="canBulkDownloadModule && kycData.nameScreeningDocuments.length"
                   @click="bulkDownloadKycList(kycData.nameScreeningDocuments, 'Name Screening')"
                 />
+                <DocumentUploadLinkButton
+                  v-if="!isViewMode"
+                  aria-label="Upload"
+                  @click="handleUploadKYCDocument('NAME_SCREENING')"
+                />
                 <AddCommentButton
                   v-if="showModuleCommentEntry"
                   @click="openCommentFromModule('KYC_NAME_SCREENING', 'Name Screening Documents')"
                 />
-                <el-button v-if="!isViewMode" class="crm-upload-action crm-upload-action--asset" type="primary" link aria-label="Upload" @click="handleUploadKYCDocument('NAME_SCREENING')">
-                  <img class="crm-upload-action__asset" :src="crmUploadActionImg" alt="" />
-                </el-button>
               </div>
             </div>
             <el-table
@@ -2175,7 +2179,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
 import { Hide, Plus, User, Phone, Message, Location, UploadFilled, Place, View } from '@element-plus/icons-vue'
 import JSZip from 'jszip'
-import crmUploadActionImg from '@/assets/crm-upload-action.png'
 import { useAuthStore } from '@/stores/auth'
 import { userClientApi, type Client, type ContactInfo, type IndividualGeneralInfo, type CorporateGeneralInfo, type CreateClientParams } from '@/api/user/client'
 import { portfolioApi, type Portfolio, type CreatePortfolioParams } from '@/api/user/portfolio'
@@ -4861,6 +4864,16 @@ onMounted(() => {
     transform: translateX(21px);
   }
 
+  /* Documents 等：+Comment 与 Upload/Bulk 同一行时取消 translate，避免横向重叠。 */
+  .section-header-actions :deep(.crm-add-comment-btn) {
+    transform: none;
+  }
+
+  /* Documents Tab：整组操作（Upload / Download / +Comment）一并右移，与「Hide Comment」对齐；组内 gap 不变 */
+  .client-tabs-wrap .client-tabs :deep(#pane-documents .document-section .section-header-actions) {
+    transform: translateX(21px);
+  }
+
   .client-tabs-wrap .client-tabs :deep(#pane-comments .crm-add-comment-btn) {
     transform: none;
   }
@@ -5306,7 +5319,10 @@ onMounted(() => {
 .portfolio-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
 }
 
 .kyc-information-form {
@@ -5387,6 +5403,8 @@ onMounted(() => {
     background-color: #fff;
     border: none;
     border-radius: var(--crm-radius-sm, 4px);
+    overflow-x: visible;
+    overflow-y: visible;
   }
 
   .kyc-upload-title {
@@ -5399,7 +5417,20 @@ onMounted(() => {
   .kyc-upload-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 16px;
+    min-width: 0;
+    box-sizing: border-box;
+    /* 整组右移与 Information 的 +Comment / Hide Comment 对齐；避免只对 Comment 做 translate 导致 Upload–Comment 视觉间距变大 */
+    transform: translateX(21px);
+
+    & > * {
+      flex-shrink: 0;
+    }
+  }
+
+  .kyc-upload-actions :deep(.crm-add-comment-btn) {
+    transform: none;
   }
 }
 
@@ -5427,8 +5458,10 @@ onMounted(() => {
   .section-header-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 16px;
     flex-shrink: 0;
+    min-width: 0;
   }
 
   .section-title {
@@ -5446,8 +5479,8 @@ onMounted(() => {
   :deep(.crm-document-upload-link-btn) {
     gap: 8px;
     font-size: 14px;
-    font-weight: 500;
-    line-height: 1.25;
+    font-weight: 400;
+    line-height: 1.5;
     color: var(--crm-primary, #025189);
 
     &:hover {
