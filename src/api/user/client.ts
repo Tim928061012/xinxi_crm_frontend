@@ -20,6 +20,8 @@ export interface IndividualGeneralInfo {
   lastName: string
   chineseName?: string
   idType?: string
+  /** ID Type 为 Others 时填写 */
+  idRemarks?: string
   idNo?: string
   idExpiry?: string
   rm: string
@@ -55,6 +57,8 @@ export interface CorporateGeneralInfo {
   introducerId?: number
   chineseName?: string
   idType?: string
+  /** ID Type 为 Others 时填写 */
+  idRemarks?: string
   idNo?: string
   dateOfCompanySearch?: string
   countryOfRegistration?: string

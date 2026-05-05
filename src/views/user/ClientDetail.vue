@@ -423,6 +423,7 @@
                         <el-option label="Passport" value="Passport" />
                         <el-option label="ID Card" value="ID Card" />
                         <el-option label="Driver License" value="Driver License" />
+                        <el-option label="Others" value="Others" />
                       </el-select>
                     </template>
                   </el-form-item>
@@ -440,6 +441,24 @@
                       <span style="margin-left: 8px;">{{ (clientForm.general as any).dualCitizenship ? 'Yes' : 'No' }}</span>
                     </template>
                   </el-form-item>
+                </div>
+
+                <div v-if="(clientForm.general as any).idType === 'Others'" class="form-row">
+                  <el-form-item label="ID remarks">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text" style="white-space: pre-wrap;">{{ formatDisplayValue((clientForm.general as any).idRemarks) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-input
+                        v-model="(clientForm.general as any).idRemarks"
+                        type="textarea"
+                        :autosize="{ minRows: 2, maxRows: 12 }"
+                        placeholder="Please describe the ID type"
+                        :disabled="isViewMode"
+                      />
+                    </template>
+                  </el-form-item>
+                  <el-form-item label=" "></el-form-item>
                 </div>
 
                 <!-- 第10行: Id No., Nationality -->
@@ -806,7 +825,26 @@
                       <el-select v-model="(clientForm.general as any).idType" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
                         <el-option label="Business License" value="Business License" />
                         <el-option label="Registration Certificate" value="Registration Certificate" />
+                        <el-option label="Others" value="Others" />
                       </el-select>
+                    </template>
+                  </el-form-item>
+                  <el-form-item label=" "></el-form-item>
+                </div>
+
+                <div v-if="(clientForm.general as any).idType === 'Others'" class="form-row">
+                  <el-form-item label="ID remarks">
+                    <template v-if="isViewMode">
+                      <span class="view-mode-text" style="white-space: pre-wrap;">{{ formatDisplayValue((clientForm.general as any).idRemarks) }}</span>
+                    </template>
+                    <template v-else>
+                      <el-input
+                        v-model="(clientForm.general as any).idRemarks"
+                        type="textarea"
+                        :autosize="{ minRows: 2, maxRows: 12 }"
+                        placeholder="Please describe the ID type"
+                        :disabled="isViewMode"
+                      />
                     </template>
                   </el-form-item>
                   <el-form-item label=" "></el-form-item>
@@ -2737,7 +2775,9 @@ const clientForm = reactive<Omit<CreateClientParams, 'secondaryContact'> & { sec
     firstName: '',
     lastName: '',
     rm: '',
-    arm: ''
+    arm: '',
+    idType: '',
+    idRemarks: ''
   } as IndividualGeneralInfo,
   contact: {
     title: '',
@@ -2784,6 +2824,15 @@ const emptyContact = (): ContactInfo => ({
   address: '',
   jurisdictionDiffers: false
 })
+
+watch(
+  () => (clientForm.general as any).idType,
+  v => {
+    if (v !== 'Others') {
+      ;(clientForm.general as any).idRemarks = ''
+    }
+  }
+)
 
 // RM、ARM 和 Introducer 选择
 const rmSelectDialogVisible = ref(false)
@@ -3074,6 +3123,8 @@ const loadClient = async () => {
           lastName: '',
           rm: '',
           arm: '',
+          idType: '',
+          idRemarks: '',
           introducerId: undefined
         } as IndividualGeneralInfo
       } else {
@@ -3083,6 +3134,8 @@ const loadClient = async () => {
           companyName: '',
           rm: '',
           arm: '',
+          idType: '',
+          idRemarks: '',
           introducerId: undefined
         } as CorporateGeneralInfo
       }

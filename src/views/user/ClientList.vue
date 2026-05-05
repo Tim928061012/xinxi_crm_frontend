@@ -93,7 +93,10 @@
                 @click.stop="openProgress(row)"
                 @keydown.enter.prevent="openProgress(row)"
               >
-                <span class="progress-label">
+                <span
+                  class="progress-label"
+                  :class="{ 'progress-label--my-turn': isProgressTurnForCurrentUser(row) }"
+                >
                   {{ row.progressLabel }}
                 </span>
                 <span
@@ -616,6 +619,15 @@ const canEditInList = (row: ClientListRow) => {
 const ownerBadgeKind = (row: ClientListRow) =>
   getProgressOwnerBadgeKind(row.progressOwnerRoleLabel, row.progressStatus, row.inactive)
 
+/** 当前待办审批角色与登录用户一致时，进度状态文案高亮（颜色与 el-button danger / Reject 一致） */
+const isProgressTurnForCurrentUser = (row: ClientListRow) => {
+  const ownerLabel = (row.progressOwnerRoleLabel || '').trim()
+  if (!ownerLabel) return false
+  const myRole = normalizeRole(authStore.user?.role)
+  if (!myRole) return false
+  return normalizeRole(ownerLabel) === myRole
+}
+
 const onActionEdit = (row: ClientListRow) => {
   if (!canEditInList(row)) return
   handleEdit(row)
@@ -1100,9 +1112,15 @@ onMounted(loadClients)
       padding: 4px 2px;
       margin: -4px -2px;
 
-      &:hover .progress-label,
-      &:focus-visible .progress-label {
+      &:hover .progress-label:not(.progress-label--my-turn),
+      &:focus-visible .progress-label:not(.progress-label--my-turn) {
         color: #0b63c5;
+        text-decoration: none;
+      }
+
+      &:hover .progress-label--my-turn,
+      &:focus-visible .progress-label--my-turn {
+        color: var(--el-color-danger-dark-2, #c45656);
         text-decoration: none;
       }
     }
@@ -1113,6 +1131,11 @@ onMounted(loadClients)
     color: #303133;
     line-height: 1.4;
     text-decoration: none;
+
+    &--my-turn {
+      color: var(--el-color-danger);
+      font-weight: 600;
+    }
   }
 
   .progress-owner-pill {
