@@ -757,11 +757,22 @@
                       <span class="view-mode-text">{{ formatDisplayValue((clientForm.general as any).industry) }}</span>
                     </template>
                     <template v-else>
-                      <el-select v-model="(clientForm.general as any).industry" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
-                        <el-option label="Finance" value="Finance" />
-                        <el-option label="Technology" value="Technology" />
-                        <el-option label="Manufacturing" value="Manufacturing" />
-                        <el-option label="Retail" value="Retail" />
+                      <el-select
+                        v-model="(clientForm.general as any).industry"
+                        filterable
+                        clearable
+                        :filter-method="onCorporateIndustryFilterMethod"
+                        placeholder="Search or select industry"
+                        style="width: 100%"
+                        :disabled="isViewMode"
+                        @visible-change="onCorporateIndustryVisibleChange"
+                      >
+                        <el-option
+                          v-for="item in filteredCorporateIndustries"
+                          :key="item"
+                          :label="item"
+                          :value="item"
+                        />
                       </el-select>
                     </template>
                   </el-form-item>
@@ -2227,6 +2238,10 @@ import { kycApi, type KYCData, type KYCDocument } from '@/api/user/kyc'
 import { documentsApi, type DocumentsData, type Document, type DocumentType } from '@/api/user/documents'
 import { riskProfileApi, type InvestmentRiskProfile, type InvestmentType } from '@/api/user/risk-profile'
 import { feeScheduleApi, type FeeSchedule } from '@/api/user/fee-schedule'
+import {
+  CORPORATE_INDUSTRY_OPTIONS,
+  corporateIndustryOptionMatches
+} from '@/constants/corporate-industry-options'
 import { workflowApi, type ClientProgressData, type ClientType, type ClientComment } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import ClientAddCommentDialog from '@/components/client/ClientAddCommentDialog.vue'
@@ -2840,6 +2855,25 @@ const armSelectDialogVisible = ref(false)
 const accountList = ref<Account[]>([])
 const introducerList = ref<Introducer[]>([])
 const bankList = ref<BankCentre[]>([])
+
+/** Corporate Industry：配合 filter-method 做分词子串模糊过滤 */
+const corporateIndustryFilterQuery = ref('')
+const filteredCorporateIndustries = computed(() => {
+  const q = corporateIndustryFilterQuery.value
+  const all = [...CORPORATE_INDUSTRY_OPTIONS]
+  const list = !q.trim() ? all : all.filter(opt => corporateIndustryOptionMatches(opt, q))
+  const cur = String((clientForm.general as any).industry || '').trim()
+  if (cur && !list.includes(cur)) {
+    return [cur, ...list]
+  }
+  return list
+})
+function onCorporateIndustryFilterMethod(query: string) {
+  corporateIndustryFilterQuery.value = query
+}
+function onCorporateIndustryVisibleChange(visible: boolean) {
+  if (!visible) corporateIndustryFilterQuery.value = ''
+}
 
 // Introducer 下拉可见列表：只显示启用的 + 当前已选中的（即使已禁用也保留）
 const visibleIntroducers = computed(() => {
