@@ -1,16 +1,8 @@
 /**
- * Corporate 客户 Industry 选项：
- * - 保留系统原有 4 项
- * - 自《行業.docx》「Industry Name (Eng)」列补充 50 项（与文档一致）
+ * Corporate 客户 Industry 选项：仅《行業.docx》「Industry Name (Eng)」列 50 项。
+ * 历史数据若仍为旧四类（Finance 等），下拉会通过 ClientDetail 将当前值 prepend 展示以便重选。
  */
-export const LEGACY_CORPORATE_INDUSTRY_OPTIONS = [
-  'Finance',
-  'Technology',
-  'Manufacturing',
-  'Retail'
-] as const
-
-export const EXTENDED_CORPORATE_INDUSTRY_OPTIONS = [
+export const CORPORATE_INDUSTRY_OPTIONS = [
   'Virtual Assets & Web3 Services',
   'Precious Metals & Stones Dealers',
   'Gaming, Casinos & Betting',
@@ -61,13 +53,9 @@ export const EXTENDED_CORPORATE_INDUSTRY_OPTIONS = [
   'Office Equipment & Managed IT Services',
   'Property Management',
   'Environmental & Carbon Advisory'
-] as const
+] as const satisfies readonly string[]
 
-/** 下拉展示顺序：原选项在前，文档 50 类在后 */
-export const CORPORATE_INDUSTRY_OPTIONS: readonly string[] = [
-  ...LEGACY_CORPORATE_INDUSTRY_OPTIONS,
-  ...EXTENDED_CORPORATE_INDUSTRY_OPTIONS
-]
+export type CorporateIndustryOption = (typeof CORPORATE_INDUSTRY_OPTIONS)[number]
 
 /** 模糊匹配：不区分大小写；空格分词，各词均需在选项名中出现（子串） */
 export function corporateIndustryOptionMatches(label: string, query: string): boolean {

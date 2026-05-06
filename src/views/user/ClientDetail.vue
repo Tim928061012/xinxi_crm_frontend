@@ -444,7 +444,7 @@
                 </div>
 
                 <div v-if="(clientForm.general as any).idType === 'Others'" class="form-row">
-                  <el-form-item label="ID remarks">
+                  <el-form-item label="Id Remarks">
                     <template v-if="isViewMode">
                       <span class="view-mode-text" style="white-space: pre-wrap;">{{ formatDisplayValue((clientForm.general as any).idRemarks) }}</span>
                     </template>
@@ -844,7 +844,7 @@
                 </div>
 
                 <div v-if="(clientForm.general as any).idType === 'Others'" class="form-row">
-                  <el-form-item label="ID remarks">
+                  <el-form-item label="Id Remarks">
                     <template v-if="isViewMode">
                       <span class="view-mode-text" style="white-space: pre-wrap;">{{ formatDisplayValue((clientForm.general as any).idRemarks) }}</span>
                     </template>
