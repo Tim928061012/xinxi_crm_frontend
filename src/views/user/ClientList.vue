@@ -340,6 +340,7 @@ import {
 } from '@/utils/client-progress'
 import { normalizeRole } from '@/utils/roles'
 import { formatPersonName } from '@/utils/name'
+import { normalizeClientListClientType } from '@/utils/normalize-client-type'
 
 interface ClientListRow {
   id: number
@@ -522,7 +523,7 @@ function resetExportDialogFilters() {
 }
 
 const normalizeClient = (item: any): ClientListRow => {
-  const contactNature = (item.clientType || item.contactNature || item.contact_nature || 'Individual') as ClientType
+  const contactNature = normalizeClientListClientType(item as Record<string, unknown>)
 
   let clientName = ''
   if (contactNature === 'Corporate') {

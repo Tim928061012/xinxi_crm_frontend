@@ -37,10 +37,9 @@ export const adminClientApi = {
     return request.put(`/client-corporates/${id}/compliance-operation`, data)
   },
 
-  // 删除客户（管理员与普通用户共用同一接口，后端按角色做权限校验）
-  deleteClient(id: number, clientType?: 'Individual' | 'Corporate') {
-    const params = clientType ? { clientType } : {}
-    return request.delete(`/user/clients/${id}`, { params })
+  // 删除客户（必须带 clientType；与 userClientApi.deleteClient 一致）
+  deleteClient(id: number, clientType: 'Individual' | 'Corporate') {
+    return request.delete(`/user/clients/${id}`, { params: { clientType } })
   }
 }
 

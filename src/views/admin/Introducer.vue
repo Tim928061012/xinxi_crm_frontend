@@ -1,10 +1,12 @@
 <template>
   <div class="introducer-page">
     <div class="page-header">
-      <el-button type="primary" @click="goNew">
-        <el-icon><Plus /></el-icon>
-        New Introducer
-      </el-button>
+      <div class="page-header-left">
+        <el-button type="primary" @click="goNew">
+          <el-icon><Plus /></el-icon>
+          New Introducer
+        </el-button>
+      </div>
       <div class="user-info">
         <span>{{ authStore.user?.username || authStore.user?.account || 'admin' }}</span>
         <span v-if="authStore.user?.roleDisplayName || authStore.user?.role" class="user-role-pill">
@@ -73,10 +75,7 @@
     </template>
 
     <div v-else class="empty-state">
-      <el-button type="primary" size="large" @click="goNew">
-        <el-icon><Plus /></el-icon>
-        New Introducer
-      </el-button>
+      <el-empty description="No introducers yet" />
     </div>
   </div>
 </template>
@@ -274,6 +273,13 @@ onMounted(() => {
     width: 100%;
     box-sizing: border-box;
 
+    .page-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
     .user-info {
       display: inline-flex;
       align-items: center;
@@ -406,10 +412,13 @@ onMounted(() => {
 
   .empty-state {
     width: 100%;
+    min-height: 420px;
     display: flex;
-    justify-content: center;
     align-items: center;
-    min-height: calc(100vh - 100px);
+    justify-content: center;
+    background: #fff;
+    border-radius: 8px;
+    box-sizing: border-box;
   }
 }
 

@@ -127,10 +127,9 @@ export const userClientApi = {
     return request.put(`/user/clients/${id}`, data)
   },
 
-  // 删除客户
-  deleteClient(id: number, clientType?: 'Individual' | 'Corporate') {
-    const params = clientType ? { clientType } : {}
-    return request.delete(`/user/clients/${id}`, { params })
+  // 删除客户（必须带 clientType，否则后端在 Individual/Corporate 同 id 时无法区分）
+  deleteClient(id: number, clientType: 'Individual' | 'Corporate') {
+    return request.delete(`/user/clients/${id}`, { params: { clientType } })
   }
 }
 
