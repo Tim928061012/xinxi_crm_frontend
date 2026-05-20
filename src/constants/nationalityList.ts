@@ -9,6 +9,7 @@ export const nationalityList = [
   'Bangladesh',
   'Belgium',
   'Brazil',
+  'British Virgin Island (BVI)',
   'Bulgaria',
   'Cambodia',
   'Canada',

@@ -2258,6 +2258,7 @@ import { getProgressLabel, isClientEditable, normalizeProgressStatus } from '@/u
 import { mapTabToCommentModule } from '@/utils/comment-modules'
 import { getClientBasePath, getClientListPath } from '@/utils/client-routes'
 import { isAdminRole, isOperationRole, isReviewerOnlyEditInReviewRole, normalizeRole } from '@/utils/roles'
+import { nationalityList } from '@/constants/nationalityList'
 
 const route = useRoute()
 const router = useRouter()
@@ -2694,91 +2695,6 @@ watch(clientId, id => {
 
 const clientFormRef = ref<FormInstance>()
 const portfolioFormRef = ref<FormInstance>()
-
-// 全球国家/地区列表（全英文，注意地缘政治敏感度，按字母顺序排列）
-const nationalityList = [
-  'Afghanistan',
-  'Albania',
-  'Algeria',
-  'Argentina',
-  'Australia',
-  'Austria',
-  'Bangladesh',
-  'Belgium',
-  'Brazil',
-  'Bulgaria',
-  'Cambodia',
-  'Canada',
-  'Chile',
-  'China',
-  'Colombia',
-  'Croatia',
-  'Czech Republic',
-  'Denmark',
-  'Egypt',
-  'Estonia',
-  'Finland',
-  'France',
-  'Germany',
-  'Greece',
-  'Hong Kong, China', // 中国香港
-  'Hungary',
-  'Iceland',
-  'India',
-  'Indonesia',
-  'Iran',
-  'Iraq',
-  'Ireland',
-  'Israel',
-  'Italy',
-  'Japan',
-  'Jordan',
-  'Kazakhstan',
-  'Kenya',
-  'Korea, North',
-  'Korea, South',
-  'Kuwait',
-  'Latvia',
-  'Lebanon',
-  'Lithuania',
-  'Luxembourg',
-  'Macau, China', // 中国澳门
-  'Malaysia',
-  'Mexico',
-  'Morocco',
-  'Myanmar',
-  'Netherlands',
-  'New Zealand',
-  'Nigeria',
-  'Norway',
-  'Oman',
-  'Pakistan',
-  'Philippines',
-  'Poland',
-  'Portugal',
-  'Qatar',
-  'Romania',
-  'Russia',
-  'Saudi Arabia',
-  'Singapore',
-  'Slovakia',
-  'Slovenia',
-  'South Africa',
-  'Spain',
-  'Sri Lanka',
-  'Sweden',
-  'Switzerland',
-  'Taiwan, China', // 中国台湾
-  'Thailand',
-  'Turkey',
-  'Ukraine',
-  'United Arab Emirates',
-  'United Kingdom',
-  'United States',
-  'Vietnam',
-  'Yemen',
-  'Zimbabwe'
-].sort((a, b) => a.localeCompare(b, 'en'))
 
 // 表单数据（secondaryContact 在表单中始终存在，便于模板绑定）
 const clientForm = reactive<Omit<CreateClientParams, 'secondaryContact'> & { secondaryContact: ContactInfo; portfolios: Portfolio[] }>({

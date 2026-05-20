@@ -254,17 +254,23 @@ function isLatestLogRow(logId: number) {
   return !!latest && latest.logId === logId
 }
 
-const displayCreatedTime = computed(() => toDisplayDate(props.createdTime))
+const displayCreatedTime = computed(() => {
+  const fromClientRow = progress.value?.clientCreatedAt
+  if (fromClientRow != null && String(fromClientRow).trim() !== '') {
+    return toDisplayDate(String(fromClientRow))
+  }
+  return toDisplayDate(props.createdTime)
+})
 
 const displayCreatedBy = computed(() => {
+  // 与后端一致：优先客户表创建人（无 CREATED 日志或日志缺 actor 时仍有值）
+  const fromClient = (progress.value?.createdByName || '').trim()
+  if (fromClient) return fromClient
   const logs = sortedLogs.value
-  // 优先使用 CREATED 日志中的操作者，避免信息区与日志区来源不一致
   const createdLog = logs.find(log => (log.actionType || '').toUpperCase() === 'CREATED')
   if (createdLog?.actorName?.trim()) return createdLog.actorName.trim()
-  // 历史脏数据/缺日志场景下回退到最早一条日志的 actorName
   const firstLog = logs[0]
   if (firstLog?.actorName?.trim()) return firstLog.actorName.trim()
-  // 不再回退 RM，避免 Created By 显示错人
   return '-'
 })
 

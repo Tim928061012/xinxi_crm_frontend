@@ -27,6 +27,10 @@ export interface ClientProgressData {
   ownerRoleLabel?: string
   inactive: boolean
   signatureSubmittedByUserId?: number | null
+  /** 客户创建人（客户表 creator），与进度日志无关；供 Progress 弹窗 Created By */
+  createdByName?: string | null
+  /** 客户表 created_at（首次保存），供 Progress「Created Time」；不用日志时间 */
+  clientCreatedAt?: string | null
   availableActions: string[]
   logs: ClientProgressLog[]
 }
