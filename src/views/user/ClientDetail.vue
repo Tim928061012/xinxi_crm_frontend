@@ -4247,17 +4247,6 @@ const handleOpenKYCDocument = async (document: KYCDocument) => {
     ElMessage.warning('Document ID is missing. Please refresh the page and try again.')
     return
   }
-  const stagedFile = findPendingFormsFile(document.id, pendingFormsUploads.value)
-  if (document.id < 0) {
-    if (!stagedFile) {
-      ElMessage.warning('This staged file is no longer available. Please select it again.')
-      return
-    }
-    const localUrl = window.URL.createObjectURL(stagedFile)
-    window.open(localUrl, '_blank')
-    window.setTimeout(() => window.URL.revokeObjectURL(localUrl), 60_000)
-    return
-  }
   try {
     const response = await kycApi.getKYCDocument(clientId.value, document.id)
     const blobData = (response as any).data || response
@@ -4328,6 +4317,17 @@ const handleOpenDocument = async (document: Document) => {
   }
   if (!document.id) {
     ElMessage.warning('Document ID is missing. Please refresh the page and try again.')
+    return
+  }
+  const stagedFile = findPendingFormsFile(document.id, pendingFormsUploads.value)
+  if (document.id < 0) {
+    if (!stagedFile) {
+      ElMessage.warning('This staged file is no longer available. Please select it again.')
+      return
+    }
+    const localUrl = window.URL.createObjectURL(stagedFile)
+    window.open(localUrl, '_blank')
+    window.setTimeout(() => window.URL.revokeObjectURL(localUrl), 60_000)
     return
   }
   try {
