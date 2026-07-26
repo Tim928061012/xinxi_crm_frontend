@@ -36,6 +36,7 @@ export const CORPORATE_INDUSTRY_OPTIONS = [
   'Healthcare Providers & Clinics',
   'Software Development & SI',
   'Venture Capital & Private Equity',
+  'Investment holding',
   'Financial Leasing & Asset Financing',
   'HR, Executive Search & Staffing',
   'Chemical & Hazardous Materials',

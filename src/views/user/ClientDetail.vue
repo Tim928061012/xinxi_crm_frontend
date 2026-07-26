@@ -342,10 +342,12 @@
                     </template>
                     <template v-else>
                       <el-select v-model="(clientForm.general as any).educationLevel" placeholder="Please select" style="width: 100%" :disabled="isViewMode">
-                        <el-option label="High School" value="High School" />
-                        <el-option label="Bachelor" value="Bachelor" />
-                        <el-option label="Master" value="Master" />
-                        <el-option label="PhD" value="PhD" />
+                        <el-option
+                          v-for="option in EDUCATION_LEVEL_OPTIONS"
+                          :key="option"
+                          :label="option"
+                          :value="option"
+                        />
                       </el-select>
                     </template>
                   </el-form-item>
@@ -2242,6 +2244,7 @@ import {
   CORPORATE_INDUSTRY_OPTIONS,
   corporateIndustryOptionMatches
 } from '@/constants/corporate-industry-options'
+import { EDUCATION_LEVEL_OPTIONS } from '@/constants/education-level-options'
 import { workflowApi, type ClientProgressData, type ClientType, type ClientComment } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import ClientAddCommentDialog from '@/components/client/ClientAddCommentDialog.vue'
