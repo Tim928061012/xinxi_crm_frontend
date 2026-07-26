@@ -2245,6 +2245,10 @@ import {
   corporateIndustryOptionMatches
 } from '@/constants/corporate-industry-options'
 import { EDUCATION_LEVEL_OPTIONS } from '@/constants/education-level-options'
+import {
+  findPendingFormsFile,
+  type PendingFormsUpload
+} from '@/utils/pending-forms'
 import { workflowApi, type ClientProgressData, type ClientType, type ClientComment } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import ClientAddCommentDialog from '@/components/client/ClientAddCommentDialog.vue'
@@ -2897,7 +2901,6 @@ const feeScheduleData = reactive<FeeSchedule>({
 const documentUploadDialogVisible = ref(false)
 const documentUploadType = ref<DocumentType | 'kyc'>('identity')
 const kycUploadDocumentType = ref<'SUPPORTING_DOCUMENT' | 'NAME_SCREENING'>('SUPPORTING_DOCUMENT')
-type PendingFormsUpload = { tempId: number; file: File }
 const pendingFormsUploads = ref<PendingFormsUpload[]>([])
 const pendingFormsDeleteIds = ref<number[]>([])
 const pendingFormsTempIdSeed = ref(-1)
@@ -4242,6 +4245,17 @@ const handleOpenKYCDocument = async (document: KYCDocument) => {
   }
   if (!document.id) {
     ElMessage.warning('Document ID is missing. Please refresh the page and try again.')
+    return
+  }
+  const stagedFile = findPendingFormsFile(document.id, pendingFormsUploads.value)
+  if (document.id < 0) {
+    if (!stagedFile) {
+      ElMessage.warning('This staged file is no longer available. Please select it again.')
+      return
+    }
+    const localUrl = window.URL.createObjectURL(stagedFile)
+    window.open(localUrl, '_blank')
+    window.setTimeout(() => window.URL.revokeObjectURL(localUrl), 60_000)
     return
   }
   try {
