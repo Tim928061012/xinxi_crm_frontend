@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildClientReviewPayload, getIncompleteReviewSections } from './client-review-payload'
+import {
+  buildClientReviewPayload,
+  getIncompleteReviewSections,
+  isAtomicReviewStatus
+} from './client-review-payload'
 
 describe('buildClientReviewPayload', () => {
   it('includes every editable review section and explicit false knowledge values', () => {
@@ -113,5 +117,16 @@ describe('getIncompleteReviewSections', () => {
       risk: true,
       fee: true
     })).toEqual([])
+  })
+})
+
+describe('isAtomicReviewStatus', () => {
+  it('uses the detail fallback when progress loading failed', () => {
+    expect(isAtomicReviewStatus(undefined, 'Operational Review')).toBe(true)
+    expect(isAtomicReviewStatus(null, 'COMPLIANCE_REVIEW')).toBe(true)
+  })
+
+  it('does not treat non-editable stages as atomic review stages', () => {
+    expect(isAtomicReviewStatus(undefined, 'PENDING_SIGNATURE')).toBe(false)
   })
 })

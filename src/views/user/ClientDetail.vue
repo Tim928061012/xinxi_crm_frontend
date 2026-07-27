@@ -2252,6 +2252,7 @@ import {
 import {
   buildClientReviewPayload,
   getIncompleteReviewSections,
+  isAtomicReviewStatus,
   type ReviewSectionLoadState
 } from '@/utils/client-review-payload'
 import { workflowApi, type ClientProgressData, type ClientType, type ClientComment } from '@/api/user/workflow'
@@ -2405,9 +2406,7 @@ const isReviewMode = computed(() => route.query.mode === 'review' && !isViewMode
 const isAtomicReviewEditMode = computed(
   () =>
     isReviewMode.value &&
-    ['OPERATIONAL_REVIEW', 'COMPLIANCE_REVIEW'].includes(
-      normalizeProgressStatus(progressData.value?.progressStatus)
-    )
+    isAtomicReviewStatus(progressData.value?.progressStatus, progressStatusFallback.value)
 )
 const isRoSignatureReviewInView = computed(
   () =>
@@ -4008,10 +4007,7 @@ const handleReviewDecision = async (approve: boolean) => {
   workflowLoading.value = true
   try {
     const shouldSubmitReviewData =
-      !isRoSignatureReadOnlyReview.value &&
-      ['OPERATIONAL_REVIEW', 'COMPLIANCE_REVIEW'].includes(
-        normalizeProgressStatus(progressData.value?.progressStatus)
-      )
+      !isRoSignatureReadOnlyReview.value && isAtomicReviewEditMode.value
     const reviewPayload = shouldSubmitReviewData
       ? buildClientReviewPayload(
           clientId.value,

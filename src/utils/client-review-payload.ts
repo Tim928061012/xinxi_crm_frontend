@@ -22,6 +22,16 @@ export const getIncompleteReviewSections = (state: ReviewSectionLoadState): stri
     .filter((key) => !state[key])
     .map((key) => REVIEW_SECTION_LABELS[key])
 
+const normalizeReviewStatus = (value?: string | null): string =>
+  (value || '').trim().toUpperCase().replace(/[\s-]+/g, '_')
+
+export const isAtomicReviewStatus = (
+  progressStatus?: string | null,
+  fallbackStatus?: string | null
+): boolean => ['OPERATIONAL_REVIEW', 'COMPLIANCE_REVIEW'].includes(
+  normalizeReviewStatus(progressStatus || fallbackStatus)
+)
+
 const parseDdMmYyyyToIso = (value?: string | null): string | null => {
   if (!value) return null
   const parts = value.split('/')
