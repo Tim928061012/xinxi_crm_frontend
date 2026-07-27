@@ -1,4 +1,6 @@
 import request from '../request'
+import type { KycInfo } from './kyc'
+import type { buildRiskAssessmentPayload, buildFeeSchedulePayload } from '@/utils/client-review-payload'
 
 export type ClientType = 'Individual' | 'Corporate'
 
@@ -61,6 +63,9 @@ export interface ReplyCommentPayload {
 
 export interface WorkflowActionPayload {
   clientDetail?: any
+  kycInfo?: KycInfo
+  riskAssessment?: ReturnType<typeof buildRiskAssessmentPayload>
+  feeSchedule?: ReturnType<typeof buildFeeSchedulePayload>
 }
 
 const clientParams = (clientType: ClientType) => ({ clientType })

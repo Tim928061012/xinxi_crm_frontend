@@ -1,4 +1,5 @@
 import request from '../request'
+import { buildFeeSchedulePayload } from '@/utils/client-review-payload'
 
 // 管理费
 export interface ManagementFee {
@@ -76,19 +77,7 @@ export const feeScheduleApi = {
 
   // 创建 / 更新费用计划（调用 /api/client-fee-schedules）
   async updateFeeSchedule(clientId: number, data: FeeSchedule, clientType: 'Individual' | 'Corporate') {
-    const payload: any = {
-      clientId,
-      clientType,
-      managementFeeEnabled: data.managementFee.enabled,
-      yearlyManagementFeePerc: data.managementFee.yearlyManagementFee ?? null,
-      minimumManagementFeePa: data.managementFee.minimumManagementFee ?? null,
-      performanceFeeEnabled: data.performanceFee.enabled,
-      hurdleRatePerc: data.performanceFee.hurdleRate ?? null,
-      profitSharedPerc: data.performanceFee.profitSharedToXinXi ?? null,
-      retrocessionEnabled: data.retrocession.enabled,
-      othersEnabled: data.others.enabled,
-      othersDetails: data.others.details ?? null
-    }
+    const payload = buildFeeSchedulePayload(clientId, data, clientType)
 
     const hasExisting = (data as any).__hasExisting === true
     const id = (data as any).__id
@@ -112,4 +101,3 @@ export const feeScheduleApi = {
     }
   }
 }
-

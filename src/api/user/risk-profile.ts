@@ -1,4 +1,5 @@
 import request from '../request'
+import { buildRiskAssessmentPayload } from '@/utils/client-review-payload'
 
 // 投资类型
 export interface InvestmentType {
@@ -43,17 +44,6 @@ const formatIsoToDdMmYyyy = (value?: string | number | null): string | undefined
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const year = d.getFullYear()
   return `${day}/${month}/${year}`
-}
-
-const parseDdMmYyyyToIso = (value?: string | null): string | null => {
-  if (!value) return null
-  const parts = value.split('/')
-  if (parts.length !== 3) return null
-  const [day, month, year] = parts
-  const d = new Date(Number(year), Number(month) - 1, Number(day))
-  if (isNaN(d.getTime())) return null
-  // 使用 ISO8601，匹配后端 Date 默认解析格式
-  return d.toISOString()
 }
 
 /** 兼容 JSON true / JDBC 部分驱动返回 1 */
@@ -129,36 +119,7 @@ export const riskProfileApi = {
 
   // 更新/保存投资风险档案（调用 client-risk-profiles/assessment 接口）
   async updateRiskProfile(clientId: number, data: InvestmentRiskProfile, clientType: 'Individual' | 'Corporate') {
-    const v = data.vulnerableClientAssessment
-    const riskProfilePayload: any = {
-      clientId,
-      clientType,
-      riskRating: data.investmentRiskRating,
-      // 显式布尔，避免 undefined 被 axios 省略后后端反序列化为 null 把 bit 列写成 NULL
-      isHkPi: data.hongKongPI === true,
-      remarks: data.remarks ?? '',
-      vAge65Plus: v ? v.age65AndAbove === true : false,
-      vDisability: v ? v.physicalOrIntellectualDisabilities === true : false,
-      // 后端字段是“语言熟练”，前端是“英文不熟练”，取反
-      vLanguageProficient: v ? v.notProficientInEnglish !== true : true,
-      vLowEducationInvestment: v ? v.educationPrimaryOrBelow === true : false,
-      isVulnerableClient: v ? v.vulnerableClient === true : false,
-      reviewDate: v ? parseDdMmYyyyToIso(v.reviewDate) : null // 转为 ISO，后端才可解析
-    }
-
-    // 构造投资经验列表
-    const investmentExperiences = data.investmentKnowledgeExperience.types.map((t) => ({
-      clientId,
-      clientType,
-      investmentType: t.type,
-      hasKnowledge: t.knowledge,
-      hasExperience: t.experience
-    }))
-
-    const payload = {
-      riskProfile: riskProfilePayload,
-      investmentExperiences
-    }
+    const payload = buildRiskAssessmentPayload(clientId, data, clientType)
     const hasExisting = (data as any).__hasExisting === true
 
     if (hasExisting) {
@@ -174,4 +135,3 @@ export const riskProfileApi = {
     }
   }
 }
-
