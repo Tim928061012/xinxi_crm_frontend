@@ -2249,6 +2249,7 @@ import {
   findPendingFormsFile,
   type PendingFormsUpload
 } from '@/utils/pending-forms'
+import { buildClientReviewPayload } from '@/utils/client-review-payload'
 import { workflowApi, type ClientProgressData, type ClientType, type ClientComment } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import ClientAddCommentDialog from '@/components/client/ClientAddCommentDialog.vue'
@@ -3971,21 +3972,31 @@ const handleReviewDecision = async (approve: boolean) => {
 
   workflowLoading.value = true
   try {
-    const shouldSubmitClientDetail =
+    const shouldSubmitReviewData =
       !isRoSignatureReadOnlyReview.value &&
       ['OPERATIONAL_REVIEW', 'COMPLIANCE_REVIEW'].includes(
         normalizeProgressStatus(progressData.value?.progressStatus)
       )
+    const reviewPayload = shouldSubmitReviewData
+      ? buildClientReviewPayload(
+          clientId.value,
+          currentClientType.value,
+          buildWorkflowClientDetailPayload(),
+          kycData,
+          riskProfileData,
+          feeScheduleData
+        )
+      : undefined
     const response = approve
       ? await workflowApi.approve(
           clientId.value,
           currentClientType.value,
-          shouldSubmitClientDetail ? { clientDetail: buildWorkflowClientDetailPayload() } : undefined
+          reviewPayload
         )
       : await workflowApi.reject(
           clientId.value,
           currentClientType.value,
-          shouldSubmitClientDetail ? { clientDetail: buildWorkflowClientDetailPayload() } : undefined
+          reviewPayload
         )
 
     progressData.value = response.data || response
