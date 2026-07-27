@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildClientReviewPayload } from './client-review-payload'
+import { buildClientReviewPayload, getIncompleteReviewSections } from './client-review-payload'
 
 describe('buildClientReviewPayload', () => {
   it('includes every editable review section and explicit false knowledge values', () => {
@@ -93,5 +93,25 @@ describe('buildClientReviewPayload', () => {
       othersEnabled: false,
       othersDetails: ''
     })
+  })
+})
+
+describe('getIncompleteReviewSections', () => {
+  it('returns every required review section that failed to load', () => {
+    expect(getIncompleteReviewSections({
+      portfolio: true,
+      kyc: false,
+      risk: true,
+      fee: false
+    })).toEqual(['KYC', 'Fee Schedule'])
+  })
+
+  it('returns an empty list when all required review sections loaded', () => {
+    expect(getIncompleteReviewSections({
+      portfolio: true,
+      kyc: true,
+      risk: true,
+      fee: true
+    })).toEqual([])
   })
 })

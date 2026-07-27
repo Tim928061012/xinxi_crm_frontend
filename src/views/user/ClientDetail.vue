@@ -2249,7 +2249,11 @@ import {
   findPendingFormsFile,
   type PendingFormsUpload
 } from '@/utils/pending-forms'
-import { buildClientReviewPayload } from '@/utils/client-review-payload'
+import {
+  buildClientReviewPayload,
+  getIncompleteReviewSections,
+  type ReviewSectionLoadState
+} from '@/utils/client-review-payload'
 import { workflowApi, type ClientProgressData, type ClientType, type ClientComment } from '@/api/user/workflow'
 import ClientProgressDialog from '@/components/client/ClientProgressDialog.vue'
 import ClientAddCommentDialog from '@/components/client/ClientAddCommentDialog.vue'
@@ -2364,6 +2368,12 @@ const tabLoading: Record<string, boolean> = reactive({
   documents: false,
   fee: false
 })
+const reviewSectionLoaded = reactive<ReviewSectionLoadState>({
+  portfolio: false,
+  kyc: false,
+  risk: false,
+  fee: false
+})
 // 各 Tab 的最后保存时间文案（进入编辑页时从后端获取，保存成功后更新）
 const tabLastSaved: Record<string, string> = reactive({
   general: '',
@@ -2392,6 +2402,13 @@ const currentClientType = computed((): ClientType => {
   return fromQuery || fromForm || 'Individual'
 })
 const isReviewMode = computed(() => route.query.mode === 'review' && !isViewMode.value)
+const isAtomicReviewEditMode = computed(
+  () =>
+    isReviewMode.value &&
+    ['OPERATIONAL_REVIEW', 'COMPLIANCE_REVIEW'].includes(
+      normalizeProgressStatus(progressData.value?.progressStatus)
+    )
+)
 const isRoSignatureReviewInView = computed(
   () =>
     route.query.mode === 'review' &&
@@ -3014,6 +3031,12 @@ const loadClient = async () => {
 
   const gen = ++loadClientGeneration
   clientDetailLoaded.value = false
+  Object.assign(reviewSectionLoaded, {
+    portfolio: false,
+    kyc: false,
+    risk: false,
+    fee: false
+  })
   pageLoading.value = true
   try {
     // 优先按当前页面类型加载，避免 Individual/Corporate 出现同 ID 时后端按 id 自动判断造成误判
@@ -3134,6 +3157,7 @@ const loadClient = async () => {
         portfolioNo: item.portfolioNo || item.portfolio_no || '',
         uploadTime: item.uploadTime || item.upload_time || item.createdAt || item.created_at || ''
       }))
+      reviewSectionLoaded.portfolio = true
     } else {
       // 如果没有portfolios，尝试单独加载
       try {
@@ -3146,6 +3170,7 @@ const loadClient = async () => {
           portfolioNo: item.portfolioNumber || item.portfolioNo || item.portfolio_no || '',
           uploadTime: item.uploadTime || item.upload_time || item.createdAt || item.created_at || ''
         }))
+        reviewSectionLoaded.portfolio = true
       } catch (error) {
         console.warn('Failed to load portfolios:', error)
         clientForm.portfolios = []
@@ -3207,6 +3232,7 @@ const loadClient = async () => {
       kycData.nextReviewDate = kyc.nextReviewDate ?? ''
       kycData.documents = kyc.documents || []
       kycData.nameScreeningDocuments = kyc.nameScreeningDocuments || []
+      reviewSectionLoaded.kyc = true
 
       // KYC Tab 的 Last saved：取最新的文档上传时间
       const kycTimes = kycData.documents
@@ -3282,6 +3308,7 @@ const loadClient = async () => {
       })
       ;(riskProfileData as any).__hasExisting = (risk as any).__hasExisting === true
       ;(riskProfileData as any).__lastUpdatedAt = (risk as any).__lastUpdatedAt ?? null
+      reviewSectionLoaded.risk = true
 
       // Risk Tab 的 Last saved：用后端 riskProfile 的 updatedAt/createdAt
       const riskLast = (risk as any).__lastUpdatedAt
@@ -3308,6 +3335,7 @@ const loadClient = async () => {
       ;(feeScheduleData as any).__id = (fee as any).__id ?? null
       ;(feeScheduleData as any).__hasExisting = (fee as any).__hasExisting === true
       ;(feeScheduleData as any).__lastUpdatedAt = (fee as any).__lastUpdatedAt || null
+      reviewSectionLoaded.fee = true
 
       // Fee Tab 的 Last saved：用后端 feeSchedule 的 updatedAt/createdAt
       const feeLast = (fee as any).__lastUpdatedAt
@@ -3944,6 +3972,13 @@ const handleReviewDecision = async (approve: boolean) => {
     ElMessage.warning('Client detail is still loading. Please wait and try again.')
     return
   }
+  if (isAtomicReviewEditMode.value) {
+    const incompleteSections = getIncompleteReviewSections(reviewSectionLoaded)
+    if (incompleteSections.length > 0) {
+      ElMessage.error(`Failed to load ${incompleteSections.join(', ')}. Please refresh and try again.`)
+      return
+    }
+  }
   if (approve && !isRoSignatureReviewInView.value) {
     const valid = await validateClientForm()
     if (!valid) {
@@ -4162,7 +4197,7 @@ const handleDeletePortfolio = async (index: number) => {
     )
 
     const portfolio = clientForm.portfolios[index]
-    if (portfolio.id) {
+    if (portfolio.id && !isAtomicReviewEditMode.value) {
       await portfolioApi.deletePortfolio(portfolio.id)
     }
     
@@ -4186,7 +4221,7 @@ const handleSubmitPortfolio = async () => {
         if (editingPortfolioIndex.value !== null) {
           // 编辑模式
           const portfolio = clientForm.portfolios[editingPortfolioIndex.value]
-          if (portfolio.id) {
+          if (portfolio.id && !isAtomicReviewEditMode.value) {
             await portfolioApi.updatePortfolio(portfolio.id, portfolioForm)
           }
           Object.assign(portfolio, {
@@ -4198,7 +4233,7 @@ const handleSubmitPortfolio = async () => {
           ElMessage.success('Portfolio updated successfully')
         } else {
           // 新建模式
-          if (clientId.value) {
+          if (clientId.value && !isAtomicReviewEditMode.value) {
             portfolioForm.clientId = clientId.value
             // 传递clientType给createPortfolio
             const response = await portfolioApi.createPortfolio({

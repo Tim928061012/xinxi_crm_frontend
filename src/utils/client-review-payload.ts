@@ -3,6 +3,25 @@ import type { InvestmentRiskProfile } from '@/api/user/risk-profile'
 import type { FeeSchedule } from '@/api/user/fee-schedule'
 import type { ClientType, WorkflowActionPayload } from '@/api/user/workflow'
 
+export interface ReviewSectionLoadState {
+  portfolio: boolean
+  kyc: boolean
+  risk: boolean
+  fee: boolean
+}
+
+const REVIEW_SECTION_LABELS: Record<keyof ReviewSectionLoadState, string> = {
+  portfolio: 'Portfolio',
+  kyc: 'KYC',
+  risk: 'Investment Risk Profile',
+  fee: 'Fee Schedule'
+}
+
+export const getIncompleteReviewSections = (state: ReviewSectionLoadState): string[] =>
+  (Object.keys(REVIEW_SECTION_LABELS) as Array<keyof ReviewSectionLoadState>)
+    .filter((key) => !state[key])
+    .map((key) => REVIEW_SECTION_LABELS[key])
+
 const parseDdMmYyyyToIso = (value?: string | null): string | null => {
   if (!value) return null
   const parts = value.split('/')
